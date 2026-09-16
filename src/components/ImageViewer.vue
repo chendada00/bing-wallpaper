@@ -6,11 +6,14 @@
       :style="viewerStyle"
       @click.self="close"
     >
-      <!-- 背景主色调 -->
+      <!-- 主色调背景 -->
       <div
         class="viewer-color-bg"
         :style="colorBackgroundStyle"
       />
+
+      <!-- 深色遮罩 -->
+      <div class="viewer-overlay" />
 
       <!-- 关闭 -->
       <button
@@ -42,31 +45,19 @@
       </button>
 
       <div class="viewer-content">
-        <!-- 图片区域 -->
+        <!-- 图片 -->
         <div class="viewer-image-wrapper">
-          <!-- Base64 占位图 -->
           <img
-            v-if="placeholderImage"
-            :src="placeholderImage"
+            v-if="displayImage"
+            :key="displayImage"
+            :src="displayImage"
             :alt="item?.title || item?.date"
-            class="viewer-image viewer-placeholder"
+            class="viewer-image"
             :class="{
-              'is-hidden': highResLoaded
+              'is-placeholder': !highResLoaded,
+              'is-high-res': highResLoaded
             }"
-          >
-
-          <!-- 高清图 -->
-          <img
-            v-if="item?.image"
-            :key="item?.date"
-            :src="item.image"
-            :alt="item?.title || item?.date"
-            class="viewer-image viewer-high-res"
-            :class="{
-              'is-loaded': highResLoaded
-            }"
-            @load="handleImageLoad"
-            @error="handleImageError"
+            @error="handleDisplayError"
           >
 
           <!-- 高清图加载动画 -->
@@ -77,7 +68,7 @@
             <span class="viewer-spinner" />
           </div>
 
-          <!-- 图片加载失败 -->
+          <!-- 高清图加载失败 -->
           <div
             v-if="imageError"
             class="viewer-error"
@@ -123,7 +114,7 @@
             />
 
             <span class="color-name">
-              {{ primaryColor }}
+              {{ primaryColor.toUpperCase() }}
             </span>
 
             <span class="color-copy">
@@ -190,18 +181,36 @@ const emit = defineEmits([
 ])
 
 /*
- * 高清图状态
+ * 当前真正显示的图片
  *
- * 切换图片时：
- * 1. 立即显示 Base64
- * 2. 高清图开始加载
- * 3. 高清图加载完成后淡入
+ * 切换时先设置成 Base64，
+ * 高清图加载完成后再切换成高清图。
  */
-const imageLoading = ref(true)
+const displayImage = ref('')
+
+/*
+ * 高清图是否加载完成
+ */
 const highResLoaded = ref(false)
+
+/*
+ * 高清图加载状态
+ */
+const imageLoading = ref(false)
+
+/*
+ * 高清图加载失败
+ */
 const imageError = ref(false)
 
+/*
+ * 下载状态
+ */
 const downloading = ref(false)
+
+/*
+ * 复制状态
+ */
 const copied = ref(false)
 
 /*
@@ -229,10 +238,7 @@ const hasNext = computed(() => {
 })
 
 /*
- * Base64 占位图
- *
- * 兼容：
- * data:image/jpeg;base64,...
+ * Base64
  */
 const placeholderImage = computed(() => {
   return props.item?.base64 || ''
@@ -240,16 +246,6 @@ const placeholderImage = computed(() => {
 
 /*
  * 主色调
- *
- * 优先使用 Vibrant。
- * 如果没有，则按照以下顺序寻找：
- *
- * Vibrant
- * LightVibrant
- * Muted
- * DarkVibrant
- * LightMuted
- * DarkMuted
  */
 const primaryColor = computed(() => {
   const color = props.item?.color
@@ -270,10 +266,7 @@ const primaryColor = computed(() => {
 })
 
 /*
- * Viewer 主背景
- *
- * 不直接使用纯主色调，
- * 而是使用低透明度，让图片成为视觉主体。
+ * Viewer CSS 变量
  */
 const viewerStyle = computed(() => {
   return {
@@ -282,10 +275,9 @@ const viewerStyle = computed(() => {
 })
 
 /*
- * 彩色背景层
+ * 主色调背景
  *
- * 通过多个渐变层 + blur，
- * 让主色调有一点氛围感。
+ * 只使用很低的透明度。
  */
 const colorBackgroundStyle = computed(() => {
   if (!primaryColor.value) {
@@ -297,50 +289,158 @@ const colorBackgroundStyle = computed(() => {
   return {
     background: `
       radial-gradient(
-        circle at 50% 35%,
+        circle at 50% 40%,
         ${primaryColor.value} 0%,
-        transparent 62%
+        transparent 65%
       )
     `,
-    opacity: '0.18'
+    opacity: '0.16'
   }
 })
 
 /*
- * 图片切换
+ * 当前正在预加载的 Image 对象
  *
- * 每次 item 改变：
- * - 高清图重新进入 loading
- * - Base64 立即显示
- * - 高清图重新加载
+ * 切换图片的时候，如果上一张还没有加载完，
+ * 可以取消它的事件引用。
+ */
+let preloadImage = null
+
+/*
+ * 初始化 / 切换图片
  */
 watch(
   () => props.item,
   () => {
-    imageLoading.value = true
-    highResLoaded.value = false
-    imageError.value = false
-    copied.value = false
+    loadCurrentImage()
+  },
+  {
+    immediate: true
   }
 )
 
 /*
- * 高清图加载完成
+ * 加载当前图片
+ *
+ * 核心逻辑：
+ *
+ * Base64
+ *   ↓
+ * 立即显示
+ *   ↓
+ * 后台加载高清图
+ *   ↓
+ * 高清图 onload
+ *   ↓
+ * displayImage = 高清图
  */
-function handleImageLoad() {
-  imageLoading.value = false
-  highResLoaded.value = true
+function loadCurrentImage() {
+  /*
+   * 清理上一张图片的预加载对象
+   */
+  if (preloadImage) {
+    preloadImage.onload = null
+    preloadImage.onerror = null
+    preloadImage = null
+  }
+
+  copied.value = false
+
+  highResLoaded.value = false
+
+  imageError.value = false
+
+  /*
+   * 第一时间显示 Base64
+   */
+  displayImage.value = placeholderImage.value
+
+  /*
+   * 没有高清图就不继续加载
+   */
+  if (!props.item?.image) {
+    imageLoading.value = false
+    return
+  }
+
+  /*
+   * 有高清图，开始后台加载
+   */
+  imageLoading.value = true
+
+  const image = new Image()
+
+  preloadImage = image
+
+  /*
+   * 防止浏览器缓存导致部分情况下无法正常处理
+   *
+   * 不在 URL 后面强行加时间戳，
+   * 避免破坏 GitHub Raw 的缓存。
+   */
+  image.onload = () => {
+    /*
+     * 确认当前还是这一张图片
+     */
+    if (
+      props.item?.image !== image.src
+    ) {
+      return
+    }
+
+    /*
+     * 高清图已经完整加载成功
+     *
+     * 现在才替换真正显示的图片。
+     */
+    displayImage.value = props.item.image
+
+    highResLoaded.value = true
+
+    imageLoading.value = false
+
+    imageError.value = false
+  }
+
+  image.onerror = () => {
+    /*
+     * 高清图加载失败
+     *
+     * 不影响 Base64。
+     */
+    imageLoading.value = false
+
+    highResLoaded.value = false
+
+    imageError.value = true
+  }
+
+  /*
+   * 开始加载高清图
+   */
+  image.src = props.item.image
 }
 
 /*
- * 高清图加载失败
- *
- * Base64 仍然保留显示。
+ * 展示图片本身加载失败
  */
-function handleImageError() {
-  imageLoading.value = false
-  highResLoaded.value = false
-  imageError.value = true
+function handleDisplayError() {
+  /*
+   * 如果已经是高清图，
+   * 出现错误时退回 Base64。
+   */
+  if (
+    highResLoaded.value &&
+    placeholderImage.value
+  ) {
+    displayImage.value = placeholderImage.value
+
+    highResLoaded.value = false
+
+    imageLoading.value = false
+
+    imageError.value = true
+  }
 }
 
 /*
@@ -379,7 +479,7 @@ function next() {
 }
 
 /*
- * 键盘操作
+ * 键盘控制
  */
 function handleKeydown(event) {
   if (event.key === 'Escape') {
@@ -398,17 +498,17 @@ function handleKeydown(event) {
 }
 
 /*
- * 复制主色调
+ * 复制颜色
  */
 async function copyColor() {
   if (!primaryColor.value) {
     return
   }
 
+  const color = primaryColor.value.toUpperCase()
+
   try {
-    await navigator.clipboard.writeText(
-      primaryColor.value.toUpperCase()
-    )
+    await navigator.clipboard.writeText(color)
 
     copied.value = true
 
@@ -417,17 +517,22 @@ async function copyColor() {
     }, 1800)
   } catch (error) {
     /*
-     * 兼容部分浏览器 / 非 HTTPS 环境
+     * 兼容非 HTTPS / 部分旧浏览器
      */
     try {
       const textarea = document.createElement('textarea')
 
-      textarea.value = primaryColor.value.toUpperCase()
+      textarea.value = color
 
       textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
+
+      textarea.style.left = '-9999px'
+
+      textarea.style.top = '0'
 
       document.body.appendChild(textarea)
+
+      textarea.focus()
 
       textarea.select()
 
@@ -441,7 +546,10 @@ async function copyColor() {
         copied.value = false
       }, 1800)
     } catch (copyError) {
-      console.error('复制颜色失败:', copyError)
+      console.error(
+        '复制颜色失败:',
+        copyError
+      )
     }
   }
 }
@@ -450,17 +558,24 @@ async function copyColor() {
  * 下载原图
  */
 async function downloadImage() {
-  if (!props.item?.image || downloading.value) {
+  if (
+    !props.item?.image ||
+    downloading.value
+  ) {
     return
   }
 
   downloading.value = true
 
   try {
-    const response = await fetch(props.item.image)
+    const response = await fetch(
+      props.item.image
+    )
 
     if (!response.ok) {
-      throw new Error('Download failed')
+      throw new Error(
+        `HTTP ${response.status}`
+      )
     }
 
     const blob = await response.blob()
@@ -471,7 +586,9 @@ async function downloadImage() {
 
     link.href = url
 
-    link.download = `${props.item.date || 'bing-wallpaper'}.jpg`
+    link.download = `${
+      props.item.date || 'bing-wallpaper'
+    }.jpg`
 
     document.body.appendChild(link)
 
@@ -483,8 +600,15 @@ async function downloadImage() {
       URL.revokeObjectURL(url)
     }, 1000)
   } catch (error) {
-    console.error('下载失败:', error)
+    console.error(
+      '下载失败:',
+      error
+    )
 
+    /*
+     * 如果 fetch 下载失败，
+     * 直接打开原图。
+     */
     window.open(
       props.item.image,
       '_blank',
@@ -510,6 +634,12 @@ onBeforeUnmount(() => {
     'keydown',
     handleKeydown
   )
+
+  if (preloadImage) {
+    preloadImage.onload = null
+    preloadImage.onerror = null
+    preloadImage = null
+  }
 })
 </script>
 
@@ -529,11 +659,6 @@ onBeforeUnmount(() => {
 
   padding: 40px;
 
-  /*
-   * 基础背景。
-   *
-   * 彩色背景层会叠加在这个背景上。
-   */
   background:
     linear-gradient(
       180deg,
@@ -546,6 +671,9 @@ onBeforeUnmount(() => {
   animation: viewer-in 0.25s ease;
 }
 
+/*
+ * 主色调氛围光
+ */
 .viewer-color-bg {
   position: absolute;
 
@@ -555,7 +683,7 @@ onBeforeUnmount(() => {
 
   pointer-events: none;
 
-  filter: blur(90px);
+  filter: blur(100px);
 
   transform: scale(1.15);
 
@@ -564,22 +692,20 @@ onBeforeUnmount(() => {
     opacity 0.7s ease;
 }
 
-.viewer::after {
-  content: '';
-
+/*
+ * 深色遮罩
+ */
+.viewer-overlay {
   position: absolute;
 
   inset: 0;
 
-  z-index: 0;
+  z-index: 1;
 
   pointer-events: none;
 
-  /*
-   * 再覆盖一层黑色，
-   * 防止主色调过于明显。
-   */
-  background: rgba(8, 10, 14, 0.48);
+  background:
+    rgba(8, 10, 14, 0.52);
 }
 
 @keyframes viewer-in {
@@ -592,6 +718,9 @@ onBeforeUnmount(() => {
   }
 }
 
+/*
+ * 内容
+ */
 .viewer-content {
   position: relative;
 
@@ -611,7 +740,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 图片容器
+ * 图片区域
  */
 .viewer-image-wrapper {
   position: relative;
@@ -636,7 +765,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 所有图片
+ * 图片
  */
 .viewer-image {
   display: block;
@@ -659,73 +788,47 @@ onBeforeUnmount(() => {
 
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.42);
+
+  transition:
+    filter 0.35s ease,
+    opacity 0.35s ease;
 }
 
 /*
- * Base64 占位图
- *
- * 默认直接显示。
+ * Base64
  */
-.viewer-placeholder {
-  position: relative;
-
-  z-index: 1;
-
+.viewer-image.is-placeholder {
   filter: blur(10px);
 
-  transform: scale(1.025);
-
-  transition:
-    opacity 0.45s ease,
-    filter 0.45s ease;
+  transform: scale(1.02);
 }
 
 /*
  * 高清图
- *
- * 一开始透明，
- * 加载完成后淡入。
  */
-.viewer-high-res {
-  position: absolute;
+.viewer-image.is-high-res {
+  filter: none;
 
-  inset: 0;
+  transform: scale(1);
 
-  width: 100%;
-
-  height: 100%;
-
-  z-index: 2;
-
-  opacity: 0;
-
-  transition:
-    opacity 0.45s ease;
-
-  object-fit: contain;
+  animation: high-res-in 0.35s ease;
 }
 
-/*
- * 高清图加载完成
- */
-.viewer-high-res.is-loaded {
-  opacity: 1;
-}
+@keyframes high-res-in {
+  from {
+    opacity: 0.55;
+  }
 
-/*
- * 高清图加载完成后，
- * Base64 淡出。
- */
-.viewer-placeholder.is-hidden {
-  opacity: 0;
-
-  filter: blur(0);
-
-  pointer-events: none;
+  to {
+    opacity: 1;
+  }
 }
 
 /*
  * Loading
+ *
+ * 只在右下角显示，
+ * 不遮挡 Base64。
  */
 .viewer-loading {
   position: absolute;
@@ -748,28 +851,34 @@ onBeforeUnmount(() => {
 
   border-radius: 50%;
 
-  background: rgba(0, 0, 0, 0.38);
+  background:
+    rgba(0, 0, 0, 0.42);
 
   backdrop-filter: blur(8px);
 
   -webkit-backdrop-filter: blur(8px);
 
   box-shadow:
-    0 5px 20px rgba(0, 0, 0, 0.2);
+    0 5px 20px rgba(0, 0, 0, 0.22);
 }
 
+/*
+ * Spinner
+ */
 .viewer-spinner {
   width: 18px;
 
   height: 18px;
 
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid
+    rgba(255, 255, 255, 0.24);
 
   border-top-color: #fff;
 
   border-radius: 50%;
 
-  animation: spin 0.8s linear infinite;
+  animation:
+    spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -779,7 +888,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 加载失败
+ * 错误提示
  */
 .viewer-error {
   position: absolute;
@@ -796,15 +905,19 @@ onBeforeUnmount(() => {
 
   border-radius: 8px;
 
-  color: rgba(255, 255, 255, 0.8);
+  color:
+    rgba(255, 255, 255, 0.82);
 
-  background: rgba(0, 0, 0, 0.55);
+  background:
+    rgba(0, 0, 0, 0.55);
 
   backdrop-filter: blur(8px);
 
   -webkit-backdrop-filter: blur(8px);
 
   font-size: 12px;
+
+  white-space: nowrap;
 }
 
 /*
@@ -823,13 +936,15 @@ onBeforeUnmount(() => {
 
   height: 44px;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid
+    rgba(255, 255, 255, 0.08);
 
   border-radius: 50%;
 
   color: #fff;
 
-  background: rgba(255, 255, 255, 0.09);
+  background:
+    rgba(255, 255, 255, 0.09);
 
   backdrop-filter: blur(12px);
 
@@ -848,15 +963,17 @@ onBeforeUnmount(() => {
 }
 
 .viewer-close:hover {
-  background: rgba(255, 255, 255, 0.17);
+  background:
+    rgba(255, 255, 255, 0.17);
 
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color:
+    rgba(255, 255, 255, 0.15);
 
   transform: rotate(90deg);
 }
 
 /*
- * 左右切换
+ * 左右按钮
  */
 .viewer-nav {
   position: fixed;
@@ -869,13 +986,15 @@ onBeforeUnmount(() => {
 
   height: 72px;
 
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid
+    rgba(255, 255, 255, 0.07);
 
   border-radius: 16px;
 
   color: #fff;
 
-  background: rgba(255, 255, 255, 0.07);
+  background:
+    rgba(255, 255, 255, 0.07);
 
   backdrop-filter: blur(12px);
 
@@ -898,13 +1017,17 @@ onBeforeUnmount(() => {
 }
 
 .viewer-nav:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background:
+    rgba(255, 255, 255, 0.14);
 
-  border-color: rgba(255, 255, 255, 0.13);
+  border-color:
+    rgba(255, 255, 255, 0.13);
 }
 
 .viewer-nav:active {
-  transform: translateY(-50%) scale(0.94);
+  transform:
+    translateY(-50%)
+    scale(0.94);
 }
 
 .viewer-prev {
@@ -916,7 +1039,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 信息区域
+ * 信息
  */
 .viewer-info {
   width: min(900px, 100%);
@@ -927,7 +1050,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 日期 + 图片序号
+ * 日期 + 序号
  */
 .viewer-meta {
   display: flex;
@@ -940,7 +1063,8 @@ onBeforeUnmount(() => {
 .viewer-date {
   font-size: 12px;
 
-  color: rgba(255, 255, 255, 0.55);
+  color:
+    rgba(255, 255, 255, 0.55);
 }
 
 .viewer-counter {
@@ -948,9 +1072,11 @@ onBeforeUnmount(() => {
 
   border-radius: 6px;
 
-  color: rgba(255, 255, 255, 0.48);
+  color:
+    rgba(255, 255, 255, 0.48);
 
-  background: rgba(255, 255, 255, 0.07);
+  background:
+    rgba(255, 255, 255, 0.07);
 
   font-size: 11px;
 }
@@ -982,11 +1108,12 @@ onBeforeUnmount(() => {
 
   line-height: 1.6;
 
-  color: rgba(255, 255, 255, 0.68);
+  color:
+    rgba(255, 255, 255, 0.68);
 }
 
 /*
- * 主色调
+ * 主色调按钮
  */
 .viewer-color {
   margin-top: 12px;
@@ -1001,13 +1128,16 @@ onBeforeUnmount(() => {
 
   padding: 0 10px 0 6px;
 
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid
+    rgba(255, 255, 255, 0.09);
 
   border-radius: 9px;
 
-  color: rgba(255, 255, 255, 0.78);
+  color:
+    rgba(255, 255, 255, 0.78);
 
-  background: rgba(255, 255, 255, 0.065);
+  background:
+    rgba(255, 255, 255, 0.065);
 
   backdrop-filter: blur(10px);
 
@@ -1024,9 +1154,11 @@ onBeforeUnmount(() => {
 }
 
 .viewer-color:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background:
+    rgba(255, 255, 255, 0.11);
 
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color:
+    rgba(255, 255, 255, 0.15);
 
   transform: translateY(-1px);
 }
@@ -1036,11 +1168,12 @@ onBeforeUnmount(() => {
 }
 
 .viewer-color.copied {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color:
+    rgba(255, 255, 255, 0.2);
 }
 
 /*
- * 色块
+ * 主色调色块
  */
 .color-preview {
   width: 21px;
@@ -1052,51 +1185,50 @@ onBeforeUnmount(() => {
   border-radius: 6px;
 
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.18);
+    inset 0 0 0 1px
+      rgba(255, 255, 255, 0.2),
+    0 2px 8px
+      rgba(0, 0, 0, 0.18);
 }
 
 /*
  * HEX
  */
 .color-name {
-  font-family:
-    "DingTalk JinBuTi",
-    Roboto,
-    sans-serif;
-
   font-size: 12px;
 
   font-weight: 600;
 
   letter-spacing: 0.03em;
-
-  text-transform: uppercase;
 }
 
 /*
- * 复制文字
+ * 复制
  */
 .color-copy {
   padding-left: 2px;
 
-  color: rgba(255, 255, 255, 0.42);
+  color:
+    rgba(255, 255, 255, 0.42);
 
   font-size: 11px;
 
-  transition: color 0.2s ease;
+  transition:
+    color 0.2s ease;
 }
 
 .viewer-color:hover .color-copy {
-  color: rgba(255, 255, 255, 0.68);
+  color:
+    rgba(255, 255, 255, 0.68);
 }
 
 .viewer-color.copied .color-copy {
-  color: rgba(255, 255, 255, 0.85);
+  color:
+    rgba(255, 255, 255, 0.9);
 }
 
 /*
- * 操作按钮
+ * 操作区域
  */
 .viewer-actions {
   display: flex;
@@ -1173,9 +1305,11 @@ onBeforeUnmount(() => {
 .open-button {
   color: #fff;
 
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    rgba(255, 255, 255, 0.08);
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid
+    rgba(255, 255, 255, 0.1);
 
   backdrop-filter: blur(10px);
 
@@ -1183,7 +1317,8 @@ onBeforeUnmount(() => {
 }
 
 .open-button:hover {
-  background: rgba(255, 255, 255, 0.13);
+  background:
+    rgba(255, 255, 255, 0.13);
 }
 
 /*
@@ -1192,22 +1327,23 @@ onBeforeUnmount(() => {
 @media (max-width: 700px) {
   .viewer {
     padding: 20px;
-
-    align-items: center;
   }
 
   .viewer-content {
-    max-height: calc(100vh - 40px);
+    max-height:
+      calc(100vh - 40px);
   }
 
   .viewer-image-wrapper {
-    max-height: calc(100vh - 220px);
+    max-height:
+      calc(100vh - 220px);
 
     border-radius: 9px;
   }
 
   .viewer-image {
-    max-height: calc(100vh - 220px);
+    max-height:
+      calc(100vh - 220px);
 
     border-radius: 9px;
   }
