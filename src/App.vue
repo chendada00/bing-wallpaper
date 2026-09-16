@@ -22,8 +22,8 @@
     <main class="main-content">
       <section class="intro">
         <div>
-          <div class="eyebrow">伴随光影</div>
-          <h1>A collection of beautiful moments.</h1>
+          <div class="eyebrow">A collection of beautiful moments.</div>
+          <h1>伴随·光影</h1>
           <p>每日一景，长久珍藏。</p>
         </div>
       </section>
