@@ -1,9 +1,18 @@
+```vue
 <template>
   <Teleport to="body">
     <div
       class="viewer"
+      :style="viewerStyle"
       @click.self="close"
     >
+      <!-- 背景主色调 -->
+      <div
+        class="viewer-color-bg"
+        :style="colorBackgroundStyle"
+      />
+
+      <!-- 关闭 -->
       <button
         class="viewer-close"
         aria-label="关闭"
@@ -12,6 +21,7 @@
         ×
       </button>
 
+      <!-- 上一张 -->
       <button
         v-if="hasPrevious"
         class="viewer-nav viewer-prev"
@@ -21,6 +31,7 @@
         ‹
       </button>
 
+      <!-- 下一张 -->
       <button
         v-if="hasNext"
         class="viewer-nav viewer-next"
@@ -31,7 +42,34 @@
       </button>
 
       <div class="viewer-content">
+        <!-- 图片区域 -->
         <div class="viewer-image-wrapper">
+          <!-- Base64 占位图 -->
+          <img
+            v-if="placeholderImage"
+            :src="placeholderImage"
+            :alt="item?.title || item?.date"
+            class="viewer-image viewer-placeholder"
+            :class="{
+              'is-hidden': highResLoaded
+            }"
+          >
+
+          <!-- 高清图 -->
+          <img
+            v-if="item?.image"
+            :key="item?.date"
+            :src="item.image"
+            :alt="item?.title || item?.date"
+            class="viewer-image viewer-high-res"
+            :class="{
+              'is-loaded': highResLoaded
+            }"
+            @load="handleImageLoad"
+            @error="handleImageError"
+          >
+
+          <!-- 高清图加载动画 -->
           <div
             v-if="imageLoading"
             class="viewer-loading"
@@ -39,18 +77,28 @@
             <span class="viewer-spinner" />
           </div>
 
-          <img
-            :src="item?.image"
-            :alt="item?.title || item?.date"
-            class="viewer-image"
-            @load="imageLoading = false"
-            @error="imageError = true"
+          <!-- 图片加载失败 -->
+          <div
+            v-if="imageError"
+            class="viewer-error"
           >
+            高清图片加载失败
+          </div>
         </div>
 
+        <!-- 图片信息 -->
         <div class="viewer-info">
-          <div class="viewer-date">
-            {{ item?.date }}
+          <div class="viewer-meta">
+            <span class="viewer-date">
+              {{ item?.date }}
+            </span>
+
+            <span
+              v-if="currentIndex >= 0"
+              class="viewer-counter"
+            >
+              {{ currentIndex + 1 }} / {{ items.length }}
+            </span>
           </div>
 
           <h2>
@@ -61,19 +109,48 @@
             {{ item?.description || item?.copyright || '' }}
           </p>
 
+          <!-- 主色调 -->
+          <button
+            v-if="primaryColor"
+            class="viewer-color"
+            :class="{ copied: copied }"
+            :title="copied ? '已复制' : '点击复制颜色值'"
+            @click="copyColor"
+          >
+            <span
+              class="color-preview"
+              :style="{ backgroundColor: primaryColor }"
+            />
+
+            <span class="color-name">
+              {{ primaryColor }}
+            </span>
+
+            <span class="color-copy">
+              {{ copied ? '✓ 已复制' : '复制' }}
+            </span>
+          </button>
+
+          <!-- 操作 -->
           <div class="viewer-actions">
             <button
               class="download-button"
               :disabled="downloading"
               @click="downloadImage"
             >
-              <span v-if="downloading">下载中...</span>
-              <span v-else>下载原图</span>
+              <span v-if="downloading">
+                下载中...
+              </span>
+
+              <span v-else>
+                下载原图
+              </span>
             </button>
 
             <a
+              v-if="item?.image"
               class="open-button"
-              :href="item?.image"
+              :href="item.image"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -112,12 +189,28 @@ const emit = defineEmits([
   'change'
 ])
 
+/*
+ * 高清图状态
+ *
+ * 切换图片时：
+ * 1. 立即显示 Base64
+ * 2. 高清图开始加载
+ * 3. 高清图加载完成后淡入
+ */
 const imageLoading = ref(true)
+const highResLoaded = ref(false)
 const imageError = ref(false)
-const downloading = ref(false)
 
+const downloading = ref(false)
+const copied = ref(false)
+
+/*
+ * 当前图片索引
+ */
 const currentIndex = computed(() => {
-  if (!props.item) return -1
+  if (!props.item) {
+    return -1
+  }
 
   return props.items.findIndex(
     item => item.date === props.item.date
@@ -135,20 +228,135 @@ const hasNext = computed(() => {
   )
 })
 
+/*
+ * Base64 占位图
+ *
+ * 兼容：
+ * data:image/jpeg;base64,...
+ */
+const placeholderImage = computed(() => {
+  return props.item?.base64 || ''
+})
+
+/*
+ * 主色调
+ *
+ * 优先使用 Vibrant。
+ * 如果没有，则按照以下顺序寻找：
+ *
+ * Vibrant
+ * LightVibrant
+ * Muted
+ * DarkVibrant
+ * LightMuted
+ * DarkMuted
+ */
+const primaryColor = computed(() => {
+  const color = props.item?.color
+
+  if (!color) {
+    return ''
+  }
+
+  return (
+    color.Vibrant ||
+    color.LightVibrant ||
+    color.Muted ||
+    color.DarkVibrant ||
+    color.LightMuted ||
+    color.DarkMuted ||
+    ''
+  )
+})
+
+/*
+ * Viewer 主背景
+ *
+ * 不直接使用纯主色调，
+ * 而是使用低透明度，让图片成为视觉主体。
+ */
+const viewerStyle = computed(() => {
+  return {
+    '--viewer-color': primaryColor.value || '#667085'
+  }
+})
+
+/*
+ * 彩色背景层
+ *
+ * 通过多个渐变层 + blur，
+ * 让主色调有一点氛围感。
+ */
+const colorBackgroundStyle = computed(() => {
+  if (!primaryColor.value) {
+    return {
+      opacity: '0'
+    }
+  }
+
+  return {
+    background: `
+      radial-gradient(
+        circle at 50% 35%,
+        ${primaryColor.value} 0%,
+        transparent 62%
+      )
+    `,
+    opacity: '0.18'
+  }
+})
+
+/*
+ * 图片切换
+ *
+ * 每次 item 改变：
+ * - 高清图重新进入 loading
+ * - Base64 立即显示
+ * - 高清图重新加载
+ */
 watch(
   () => props.item,
   () => {
     imageLoading.value = true
+    highResLoaded.value = false
     imageError.value = false
+    copied.value = false
   }
 )
 
+/*
+ * 高清图加载完成
+ */
+function handleImageLoad() {
+  imageLoading.value = false
+  highResLoaded.value = true
+}
+
+/*
+ * 高清图加载失败
+ *
+ * Base64 仍然保留显示。
+ */
+function handleImageError() {
+  imageLoading.value = false
+  highResLoaded.value = false
+  imageError.value = true
+}
+
+/*
+ * 关闭
+ */
 function close() {
   emit('close')
 }
 
+/*
+ * 上一张
+ */
 function previous() {
-  if (!hasPrevious.value) return
+  if (!hasPrevious.value) {
+    return
+  }
 
   emit(
     'change',
@@ -156,8 +364,13 @@ function previous() {
   )
 }
 
+/*
+ * 下一张
+ */
 function next() {
-  if (!hasNext.value) return
+  if (!hasNext.value) {
+    return
+  }
 
   emit(
     'change',
@@ -165,13 +378,18 @@ function next() {
   )
 }
 
+/*
+ * 键盘操作
+ */
 function handleKeydown(event) {
   if (event.key === 'Escape') {
     close()
+    return
   }
 
   if (event.key === 'ArrowLeft') {
     previous()
+    return
   }
 
   if (event.key === 'ArrowRight') {
@@ -179,6 +397,58 @@ function handleKeydown(event) {
   }
 }
 
+/*
+ * 复制主色调
+ */
+async function copyColor() {
+  if (!primaryColor.value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(
+      primaryColor.value.toUpperCase()
+    )
+
+    copied.value = true
+
+    setTimeout(() => {
+      copied.value = false
+    }, 1800)
+  } catch (error) {
+    /*
+     * 兼容部分浏览器 / 非 HTTPS 环境
+     */
+    try {
+      const textarea = document.createElement('textarea')
+
+      textarea.value = primaryColor.value.toUpperCase()
+
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+
+      document.body.appendChild(textarea)
+
+      textarea.select()
+
+      document.execCommand('copy')
+
+      textarea.remove()
+
+      copied.value = true
+
+      setTimeout(() => {
+        copied.value = false
+      }, 1800)
+    } catch (copyError) {
+      console.error('复制颜色失败:', copyError)
+    }
+  }
+}
+
+/*
+ * 下载原图
+ */
 async function downloadImage() {
   if (!props.item?.image || downloading.value) {
     return
@@ -200,6 +470,7 @@ async function downloadImage() {
     const link = document.createElement('a')
 
     link.href = url
+
     link.download = `${props.item.date || 'bing-wallpaper'}.jpg`
 
     document.body.appendChild(link)
@@ -224,6 +495,9 @@ async function downloadImage() {
   }
 }
 
+/*
+ * 生命周期
+ */
 onMounted(() => {
   window.addEventListener(
     'keydown',
@@ -242,22 +516,70 @@ onBeforeUnmount(() => {
 <style scoped>
 .viewer {
   position: fixed;
+
   inset: 0;
 
   z-index: 9999;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   padding: 40px;
 
-  background: rgba(8, 10, 14, 0.94);
+  /*
+   * 基础背景。
+   *
+   * 彩色背景层会叠加在这个背景上。
+   */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 14, 0.94),
+      rgba(8, 10, 14, 0.97)
+    );
 
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  overflow: hidden;
 
   animation: viewer-in 0.25s ease;
+}
+
+.viewer-color-bg {
+  position: absolute;
+
+  inset: -15%;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  filter: blur(90px);
+
+  transform: scale(1.15);
+
+  transition:
+    background 0.7s ease,
+    opacity 0.7s ease;
+}
+
+.viewer::after {
+  content: '';
+
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  /*
+   * 再覆盖一层黑色，
+   * 防止主色调过于明显。
+   */
+  background: rgba(8, 10, 14, 0.48);
 }
 
 @keyframes viewer-in {
@@ -271,53 +593,178 @@ onBeforeUnmount(() => {
 }
 
 .viewer-content {
+  position: relative;
+
+  z-index: 2;
+
   width: min(1200px, 100%);
+
   max-height: calc(100vh - 80px);
 
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
+
+  min-width: 0;
 }
 
+/*
+ * 图片容器
+ */
 .viewer-image-wrapper {
   position: relative;
 
-  max-width: 100%;
+  width: 100%;
+
+  max-width: 1200px;
+
   max-height: calc(100vh - 260px);
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
+
+  min-height: 100px;
+
+  overflow: hidden;
+
+  border-radius: 14px;
 }
 
+/*
+ * 所有图片
+ */
 .viewer-image {
   display: block;
 
   max-width: 100%;
+
   max-height: calc(100vh - 260px);
+
+  width: auto;
+
+  height: auto;
 
   object-fit: contain;
 
-  border-radius: 12px;
+  border-radius: 14px;
+
+  user-select: none;
+
+  -webkit-user-drag: none;
 
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.45);
+    0 30px 80px rgba(0, 0, 0, 0.42);
 }
 
-.viewer-loading {
+/*
+ * Base64 占位图
+ *
+ * 默认直接显示。
+ */
+.viewer-placeholder {
+  position: relative;
+
+  z-index: 1;
+
+  filter: blur(10px);
+
+  transform: scale(1.025);
+
+  transition:
+    opacity 0.45s ease,
+    filter 0.45s ease;
+}
+
+/*
+ * 高清图
+ *
+ * 一开始透明，
+ * 加载完成后淡入。
+ */
+.viewer-high-res {
   position: absolute;
+
   inset: 0;
 
+  width: 100%;
+
+  height: 100%;
+
+  z-index: 2;
+
+  opacity: 0;
+
+  transition:
+    opacity 0.45s ease;
+
+  object-fit: contain;
+}
+
+/*
+ * 高清图加载完成
+ */
+.viewer-high-res.is-loaded {
+  opacity: 1;
+}
+
+/*
+ * 高清图加载完成后，
+ * Base64 淡出。
+ */
+.viewer-placeholder.is-hidden {
+  opacity: 0;
+
+  filter: blur(0);
+
+  pointer-events: none;
+}
+
+/*
+ * Loading
+ */
+.viewer-loading {
+  position: absolute;
+
+  right: 16px;
+
+  bottom: 16px;
+
+  z-index: 5;
+
+  width: 34px;
+
+  height: 34px;
+
   display: flex;
+
   align-items: center;
+
   justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.38);
+
+  backdrop-filter: blur(8px);
+
+  -webkit-backdrop-filter: blur(8px);
+
+  box-shadow:
+    0 5px 20px rgba(0, 0, 0, 0.2);
 }
 
 .viewer-spinner {
-  width: 32px;
-  height: 32px;
+  width: 18px;
 
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  height: 18px;
+
+  border: 2px solid rgba(255, 255, 255, 0.25);
+
   border-top-color: #fff;
 
   border-radius: 50%;
@@ -331,52 +778,113 @@ onBeforeUnmount(() => {
   }
 }
 
+/*
+ * 加载失败
+ */
+.viewer-error {
+  position: absolute;
+
+  left: 50%;
+
+  bottom: 16px;
+
+  z-index: 6;
+
+  transform: translateX(-50%);
+
+  padding: 7px 12px;
+
+  border-radius: 8px;
+
+  color: rgba(255, 255, 255, 0.8);
+
+  background: rgba(0, 0, 0, 0.55);
+
+  backdrop-filter: blur(8px);
+
+  -webkit-backdrop-filter: blur(8px);
+
+  font-size: 12px;
+}
+
+/*
+ * 关闭按钮
+ */
 .viewer-close {
   position: fixed;
 
   top: 20px;
+
   right: 25px;
 
+  z-index: 10;
+
   width: 44px;
+
   height: 44px;
 
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
   border-radius: 50%;
 
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+
+  background: rgba(255, 255, 255, 0.09);
+
+  backdrop-filter: blur(12px);
+
+  -webkit-backdrop-filter: blur(12px);
 
   font-size: 30px;
+
   line-height: 1;
 
   cursor: pointer;
 
   transition:
     background 0.25s ease,
-    transform 0.25s ease;
+    transform 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .viewer-close:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.17);
+
+  border-color: rgba(255, 255, 255, 0.15);
+
   transform: rotate(90deg);
 }
 
+/*
+ * 左右切换
+ */
 .viewer-nav {
   position: fixed;
 
   top: 50%;
 
+  z-index: 10;
+
   width: 52px;
+
   height: 72px;
 
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+
   border-radius: 16px;
 
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+
+  background: rgba(255, 255, 255, 0.07);
+
+  backdrop-filter: blur(12px);
+
+  -webkit-backdrop-filter: blur(12px);
 
   font-size: 50px;
+
   font-weight: 200;
+
   line-height: 1;
 
   cursor: pointer;
@@ -385,11 +893,18 @@ onBeforeUnmount(() => {
 
   transition:
     background 0.25s ease,
+    border-color 0.25s ease,
     transform 0.25s ease;
 }
 
 .viewer-nav:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.14);
+
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+.viewer-nav:active {
+  transform: translateY(-50%) scale(0.94);
 }
 
 .viewer-prev {
@@ -400,40 +915,195 @@ onBeforeUnmount(() => {
   right: 24px;
 }
 
+/*
+ * 信息区域
+ */
 .viewer-info {
   width: min(900px, 100%);
 
-  margin-top: 20px;
+  margin-top: 18px;
 
   color: #fff;
 }
 
+/*
+ * 日期 + 图片序号
+ */
+.viewer-meta {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
 .viewer-date {
   font-size: 12px;
+
   color: rgba(255, 255, 255, 0.55);
 }
 
+.viewer-counter {
+  padding: 3px 7px;
+
+  border-radius: 6px;
+
+  color: rgba(255, 255, 255, 0.48);
+
+  background: rgba(255, 255, 255, 0.07);
+
+  font-size: 11px;
+}
+
+/*
+ * 标题
+ */
 .viewer-info h2 {
   margin: 5px 0 5px;
 
   font-size: 20px;
+
   font-weight: 650;
+
+  line-height: 1.4;
+
+  letter-spacing: -0.01em;
 }
 
+/*
+ * 描述
+ */
 .viewer-info p {
   margin: 0;
 
+  max-width: 850px;
+
   font-size: 13px;
+
   line-height: 1.6;
 
   color: rgba(255, 255, 255, 0.68);
 }
 
+/*
+ * 主色调
+ */
+.viewer-color {
+  margin-top: 12px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  height: 34px;
+
+  padding: 0 10px 0 6px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  border-radius: 9px;
+
+  color: rgba(255, 255, 255, 0.78);
+
+  background: rgba(255, 255, 255, 0.065);
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px);
+
+  font-family: inherit;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.2s ease;
+}
+
+.viewer-color:hover {
+  background: rgba(255, 255, 255, 0.11);
+
+  border-color: rgba(255, 255, 255, 0.15);
+
+  transform: translateY(-1px);
+}
+
+.viewer-color:active {
+  transform: translateY(0);
+}
+
+.viewer-color.copied {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/*
+ * 色块
+ */
+.color-preview {
+  width: 21px;
+
+  height: 21px;
+
+  flex-shrink: 0;
+
+  border-radius: 6px;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/*
+ * HEX
+ */
+.color-name {
+  font-family:
+    "DingTalk JinBuTi",
+    Roboto,
+    sans-serif;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.03em;
+
+  text-transform: uppercase;
+}
+
+/*
+ * 复制文字
+ */
+.color-copy {
+  padding-left: 2px;
+
+  color: rgba(255, 255, 255, 0.42);
+
+  font-size: 11px;
+
+  transition: color 0.2s ease;
+}
+
+.viewer-color:hover .color-copy {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.viewer-color.copied .color-copy {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/*
+ * 操作按钮
+ */
 .viewer-actions {
   display: flex;
+
   gap: 10px;
 
-  margin-top: 14px;
+  margin-top: 13px;
 }
 
 .download-button,
@@ -445,54 +1115,109 @@ onBeforeUnmount(() => {
   border-radius: 10px;
 
   display: inline-flex;
+
   align-items: center;
+
   justify-content: center;
 
+  font-family: inherit;
+
   font-size: 13px;
+
   font-weight: 600;
 
   text-decoration: none;
 
   cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
 }
 
+.download-button:hover,
+.open-button:hover {
+  transform: translateY(-1px);
+}
+
+.download-button:active,
+.open-button:active {
+  transform: translateY(0);
+}
+
+/*
+ * 下载
+ */
 .download-button {
   border: 0;
 
   color: #111;
+
   background: #fff;
+}
+
+.download-button:hover {
+  background: #f4f4f5;
 }
 
 .download-button:disabled {
   cursor: wait;
+
   opacity: 0.6;
 }
 
+/*
+ * 打开原图
+ */
 .open-button {
   color: #fff;
 
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  backdrop-filter: blur(10px);
+
+  -webkit-backdrop-filter: blur(10px);
 }
 
+.open-button:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+/*
+ * 移动端
+ */
 @media (max-width: 700px) {
   .viewer {
     padding: 20px;
+
+    align-items: center;
   }
 
   .viewer-content {
     max-height: calc(100vh - 40px);
   }
 
+  .viewer-image-wrapper {
+    max-height: calc(100vh - 220px);
+
+    border-radius: 9px;
+  }
+
   .viewer-image {
     max-height: calc(100vh - 220px);
-    border-radius: 8px;
+
+    border-radius: 9px;
   }
 
   .viewer-nav {
     width: 40px;
+
     height: 52px;
+
+    border-radius: 13px;
 
     font-size: 38px;
   }
@@ -507,11 +1232,68 @@ onBeforeUnmount(() => {
 
   .viewer-close {
     top: 10px;
+
     right: 10px;
+
+    width: 40px;
+
+    height: 40px;
+
+    font-size: 27px;
   }
 
   .viewer-info {
-    margin-top: 14px;
+    margin-top: 12px;
+  }
+
+  .viewer-info h2 {
+    font-size: 18px;
+  }
+
+  .viewer-info p {
+    font-size: 12px;
+
+    display: -webkit-box;
+
+    -webkit-line-clamp: 2;
+
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+  }
+
+  .viewer-color {
+    margin-top: 9px;
+  }
+
+  .viewer-actions {
+    margin-top: 10px;
+  }
+
+  .download-button,
+  .open-button {
+    height: 36px;
+
+    padding: 0 13px;
+
+    font-size: 12px;
+  }
+
+  .viewer-loading {
+    right: 10px;
+
+    bottom: 10px;
+
+    width: 30px;
+
+    height: 30px;
+  }
+
+  .viewer-spinner {
+    width: 16px;
+
+    height: 16px;
   }
 }
 </style>
+```
