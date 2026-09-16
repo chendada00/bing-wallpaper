@@ -1,3 +1,5 @@
+@import url('https://fastly.jsdelivr.net/npm/cn-fontsource-ding-talk-jin-bu-ti-regular/font.css');
+
 * {
   box-sizing: border-box;
 }
@@ -6,30 +8,33 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
 body {
   margin: 0;
 
   font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Microsoft YaHei",
-    sans-serif;
+    "DingTalk JinBuTi",
+    Roboto,
+    sans-serif !important;
+}
 
+body {
   color: #1c1c1c;
 
   background:
     radial-gradient(
       circle at 50% -20%,
-      rgba(120, 120, 120, 0.08),
-      transparent 45%
+      rgba(120, 120, 120, 0.07),
+      transparent 42%
     ),
     #f7f7f7;
 }
 
 button,
-a {
+a,
+input,
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -41,7 +46,10 @@ button {
   min-height: 100vh;
 }
 
-/* Header */
+
+/* ================================
+   Header
+================================ */
 
 .site-header {
   position: sticky;
@@ -49,18 +57,18 @@ button {
 
   z-index: 100;
 
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
 
-  background: rgba(247, 247, 247, 0.78);
+  background: rgba(247, 247, 247, 0.72);
 
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
 .header-inner {
-  width: min(1440px, calc(100% - 48px));
+  width: min(1500px, calc(100% - 44px));
 
-  height: 72px;
+  height: 64px;
 
   margin: 0 auto;
 
@@ -73,23 +81,23 @@ button {
   display: flex;
   align-items: center;
 
-  gap: 11px;
+  gap: 10px;
 }
 
 .brand-icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  border-radius: 10px;
+  border-radius: 9px;
 
   color: #fff;
   background: #111;
 
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -99,13 +107,13 @@ button {
 }
 
 .brand-subtitle {
-  margin-top: 2px;
+  margin-top: 1px;
 
   font-size: 10px;
 
   color: #999;
 
-  letter-spacing: 0.2px;
+  letter-spacing: 0.15px;
 }
 
 .header-info {
@@ -114,18 +122,25 @@ button {
   font-size: 11px;
 }
 
-/* Main */
+
+/* ================================
+   Main
+================================ */
 
 .main-content {
-  width: min(1440px, calc(100% - 48px));
+  width: min(1500px, calc(100% - 44px));
 
   margin: 0 auto;
 }
 
-/* Intro */
+
+/* ================================
+   Intro
+   缩小顶部区域，让图片成为绝对主体
+================================ */
 
 .intro {
-  padding: 70px 0 42px;
+  padding: 46px 0 28px;
 
   display: flex;
   justify-content: space-between;
@@ -133,9 +148,9 @@ button {
 }
 
 .eyebrow {
-  margin-bottom: 10px;
+  margin-bottom: 7px;
 
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 
   letter-spacing: 2px;
@@ -146,38 +161,47 @@ button {
 .intro h1 {
   margin: 0;
 
-  font-size: clamp(34px, 5vw, 58px);
+  font-size: clamp(30px, 4vw, 48px);
 
-  line-height: 1;
+  line-height: 1.05;
 
-  letter-spacing: -2px;
+  letter-spacing: -1px;
 }
 
 .intro p {
-  margin: 16px 0 0;
+  margin: 10px 0 0;
 
   color: #888;
 
-  font-size: 14px;
+  font-size: 13px;
 }
 
-/* Grid */
+
+/* ================================
+   Wallpaper Grid
+================================ */
 
 .wallpaper-grid {
   display: grid;
 
   grid-template-columns: repeat(3, minmax(0, 1fr));
 
-  gap: 18px;
+  gap: 16px;
 }
 
-/* Trigger */
+
+/* ================================
+   Infinite Scroll Trigger
+================================ */
 
 .load-more-trigger {
   height: 1px;
 }
 
-/* Mobile */
+
+/* ================================
+   Mobile
+================================ */
 
 @media (max-width: 1100px) {
   .wallpaper-grid {
@@ -188,29 +212,43 @@ button {
 @media (max-width: 700px) {
   .header-inner,
   .main-content {
-    width: min(100% - 28px, 1440px);
+    width: calc(100% - 24px);
   }
 
   .header-inner {
-    height: 62px;
+    height: 58px;
+  }
+
+  .brand-subtitle {
+    display: none;
   }
 
   .intro {
-    padding: 45px 0 25px;
+    padding: 32px 0 20px;
   }
 
   .intro h1 {
-    font-size: 36px;
-    letter-spacing: -1.5px;
+    font-size: 32px;
+    letter-spacing: -0.8px;
+  }
+
+  .intro p {
+    margin-top: 8px;
+
+    font-size: 12px;
   }
 
   .wallpaper-grid {
     grid-template-columns: 1fr;
+
     gap: 12px;
   }
 }
 
-/* Dark */
+
+/* ================================
+   Dark
+================================ */
 
 @media (prefers-color-scheme: dark) {
   body {
@@ -219,16 +257,16 @@ button {
     background:
       radial-gradient(
         circle at 50% -20%,
-        rgba(255, 255, 255, 0.06),
-        transparent 45%
+        rgba(255, 255, 255, 0.055),
+        transparent 42%
       ),
       #101010;
   }
 
   .site-header {
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.055);
 
-    background: rgba(16, 16, 16, 0.78);
+    background: rgba(16, 16, 16, 0.72);
   }
 
   .brand-icon {
