@@ -12,6 +12,7 @@
 
       <img
         class="wallpaper-image"
+        :class="{ loaded: imageLoaded }"
         :src="item.preview || item.image"
         :alt="item.title || item.copyright || item.date"
         loading="lazy"
@@ -167,10 +168,28 @@ function formatDate(date) {
     filter 0.5s ease;
 }
 
-.wallpaper-image[src] {
-  opacity: 1;
+.wallpaper-image {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  opacity: 0;
+
+  transform: scale(1.01);
+
+  transition:
+    opacity 0.6s ease,
+    transform 0.8s cubic-bezier(.2,.8,.2,1),
+    filter 0.5s ease;
 }
 
+.wallpaper-image.loaded {
+  opacity: 1;
+}
 .wallpaper-card:hover .wallpaper-image {
   transform: scale(1.055);
   filter: brightness(1.06);

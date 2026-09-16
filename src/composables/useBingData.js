@@ -1,21 +1,67 @@
 import { ref } from 'vue'
-import { currentMonth, monthKey, pad2, previousMonth } from '../utils/date'
 
-const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/chendada00/bing-data/main'
-const DATA_BASE_URL = (import.meta.env.VITE_DATA_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, '')
+import {
+  currentMonth,
+  monthKey,
+  pad2,
+  previousMonth
+} from '../utils/date'
+
+const DEFAULT_BASE_URL =
+  'https://raw.githubusercontent.com/chendada00/bing-data/main'
+
+const DATA_BASE_URL = (
+  import.meta.env.VITE_DATA_BASE_URL ||
+  DEFAULT_BASE_URL
+).replace(/\/$/, '')
+
 const MAX_EMPTY_MONTHS = 3
 
 function normalizeItem(item) {
+  const image =
+    item.image ||
+    item.sourceImage ||
+    ''
+
+  const preview =
+    item.preview ||
+    item.image ||
+    ''
+
   return {
     ...item,
+
     date: item.date || '',
-    title: item.title || 'Bing Wallpaper',
-    description: item.description || item.copyright || '',
-    copyright: item.copyright || '',
-    image: item.image || item.sourceImage || '',
-    preview: item.preview || item.image || item.sourceImage || '',
-    base64: item.base64 || '',
-    color: item.color || {},
+
+    title:
+      item.title ||
+      'Bing Wallpaper',
+
+    description:
+      item.description ||
+      item.copyright ||
+      '',
+
+    copyright:
+      item.copyright ||
+      '',
+
+    copyrightLink:
+      item.copyrightLink ||
+      item.copyrightlink ||
+      '',
+
+    image,
+
+    preview,
+
+    base64:
+      item.base64 ||
+      '',
+
+    color:
+      item.color ||
+      {}
   }
 }
 
@@ -25,25 +71,59 @@ export function useBingData() {
   const initialLoading = ref(true)
   const error = ref('')
   const noMore = ref(false)
+
   const loadedMonths = new Set()
+
   let cursor = null
   let emptyMonths = 0
 
   async function fetchMonth(year, month) {
     const key = monthKey(year, month)
-    if (loadedMonths.has(key)) return { items: [], exists: true }
+
+    if (loadedMonths.has(key)) {
+      return {
+        items: [],
+        exists: true
+      }
+    }
 
     loadedMonths.add(key)
-    const url = `${DATA_BASE_URL}/data/${year}/${pad2(month)}.json`
+
+    const url =
+      `${DATA_BASE_URL}/data/${year}/${pad2(month)}.json`
 
     try {
-      const response = await fetch(url, { cache: 'no-cache' })
-      if (response.status === 404) return { items: [], exists: false }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const response = await fetch(
+        url,
+        {
+          cache: 'no-cache'
+        }
+      )
+
+      if (response.status === 404) {
+        return {
+          items: [],
+          exists: false
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}`
+        )
+      }
 
       const data = await response.json()
-      const monthItems = Array.isArray(data.items) ? data.items.map(normalizeItem) : []
-      return { items: monthItems, exists: true }
+
+      const monthItems =
+        Array.isArray(data.items)
+          ? data.items.map(normalizeItem)
+          : []
+
+      return {
+        items: monthItems,
+        exists: true
+      }
     } catch (err) {
       loadedMonths.delete(key)
       throw err
@@ -51,17 +131,42 @@ export function useBingData() {
   }
 
   function appendUnique(newItems) {
-    const existing = new Set(items.value.map((item) => item.date))
-    const unique = newItems
-      .filter((item) => item.date && !existing.has(item.date))
-      .sort((a, b) => b.date.localeCompare(a.date))
+    const existingDates =
+      new Set(
+        items.value.map(
+          item => item.date
+        )
+      )
+
+    const unique =
+      newItems
+        .filter(item => {
+          return (
+            item.date &&
+            !existingDates.has(item.date)
+          )
+        })
+        .sort((a, b) => {
+          return b.date.localeCompare(a.date)
+        })
+
     items.value.push(...unique)
-    items.value.sort((a, b) => b.date.localeCompare(a.date))
+
+    items.value.sort((a, b) => {
+      return b.date.localeCompare(a.date)
+    })
+
     return unique.length
   }
 
   async function loadNextMonth() {
-    if (loading.value || noMore.value) return false
+    if (
+      loading.value ||
+      noMore.value ||
+      !cursor
+    ) {
+      return false
+    }
 
     loading.value = true
     error.value = ''
@@ -70,13 +175,27 @@ export function useBingData() {
       let found = false
       let checked = 0
 
-      while (!found && checked < MAX_EMPTY_MONTHS) {
-        const result = await fetchMonth(cursor.year, cursor.month)
-        cursor = previousMonth(cursor.year, cursor.month)
+      while (
+        !found &&
+        checked < MAX_EMPTY_MONTHS
+      ) {
+        const result =
+          await fetchMonth(
+            cursor.year,
+            cursor.month
+          )
+
+        cursor =
+          previousMonth(
+            cursor.year,
+            cursor.month
+          )
+
         checked += 1
 
         if (result.items.length > 0) {
           appendUnique(result.items)
+
           found = true
           emptyMonths = 0
         } else {
@@ -84,13 +203,23 @@ export function useBingData() {
         }
       }
 
-      if (!found && emptyMonths >= MAX_EMPTY_MONTHS) {
+      if (
+        !found &&
+        emptyMonths >= MAX_EMPTY_MONTHS
+      ) {
         noMore.value = true
       }
 
       return found
     } catch (err) {
-      error.value = '历史壁纸加载失败，请稍后重试。'
+      console.error(
+        '加载历史壁纸失败:',
+        err
+      )
+
+      error.value =
+        '历史壁纸加载失败，请稍后重试。'
+
       return false
     } finally {
       loading.value = false
@@ -98,12 +227,24 @@ export function useBingData() {
   }
 
   async function loadInitial() {
-    if (loading.value || items.value.length) return
-    const now = currentMonth()
-    cursor = now
+    if (
+      loading.value ||
+      items.value.length > 0
+    ) {
+      return
+    }
+
+    cursor = currentMonth()
+
     initialLoading.value = true
-    await loadNextMonth()
-    initialLoading.value = false
+    noMore.value = false
+    emptyMonths = 0
+
+    try {
+      await loadNextMonth()
+    } finally {
+      initialLoading.value = false
+    }
   }
 
   async function retry() {
@@ -120,6 +261,6 @@ export function useBingData() {
     loadInitial,
     loadNextMonth,
     retry,
-    dataBaseUrl: DATA_BASE_URL,
+    dataBaseUrl: DATA_BASE_URL
   }
 }

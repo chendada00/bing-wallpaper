@@ -3,18 +3,18 @@
     <header class="site-header">
       <div class="header-inner">
         <div class="brand">
-          <div class="brand-icon">
-            B
-          </div>
+          <div class="brand-icon">B</div>
 
           <div class="brand-text">
             <div class="brand-title">Bing Wallpaper</div>
-            <div class="brand-subtitle">Every day, a new view</div>
+            <div class="brand-subtitle">
+              Every day, a new view
+            </div>
           </div>
         </div>
 
         <div class="header-info">
-          <span>{{ totalCount }} wallpapers</span>
+          {{ items.length }} wallpapers
         </div>
       </div>
     </header>
@@ -24,13 +24,14 @@
         <div>
           <div class="eyebrow">MICROSOFT BING</div>
           <h1>Daily Wallpapers</h1>
-          <p>
-            每一张壁纸，都记录着一天的风景。
-          </p>
+          <p>每一张壁纸，都记录着一天的风景。</p>
         </div>
       </section>
 
-      <section class="wallpaper-grid">
+      <section
+        v-if="items.length > 0"
+        class="wallpaper-grid"
+      >
         <WallpaperCard
           v-for="item in items"
           :key="item.date"
@@ -39,10 +40,23 @@
         />
       </section>
 
-      <LoadingState v-if="loading" />
+      <LoadingState
+        v-if="initialLoading || loading"
+      />
+
+      <div
+        v-if="error"
+        class="error-state"
+      >
+        {{ error }}
+
+        <button @click="retry">
+          重试
+        </button>
+      </div>
 
       <EndState
-        v-if="!loading && finished"
+        v-if="!loading && !initialLoading && noMore"
       />
 
       <div
@@ -62,26 +76,40 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref
+} from 'vue'
+
 import WallpaperCard from './components/WallpaperCard.vue'
 import ImageViewer from './components/ImageViewer.vue'
 import LoadingState from './components/LoadingState.vue'
 import EndState from './components/EndState.vue'
+
 import { useBingData } from './composables/useBingData'
 
 const {
   items,
   loading,
-  finished,
-  loadMore,
-  init
+  initialLoading,
+  error,
+  noMore,
+  loadInitial,
+  loadNextMonth,
+  retry
 } = useBingData()
 
 const viewerVisible = ref(false)
 const currentItem = ref(null)
 const loadMoreTrigger = ref(null)
 
-const totalCount = computed(() => items.value.length)
+let observer = null
+
+const totalCount = computed(() => {
+  return items.value.length
+})
 
 function openViewer(item) {
   currentItem.value = item
@@ -96,23 +124,32 @@ function closeViewer() {
 }
 
 function changeViewer(item) {
-  if (!item) return
-  currentItem.value = item
+  if (item) {
+    currentItem.value = item
+  }
+}
+
+async function handleLoadMore(entries) {
+  if (!entries[0]?.isIntersecting) {
+    return
+  }
+
+  if (loading.value || initialLoading.value || noMore.value) {
+    return
+  }
+
+  await loadNextMonth()
 }
 
 onMounted(async () => {
-  await init()
+  await loadInitial()
 
-  if (!loadMoreTrigger.value) return
+  if (!loadMoreTrigger.value) {
+    return
+  }
 
-  const observer = new IntersectionObserver(
-    async entries => {
-      if (!entries[0].isIntersecting) return
-
-      if (!loading.value && !finished.value) {
-        await loadMore()
-      }
-    },
+  observer = new IntersectionObserver(
+    handleLoadMore,
     {
       rootMargin: '800px 0px'
     }
@@ -120,4 +157,29 @@ onMounted(async () => {
 
   observer.observe(loadMoreTrigger.value)
 })
+
+onBeforeUnmount(() => {
+  if (observer) {
+    observer.disconnect()
+  }
+
+  document.body.style.overflow = ''
+})
 </script>
+
+<style scoped>
+.error-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+.error-state button {
+  margin-left: 10px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+</style>
