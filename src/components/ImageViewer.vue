@@ -339,9 +339,6 @@ watch(
  * displayImage = 高清图
  */
 function loadCurrentImage() {
-  /*
-   * 清理上一张图片的预加载对象
-   */
   if (preloadImage) {
     preloadImage.onload = null
     preloadImage.onerror = null
@@ -349,55 +346,49 @@ function loadCurrentImage() {
   }
 
   copied.value = false
-
   highResLoaded.value = false
-
   imageError.value = false
 
-  /*
-   * 第一时间显示 Base64
-   */
   displayImage.value = placeholderImage.value
 
-  /*
-   * 没有高清图就不继续加载
-   */
   if (!props.item?.image) {
     imageLoading.value = false
     return
   }
 
-  /*
-   * 有高清图，开始后台加载
-   */
   imageLoading.value = true
+
+  /*
+   * 保存本次加载任务对应的 URL。
+   *
+   * 不再比较 image.src，
+   * 因为国际化域名可能会被浏览器自动转换成
+   * Punycode，导致字符串比较失败。
+   */
+  const imageUrl = props.item.image
+  const imageDate = props.item.date
 
   const image = new Image()
 
   preloadImage = image
 
-  /*
-   * 防止浏览器缓存导致部分情况下无法正常处理
-   *
-   * 不在 URL 后面强行加时间戳，
-   * 避免破坏 GitHub Raw 的缓存。
-   */
   image.onload = () => {
     /*
-     * 确认当前还是这一张图片
+     * 如果用户已经切换到了另一张图片，
+     * 忽略当前这次旧图片的加载结果。
      */
     if (
-      props.item?.image !== image.src
+      props.item?.date !== imageDate ||
+      props.item?.image !== imageUrl
     ) {
       return
     }
 
     /*
-     * 高清图已经完整加载成功
-     *
-     * 现在才替换真正显示的图片。
+     * 高清图已经完整加载成功，
+     * 现在才切换显示。
      */
-    displayImage.value = props.item.image
+    displayImage.value = imageUrl
 
     highResLoaded.value = true
 
@@ -408,10 +399,16 @@ function loadCurrentImage() {
 
   image.onerror = () => {
     /*
-     * 高清图加载失败
-     *
-     * 不影响 Base64。
+     * 如果已经切换到了其他图片，
+     * 不处理旧图片的错误。
      */
+    if (
+      props.item?.date !== imageDate ||
+      props.item?.image !== imageUrl
+    ) {
+      return
+    }
+
     imageLoading.value = false
 
     highResLoaded.value = false
@@ -419,10 +416,7 @@ function loadCurrentImage() {
     imageError.value = true
   }
 
-  /*
-   * 开始加载高清图
-   */
-  image.src = props.item.image
+  image.src = imageUrl
 }
 
 /*

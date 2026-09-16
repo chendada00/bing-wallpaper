@@ -229,27 +229,57 @@ onBeforeUnmount(() => {
 .header-links a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 7px;
+
+  height: 34px;
+  padding: 0 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 9px;
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.035);
+
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.08);
+
   text-decoration: none;
-  font-size: 11px;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
   transition:
     color 0.2s ease,
     background 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s ease;
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .header-links a:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+
+  background: rgba(255, 255, 255, 0.14);
+
+  border-color: rgba(255, 255, 255, 0.28);
+
   transform: translateY(-1px);
+
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.header-links svg {
+  width: 15px;
+  height: 15px;
+
+  fill: currentColor;
+
+  opacity: 0.95;
+
+  flex-shrink: 0;
 }
 
 .header-links svg {
