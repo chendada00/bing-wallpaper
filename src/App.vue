@@ -22,9 +22,9 @@
     <main class="main-content">
       <section class="intro">
         <div>
-          <div class="eyebrow">MICROSOFT BING</div>
-          <h1>Daily Wallpapers</h1>
-          <p>每一张壁纸，都记录着一天的风景。</p>
+          <div class="eyebrow">伴随光影</div>
+          <h1>A collection of beautiful moments.</h1>
+          <p>每日一景，长久珍藏。</p>
         </div>
       </section>
 

@@ -749,11 +749,9 @@ onBeforeUnmount(() => {
 .viewer-image-wrapper {
   position: relative;
 
-  width: 100%;
+  width: min(1200px, 100%);
 
-  max-width: 1200px;
-
-  max-height: calc(100vh - 260px);
+  aspect-ratio: 16 / 9;
 
   display: flex;
 
@@ -761,11 +759,11 @@ onBeforeUnmount(() => {
 
   justify-content: center;
 
-  min-height: 100px;
-
   overflow: hidden;
 
   border-radius: 14px;
+
+  flex-shrink: 0;
 }
 
 /*
@@ -774,13 +772,9 @@ onBeforeUnmount(() => {
 .viewer-image {
   display: block;
 
-  max-width: 100%;
+  width: 100%;
 
-  max-height: calc(100vh - 260px);
-
-  width: auto;
-
-  height: auto;
+  height: 100%;
 
   object-fit: contain;
 
