@@ -1,4 +1,4 @@
-```vue
+
 <template>
   <Teleport to="body">
     <div
@@ -66,6 +66,10 @@
             class="viewer-loading"
           >
             <span class="viewer-spinner" />
+
+            <span class="viewer-loading-text">
+              正在加载高清壁纸...
+            </span>
           </div>
 
           <!-- 高清图加载失败 -->
@@ -827,39 +831,77 @@ onBeforeUnmount(() => {
 /*
  * Loading
  *
- * 只在右下角显示，
- * 不遮挡 Base64。
+ * 在图片区域正中央显示，
+ * Spinner 下方显示加载提示。
  */
 .viewer-loading {
   position: absolute;
 
-  right: 16px;
-
-  bottom: 16px;
+  inset: 0;
 
   z-index: 5;
 
-  width: 34px;
-
-  height: 34px;
-
   display: flex;
+
+  flex-direction: column;
 
   align-items: center;
 
   justify-content: center;
 
+  pointer-events: none;
+}
+
+/*
+ * Spinner
+ */
+.viewer-spinner {
+  width: 18px;
+
+  height: 18px;
+
+  flex-shrink: 0;
+
+  border: 2px solid
+    rgba(255, 255, 255, 0.24);
+
+  border-top-color: #fff;
+
   border-radius: 50%;
 
-  background:
-    rgba(0, 0, 0, 0.42);
+  animation:
+    spin 0.8s linear infinite;
+}
 
-  backdrop-filter: blur(8px);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-  -webkit-backdrop-filter: blur(8px);
+/*
+ * Loading 文字
+ *
+ * 位于 Spinner 正下方。
+ */
+.viewer-loading-text {
+  margin-top: 10px;
 
-  box-shadow:
-    0 5px 20px rgba(0, 0, 0, 0.22);
+  color:
+    rgba(255, 255, 255, 0.68);
+
+  font-size: 12px;
+
+  font-weight: 400;
+
+  line-height: 1.4;
+
+  letter-spacing: 0.03em;
+
+  text-align: center;
+
+  text-shadow:
+    0 1px 5px rgba(0, 0, 0, 0.4);
 }
 
 /*
@@ -1414,15 +1456,26 @@ onBeforeUnmount(() => {
 
     font-size: 12px;
   }
-
   .viewer-loading {
-    right: 10px;
+    inset: 0;
 
-    bottom: 10px;
+    width: auto;
 
-    width: 30px;
+    height: auto;
 
-    height: 30px;
+    background: transparent;
+
+    backdrop-filter: none;
+
+    -webkit-backdrop-filter: none;
+
+    box-shadow: none;
+  }
+
+  .viewer-loading-text {
+    margin-top: 8px;
+
+    font-size: 11px;
   }
 
   .viewer-spinner {
@@ -1432,4 +1485,4 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-```
+
