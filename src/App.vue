@@ -223,31 +223,35 @@ onBeforeUnmount(() => {
 .header-links {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .header-links a {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   gap: 7px;
 
   height: 34px;
-  padding: 0 12px;
+  padding: 0 13px;
 
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 9px;
 
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.08);
+  /* 强制使用深色文字 */
+  color: #1f2937 !important;
 
-  text-decoration: none;
+  /* 浅色半透明背景 */
+  background: rgba(255, 255, 255, 0.92) !important;
+
+  text-decoration: none !important;
 
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1;
 
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 4px 14px rgba(0, 0, 0, 0.15);
 
   transition:
     color 0.2s ease,
@@ -258,52 +262,39 @@ onBeforeUnmount(() => {
 }
 
 .header-links a:hover {
-  color: #ffffff;
-
-  background: rgba(255, 255, 255, 0.14);
-
-  border-color: rgba(255, 255, 255, 0.28);
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.75);
 
   transform: translateY(-1px);
 
   box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.header-links a:visited {
+  color: #1f2937 !important;
+}
+
+.header-links a:active {
+  color: #111827 !important;
 }
 
 .header-links svg {
   width: 15px;
   height: 15px;
 
-  fill: currentColor;
+  fill: currentColor !important;
 
-  opacity: 0.95;
-
+  opacity: 1;
   flex-shrink: 0;
 }
 
-.header-links svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-  flex-shrink: 0;
+.header-links a span {
+  color: inherit !important;
 }
 
-.error-state {
-  padding: 40px 20px;
-  text-align: center;
-  color: #999;
-  font-size: 13px;
-}
-
-.error-state button {
-  margin-left: 10px;
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
+/* 手机端只保留图标 */
 @media (max-width: 640px) {
   .header-right {
     gap: 8px;
@@ -314,13 +305,12 @@ onBeforeUnmount(() => {
   }
 
   .header-links {
-    gap: 4px;
+    gap: 5px;
   }
 
   .header-links a {
-    width: 32px;
+    width: 34px;
     padding: 0;
-    justify-content: center;
   }
 
   .header-links a span {
