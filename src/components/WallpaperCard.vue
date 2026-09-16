@@ -601,3 +601,4 @@ function formatDate(date) {
     display: none;
   }
 }
+</style>
