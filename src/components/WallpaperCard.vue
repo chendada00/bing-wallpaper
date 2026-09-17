@@ -14,11 +14,13 @@
 
       <!-- 图片 -->
       <img
+        v-if="shouldLoad"
         class="wallpaper-image"
         :class="{ loaded: imageLoaded }"
         :src="item.preview || item.image"
         :alt="item.title || item.copyright || item.date"
-        loading="lazy"
+        loading="eager"
+        decoding="async"
         @load="handleLoaded"
         @error="handleError"
       />
@@ -78,10 +80,22 @@ const props = defineProps({
   item: {
     type: Object,
     required: true
+  },
+
+  /**
+   * 是否允许开始加载真实图片
+   */
+  shouldLoad: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['click'])
+const emit = defineEmits([
+  'click',
+  'image-loaded',
+  'image-error'
+])
 
 const imageLoaded = ref(false)
 
@@ -112,10 +126,14 @@ const cardStyle = computed(() => {
 
 function handleLoaded() {
   imageLoaded.value = true
+
+  emit('image-loaded', props.item.date)
 }
 
 function handleError() {
   imageLoaded.value = false
+
+  emit('image-error', props.item.date)
 }
 
 function formatDate(date) {

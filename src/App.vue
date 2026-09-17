@@ -76,7 +76,10 @@
           v-for="item in items"
           :key="item.date"
           :item="item"
+          :should-load="imageLoadQueue.has(item.date)"
           @click="openViewer(item)"
+          @image-loaded="handleImageLoaded"
+          @image-error="handleImageError"
         />
       </section>
 
@@ -146,10 +149,68 @@ const currentItem = ref(null)
 const loadMoreTrigger = ref(null)
 
 let observer = null
+/**
+ * 同时允许加载的图片数量
+ */
+const IMAGE_CONCURRENCY = 6
 
+/**
+ * 当前允许开始加载的图片
+ */
+const imageLoadQueue = ref(new Set())
+
+/**
+ * 已经进入过加载队列的图片
+ *
+ * 防止同一张图片重复进入队列
+ */
+const startedImages = new Set()
+
+/**
+ * 当前正在加载中的图片
+ */
+const loadingImages = new Set()
 const totalCount = computed(() => {
   return items.value.length
 })
+
+
+function fillImageLoadQueue() {
+  while (
+    loadingImages.size < IMAGE_CONCURRENCY
+  ) {
+    const nextItem = items.value.find(item => {
+      return (
+        item?.date &&
+        !startedImages.has(item.date)
+      )
+    })
+
+    if (!nextItem) {
+      break
+    }
+
+    startedImages.add(nextItem.date)
+    loadingImages.add(nextItem.date)
+
+    imageLoadQueue.value = new Set([
+      ...imageLoadQueue.value,
+      nextItem.date
+    ])
+  }
+}
+
+function handleImageLoaded(date) {
+  loadingImages.delete(date)
+
+  fillImageLoadQueue()
+}
+
+function handleImageError(date) {
+  loadingImages.delete(date)
+
+  fillImageLoadQueue()
+}
 
 function openViewer(item) {
   currentItem.value = item
@@ -174,15 +235,24 @@ async function handleLoadMore(entries) {
     return
   }
 
-  if (loading.value || initialLoading.value || noMore.value) {
+  if (
+    loading.value ||
+    initialLoading.value ||
+    noMore.value
+  ) {
     return
   }
 
   await loadNextMonth()
+
+  fillImageLoadQueue()
 }
 
 onMounted(async () => {
   await loadInitial()
+
+  // 首次加载完成后启动图片加载队列
+  fillImageLoadQueue()
 
   if (!loadMoreTrigger.value) {
     return
