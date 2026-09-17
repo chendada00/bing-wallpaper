@@ -323,8 +323,9 @@ onBeforeUnmount(() => {
 }
 
 .header-info {
-  color: rgba(255, 255, 255, 0.45);
+  color: #555 !important;
   font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
 }
 

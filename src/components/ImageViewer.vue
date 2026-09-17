@@ -55,18 +55,20 @@
 
           <!-- ==================== 图片 ==================== -->
           <div class="viewer-image-wrapper">
+            <!-- Base64 模糊占位图：始终位于底层 -->
             <img
-              v-if="displayImage"
-              :key="displayImage"
-              :src="displayImage"
+              v-if="placeholderImage"
+              :src="placeholderImage"
               :alt="item?.title || item?.date"
-              class="viewer-image"
-              :class="{
-                'is-placeholder': !highResLoaded,
-                'is-high-res': highResLoaded
-              }"
-              @load="handleImageLoad"
-              @error="handleDisplayError"
+              class="viewer-image viewer-placeholder"
+            >
+
+            <!-- 高清图：仅在完整加载完成后显示 -->
+            <img
+              v-if="highResLoaded && item?.image"
+              :src="item.image"
+              :alt="item?.title || item?.date"
+              class="viewer-image viewer-high-res"
             >
 
             <!-- 高清图加载动画 -->
@@ -253,6 +255,16 @@ const imageLoading = ref(false)
  */
 const imageError = ref(false)
 
+/**
+ * 当前高清图预加载对象
+ */
+let preloadImage = null
+
+/**
+ * 防止快速切换图片时旧请求影响当前状态
+ */
+let loadToken = 0
+
 /*
  * 下载状态
  */
@@ -423,112 +435,92 @@ const colorBackgroundStyle = computed(() => {
   }
 })
 
-/*
+/**
  * 初始化当前图片
  *
- * 不再使用 new Image()。
+ * 加载流程：
  *
- * 直接让真正的 img 元素负责加载。
+ * 1. 立即显示 Base64
+ * 2. 后台预加载高清图
+ * 3. 高清图完整加载后，再显示高清图
  */
 function loadCurrentImage() {
-  /*
-   * 重置复制状态
-   */
-  copiedColor.value = ''
+  // 使之前的预加载请求失效
+  loadToken += 1
 
-  /*
-   * 重置图片状态
-   */
+  const currentToken = loadToken
+
+  // 取消旧图片的事件回调
+  if (preloadImage) {
+    preloadImage.onload = null
+    preloadImage.onerror = null
+    preloadImage = null
+  }
+
+  // 重置状态
+  copiedColor.value = ''
   highResLoaded.value = false
   imageLoading.value = false
   imageError.value = false
 
-  /*
-   * 先显示 Base64
-   */
-  displayImage.value =
-    placeholderImage.value
-
-  /*
-   * 没有高清图
-   */
+  // 没有图片数据
   if (!props.item?.image) {
     return
   }
 
-  /*
-   * 进入高清图加载状态
-   */
+  // 先显示 Base64 占位图
   imageLoading.value = true
 
-  /*
-   * 下一帧再切换高清图。
-   *
-   * 确保 Base64 先渲染出来。
-   */
-  requestAnimationFrame(() => {
-    /*
-     * 防止用户快速切换图片后，
-     * 旧的 requestAnimationFrame 修改新图片状态。
-     */
-    if (!props.item?.image) {
+  const imageUrl = props.item.image
+  const imageDate = props.item.date
+
+  // 创建独立的高清图预加载对象
+  const image = new Image()
+
+  preloadImage = image
+
+  image.onload = () => {
+    // 防止旧图片请求影响当前图片
+    if (
+      currentToken !== loadToken ||
+      props.item?.date !== imageDate ||
+      props.item?.image !== imageUrl
+    ) {
       return
     }
 
-    displayImage.value =
-      props.item.image
-  })
-}
-
-/*
- * 图片加载成功
- */
-function handleImageLoad() {
-  if (!props.item?.image) {
-    return
-  }
-
-  /*
-   * 只有当前显示的是高清图时，
-   * 才认为高清图加载完成。
-   */
-  if (
-    displayImage.value ===
-    props.item.image
-  ) {
+    /*
+     * onload 触发时，高清图已经完整加载完成。
+     * 这时才让高清图进入页面显示。
+     */
     highResLoaded.value = true
     imageLoading.value = false
     imageError.value = false
+
+    preloadImage = null
   }
+
+  image.onerror = () => {
+    // 防止旧图片请求影响当前图片
+    if (
+      currentToken !== loadToken ||
+      props.item?.date !== imageDate ||
+      props.item?.image !== imageUrl
+    ) {
+      return
+    }
+
+    highResLoaded.value = false
+    imageLoading.value = false
+    imageError.value = true
+
+    preloadImage = null
+  }
+
+  // 开始后台加载高清图
+  image.src = imageUrl
 }
 
-/*
- * 图片加载失败
- */
-function handleDisplayError() {
-  /*
-   * 只有高清图失败才进入错误状态。
-   */
-  if (
-    displayImage.value !==
-    props.item?.image
-  ) {
-    return
-  }
-
-  imageLoading.value = false
-  highResLoaded.value = false
-  imageError.value = true
-
-  /*
-   * 如果存在 Base64，
-   * 回退到 Base64。
-   */
-  if (placeholderImage.value) {
-    displayImage.value =
-      placeholderImage.value
-  }
-}
 
 /*
  * 关闭查看器
@@ -801,6 +793,14 @@ onBeforeUnmount(() => {
     'keydown',
     handleKeydown
   )
+
+  loadToken += 1
+
+  if (preloadImage) {
+    preloadImage.onload = null
+    preloadImage.onerror = null
+    preloadImage = null
+  }
 })
 </script>
 
@@ -1789,5 +1789,72 @@ onBeforeUnmount(() => {
 
     height: 16px;
   }
+}
+/* =========================================================
+ * 图片双层加载
+ * ========================================================= */
+
+.viewer-image-wrapper {
+  position: relative;
+  width: min(1200px, 100%);
+  aspect-ratio: 16 / 9;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+/*
+ * 两张图片叠放在同一个容器中
+ */
+.viewer-image {
+  position: absolute;
+  inset: 0;
+
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
+
+/*
+ * Base64 模糊图始终作为底层
+ */
+.viewer-placeholder {
+  z-index: 1;
+}
+
+/*
+ * 高清图在完整加载后显示
+ */
+.viewer-high-res {
+  z-index: 2;
+
+  animation: high-res-fade-in 0.25s ease-out;
+}
+
+/*
+ * 高清图完整加载后淡入
+ */
+@keyframes high-res-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * 加载动画位于图片上层
+ */
+.viewer-loading {
+  z-index: 5;
 }
 </style>
