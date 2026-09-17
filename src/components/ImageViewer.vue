@@ -2,20 +2,21 @@
 <template>
   <Teleport to="body">
     <div
+      v-if="visible"
       class="viewer"
       :style="viewerStyle"
       @click.self="close"
     >
-      <!-- 主色调背景 -->
+      <!-- 主色调氛围背景：固定，不随内容滚动 -->
       <div
         class="viewer-color-bg"
         :style="colorBackgroundStyle"
       />
 
-      <!-- 深色遮罩 -->
+      <!-- 深色遮罩：固定 -->
       <div class="viewer-overlay" />
 
-      <!-- 关闭 -->
+      <!-- 关闭按钮：固定 -->
       <button
         class="viewer-close"
         aria-label="关闭"
@@ -24,7 +25,7 @@
         ×
       </button>
 
-      <!-- 上一张 -->
+      <!-- 上一张：固定 -->
       <button
         v-if="hasPrevious"
         class="viewer-nav viewer-prev"
@@ -34,7 +35,7 @@
         ‹
       </button>
 
-      <!-- 下一张 -->
+      <!-- 下一张：固定 -->
       <button
         v-if="hasNext"
         class="viewer-nav viewer-next"
@@ -44,113 +45,150 @@
         ›
       </button>
 
-      <div class="viewer-content">
-        <!-- 图片 -->
-        <div class="viewer-image-wrapper">
-          <img
-            v-if="displayImage"
-            :key="displayImage"
-            :src="displayImage"
-            :alt="item?.title || item?.date"
-            class="viewer-image"
-            :class="{
-              'is-placeholder': !highResLoaded,
-              'is-high-res': highResLoaded
-            }"
-            @error="handleDisplayError"
-          >
+      <!--
+       * 唯一滚动区域
+       *
+       * 背景、关闭按钮、左右按钮都不会跟着滚动。
+       -->
+      <div class="viewer-scroll">
+        <div class="viewer-content">
 
-          <!-- 高清图加载动画 -->
-          <div
-            v-if="imageLoading"
-            class="viewer-loading"
-          >
-            <span class="viewer-spinner" />
-
-            <span class="viewer-loading-text">
-              正在加载高清壁纸...
-            </span>
-          </div>
-
-          <!-- 高清图加载失败 -->
-          <div
-            v-if="imageError"
-            class="viewer-error"
-          >
-            高清图片加载失败
-          </div>
-        </div>
-
-        <!-- 图片信息 -->
-        <div class="viewer-info">
-          <div class="viewer-meta">
-            <span class="viewer-date">
-              {{ item?.date }}
-            </span>
-
-            <span
-              v-if="currentIndex >= 0"
-              class="viewer-counter"
+          <!-- ==================== 图片 ==================== -->
+          <div class="viewer-image-wrapper">
+            <img
+              v-if="displayImage"
+              :key="displayImage"
+              :src="displayImage"
+              :alt="item?.title || item?.date"
+              class="viewer-image"
+              :class="{
+                'is-placeholder': !highResLoaded,
+                'is-high-res': highResLoaded
+              }"
+              @load="handleImageLoad"
+              @error="handleDisplayError"
             >
-              {{ currentIndex + 1 }} / {{ items.length }}
-            </span>
+
+            <!-- 高清图加载动画 -->
+            <div
+              v-if="imageLoading"
+              class="viewer-loading"
+            >
+              <span class="viewer-spinner" />
+
+              <span class="viewer-loading-text">
+                正在加载高清壁纸...
+              </span>
+            </div>
+
+            <!-- 高清图加载失败 -->
+            <div
+              v-if="imageError"
+              class="viewer-error"
+            >
+              高清图片加载失败
+            </div>
           </div>
 
-          <h2>
-            {{ item?.title || 'Bing Wallpaper' }}
-          </h2>
+          <!-- ==================== 图片信息 ==================== -->
+          <div class="viewer-info">
 
-          <p>
-            {{ item?.description || item?.copyright || '' }}
-          </p>
-
-          <!-- 主色调 -->
-          <button
-            v-if="primaryColor"
-            class="viewer-color"
-            :class="{ copied: copied }"
-            :title="copied ? '已复制' : '点击复制颜色值'"
-            @click="copyColor"
-          >
-            <span
-              class="color-preview"
-              :style="{ backgroundColor: primaryColor }"
-            />
-
-            <span class="color-name">
-              {{ primaryColor.toUpperCase() }}
-            </span>
-
-            <span class="color-copy">
-              {{ copied ? '✓ 已复制' : '复制' }}
-            </span>
-          </button>
-
-          <!-- 操作 -->
-          <div class="viewer-actions">
-            <button
-              class="download-button"
-              :disabled="downloading"
-              @click="downloadImage"
-            >
-              <span v-if="downloading">
-                下载中...
+            <!-- 日期 + 序号 -->
+            <div class="viewer-meta">
+              <span class="viewer-date">
+                {{ item?.date }}
               </span>
 
-              <span v-else>
-                下载原图
+              <span
+                v-if="currentIndex >= 0"
+                class="viewer-counter"
+              >
+                {{ currentIndex + 1 }} / {{ items.length }}
               </span>
-            </button>
+            </div>
 
-            <a
-              v-if="item?.image"
-              class="open-button"
-              :href="item.image"
-              target="_blank"
-              rel="noopener noreferrer"
+            <!-- 标题 -->
+            <h2>
+              {{ item?.title || 'Bing Wallpaper' }}
+            </h2>
+
+            <!-- 描述 -->
+            <p>
+              {{ item?.description || item?.copyright || '' }}
+            </p>
+
+            <!-- ==================== 主色调 ==================== -->
+            <div
+              v-if="colorPalette.length"
+              class="viewer-colors"
             >
-              打开原图
-            </a>
+              <div class="viewer-colors-title">
+                主色调
+              </div>
+
+              <div class="viewer-color-list">
+                <button
+                  v-for="color in colorPalette"
+                  :key="color"
+                  class="viewer-color"
+                  :class="{
+                    copied: copiedColor === color
+                  }"
+                  :title="`复制 ${color}`"
+                  @click="copyColor(color)"
+                >
+                  <span
+                    class="color-preview"
+                    :style="{
+                      backgroundColor: color
+                    }"
+                  />
+
+                  <span class="color-name">
+                    {{ color.toUpperCase() }}
+                  </span>
+
+                  <span class="color-copy">
+                    {{
+                      copiedColor === color
+                        ? '✓'
+                        : '复制'
+                    }}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ==================== 操作 ==================== -->
+            <div class="viewer-actions">
+
+              <!-- 下载 -->
+              <button
+                class="download-button"
+                :disabled="downloading"
+                @click="downloadImage"
+              >
+                <span v-if="downloading">
+                  下载中...
+                </span>
+
+                <span v-else>
+                  下载原图
+                </span>
+              </button>
+
+              <!-- 打开原图 -->
+              <a
+                v-if="item?.image"
+                class="open-button"
+                :href="item.image"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                打开原图
+              </a>
+
+            </div>
           </div>
         </div>
       </div>
@@ -173,6 +211,11 @@ const props = defineProps({
     default: null
   },
 
+  visible: {
+    type: Boolean,
+    default: false
+  },
+
   items: {
     type: Array,
     default: () => []
@@ -185,25 +228,28 @@ const emit = defineEmits([
 ])
 
 /*
- * 当前真正显示的图片
+ * 当前显示的图片
  *
- * 切换时先设置成 Base64，
- * 高清图加载完成后再切换成高清图。
+ * 打开查看器：
+ *
+ * Base64
+ *   ↓
+ * 高清图
  */
 const displayImage = ref('')
 
 /*
- * 高清图是否加载完成
+ * 高清图是否已经加载完成
  */
 const highResLoaded = ref(false)
 
 /*
- * 高清图加载状态
+ * 高清图是否正在加载
  */
 const imageLoading = ref(false)
 
 /*
- * 高清图加载失败
+ * 高清图是否加载失败
  */
 const imageError = ref(false)
 
@@ -213,9 +259,9 @@ const imageError = ref(false)
 const downloading = ref(false)
 
 /*
- * 复制状态
+ * 当前复制成功的颜色
  */
-const copied = ref(false)
+const copiedColor = ref('')
 
 /*
  * 当前图片索引
@@ -230,10 +276,16 @@ const currentIndex = computed(() => {
   )
 })
 
+/*
+ * 是否存在上一张
+ */
 const hasPrevious = computed(() => {
   return currentIndex.value > 0
 })
 
+/*
+ * 是否存在下一张
+ */
 const hasNext = computed(() => {
   return (
     currentIndex.value >= 0 &&
@@ -242,207 +294,244 @@ const hasNext = computed(() => {
 })
 
 /*
- * Base64
+ * Base64 占位图
  */
 const placeholderImage = computed(() => {
   return props.item?.base64 || ''
 })
 
 /*
- * 主色调
+ * 主色调优先级
  */
-const primaryColor = computed(() => {
-  const color = props.item?.color
+const colorPriority = [
+  'Vibrant',
+  'LightVibrant',
+  'DarkVibrant',
+  'Muted',
+  'LightMuted',
+  'DarkMuted'
+]
 
-  if (!color) {
-    return ''
+/*
+ * 获取多个主色调
+ */
+const colorPalette = computed(() => {
+  const colors = props.item?.color || {}
+
+  const result = []
+
+  for (const key of colorPriority) {
+    const value = colors[key]
+
+    if (
+      typeof value !== 'string' ||
+      !/^#[0-9a-fA-F]{6}$/.test(value)
+    ) {
+      continue
+    }
+
+    const normalized = value.toUpperCase()
+
+    if (!result.includes(normalized)) {
+      result.push(normalized)
+    }
   }
 
-  return (
-    color.Vibrant ||
-    color.LightVibrant ||
-    color.Muted ||
-    color.DarkVibrant ||
-    color.LightMuted ||
-    color.DarkMuted ||
-    ''
-  )
+  return result
 })
+
+/*
+ * 第一个主色调
+ */
+const primaryColor = computed(() => {
+  return colorPalette.value[0] || ''
+})
+
+/*
+ * HEX 转 RGBA
+ */
+function hexToRgba(hex, alpha) {
+  const value = hex.replace('#', '')
+
+  const red = parseInt(
+    value.slice(0, 2),
+    16
+  )
+
+  const green = parseInt(
+    value.slice(2, 4),
+    16
+  )
+
+  const blue = parseInt(
+    value.slice(4, 6),
+    16
+  )
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+}
 
 /*
  * Viewer CSS 变量
  */
 const viewerStyle = computed(() => {
   return {
-    '--viewer-color': primaryColor.value || '#667085'
+    '--viewer-color':
+      primaryColor.value || '#667085'
   }
 })
 
 /*
- * 主色调背景
+ * 多主色调背景
  *
- * 只使用很低的透明度。
+ * 背景固定在整个查看器后面。
  */
 const colorBackgroundStyle = computed(() => {
-  if (!primaryColor.value) {
+  const colors = colorPalette.value
+
+  if (!colors.length) {
     return {
       opacity: '0'
     }
   }
 
+  const positions = [
+    ['18%', '16%'],
+    ['84%', '18%'],
+    ['78%', '84%'],
+    ['18%', '82%']
+  ]
+
+  const gradients = colors
+    .slice(0, 4)
+    .map((color, index) => {
+      const position = positions[index]
+
+      return `
+        radial-gradient(
+          circle at ${position[0]} ${position[1]},
+          ${hexToRgba(color, 0.62)} 0%,
+          ${hexToRgba(color, 0.24)} 30%,
+          transparent 68%
+        )
+      `
+    })
+
   return {
-    background: `
-      radial-gradient(
-        circle at 50% 40%,
-        ${primaryColor.value} 0%,
-        transparent 65%
-      )
-    `,
-    opacity: '0.16'
+    background: gradients.join(','),
+    opacity: '0.72'
   }
 })
 
 /*
- * 当前正在预加载的 Image 对象
+ * 初始化当前图片
  *
- * 切换图片的时候，如果上一张还没有加载完，
- * 可以取消它的事件引用。
- */
-let preloadImage = null
-
-/*
- * 初始化 / 切换图片
- */
-watch(
-  () => props.item,
-  () => {
-    loadCurrentImage()
-  },
-  {
-    immediate: true
-  }
-)
-
-/*
- * 加载当前图片
+ * 不再使用 new Image()。
  *
- * 核心逻辑：
- *
- * Base64
- *   ↓
- * 立即显示
- *   ↓
- * 后台加载高清图
- *   ↓
- * 高清图 onload
- *   ↓
- * displayImage = 高清图
+ * 直接让真正的 img 元素负责加载。
  */
 function loadCurrentImage() {
-  if (preloadImage) {
-    preloadImage.onload = null
-    preloadImage.onerror = null
-    preloadImage = null
-  }
+  /*
+   * 重置复制状态
+   */
+  copiedColor.value = ''
 
-  copied.value = false
+  /*
+   * 重置图片状态
+   */
   highResLoaded.value = false
+  imageLoading.value = false
   imageError.value = false
 
-  displayImage.value = placeholderImage.value
+  /*
+   * 先显示 Base64
+   */
+  displayImage.value =
+    placeholderImage.value
 
+  /*
+   * 没有高清图
+   */
   if (!props.item?.image) {
-    imageLoading.value = false
     return
   }
 
+  /*
+   * 进入高清图加载状态
+   */
   imageLoading.value = true
 
   /*
-   * 保存本次加载任务对应的 URL。
+   * 下一帧再切换高清图。
    *
-   * 不再比较 image.src，
-   * 因为国际化域名可能会被浏览器自动转换成
-   * Punycode，导致字符串比较失败。
+   * 确保 Base64 先渲染出来。
    */
-  const imageUrl = props.item.image
-  const imageDate = props.item.date
-
-  const image = new Image()
-
-  preloadImage = image
-
-  image.onload = () => {
+  requestAnimationFrame(() => {
     /*
-     * 如果用户已经切换到了另一张图片，
-     * 忽略当前这次旧图片的加载结果。
+     * 防止用户快速切换图片后，
+     * 旧的 requestAnimationFrame 修改新图片状态。
      */
-    if (
-      props.item?.date !== imageDate ||
-      props.item?.image !== imageUrl
-    ) {
+    if (!props.item?.image) {
       return
     }
 
-    /*
-     * 高清图已经完整加载成功，
-     * 现在才切换显示。
-     */
-    displayImage.value = imageUrl
-
-    highResLoaded.value = true
-
-    imageLoading.value = false
-
-    imageError.value = false
-  }
-
-  image.onerror = () => {
-    /*
-     * 如果已经切换到了其他图片，
-     * 不处理旧图片的错误。
-     */
-    if (
-      props.item?.date !== imageDate ||
-      props.item?.image !== imageUrl
-    ) {
-      return
-    }
-
-    imageLoading.value = false
-
-    highResLoaded.value = false
-
-    imageError.value = true
-  }
-
-  image.src = imageUrl
+    displayImage.value =
+      props.item.image
+  })
 }
 
 /*
- * 展示图片本身加载失败
+ * 图片加载成功
+ */
+function handleImageLoad() {
+  if (!props.item?.image) {
+    return
+  }
+
+  /*
+   * 只有当前显示的是高清图时，
+   * 才认为高清图加载完成。
+   */
+  if (
+    displayImage.value ===
+    props.item.image
+  ) {
+    highResLoaded.value = true
+    imageLoading.value = false
+    imageError.value = false
+  }
+}
+
+/*
+ * 图片加载失败
  */
 function handleDisplayError() {
   /*
-   * 如果已经是高清图，
-   * 出现错误时退回 Base64。
+   * 只有高清图失败才进入错误状态。
    */
   if (
-    highResLoaded.value &&
-    placeholderImage.value
+    displayImage.value !==
+    props.item?.image
   ) {
-    displayImage.value = placeholderImage.value
+    return
+  }
 
-    highResLoaded.value = false
+  imageLoading.value = false
+  highResLoaded.value = false
+  imageError.value = true
 
-    imageLoading.value = false
-
-    imageError.value = true
+  /*
+   * 如果存在 Base64，
+   * 回退到 Base64。
+   */
+  if (placeholderImage.value) {
+    displayImage.value =
+      placeholderImage.value
   }
 }
 
 /*
- * 关闭
+ * 关闭查看器
  */
 function close() {
   emit('close')
@@ -458,7 +547,9 @@ function previous() {
 
   emit(
     'change',
-    props.items[currentIndex.value - 1]
+    props.items[
+      currentIndex.value - 1
+    ]
   )
 }
 
@@ -472,7 +563,9 @@ function next() {
 
   emit(
     'change',
-    props.items[currentIndex.value + 1]
+    props.items[
+      currentIndex.value + 1
+    ]
   )
 }
 
@@ -480,17 +573,41 @@ function next() {
  * 键盘控制
  */
 function handleKeydown(event) {
+  /*
+   * 查看器关闭时不处理。
+   */
+  if (!props.visible) {
+    return
+  }
+
+  /*
+   * ESC
+   */
   if (event.key === 'Escape') {
+    event.preventDefault()
+
     close()
+
     return
   }
 
+  /*
+   * 左箭头
+   */
   if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+
     previous()
+
     return
   }
 
+  /*
+   * 右箭头
+   */
   if (event.key === 'ArrowRight') {
+    event.preventDefault()
+
     next()
   }
 }
@@ -498,57 +615,91 @@ function handleKeydown(event) {
 /*
  * 复制颜色
  */
-async function copyColor() {
-  if (!primaryColor.value) {
+async function copyColor(color) {
+  if (!color) {
     return
   }
 
-  const color = primaryColor.value.toUpperCase()
+  const value = color.toUpperCase()
 
+  /*
+   * 优先使用 Clipboard API
+   */
   try {
-    await navigator.clipboard.writeText(color)
+    await navigator.clipboard.writeText(value)
 
-    copied.value = true
+    copiedColor.value = value
 
     setTimeout(() => {
-      copied.value = false
+      if (
+        copiedColor.value === value
+      ) {
+        copiedColor.value = ''
+      }
     }, 1800)
+
+    return
   } catch (error) {
-    /*
-     * 兼容非 HTTPS / 部分旧浏览器
-     */
-    try {
-      const textarea = document.createElement('textarea')
+    console.warn(
+      'Clipboard API 复制失败，尝试兼容方案:',
+      error
+    )
+  }
 
-      textarea.value = color
+  /*
+   * 兼容方案
+   */
+  try {
+    const textarea =
+      document.createElement(
+        'textarea'
+      )
 
-      textarea.style.position = 'fixed'
+    textarea.value = value
 
-      textarea.style.left = '-9999px'
+    textarea.style.position =
+      'fixed'
 
-      textarea.style.top = '0'
+    textarea.style.left =
+      '-9999px'
 
-      document.body.appendChild(textarea)
+    textarea.style.top = '0'
 
-      textarea.focus()
+    document.body.appendChild(
+      textarea
+    )
 
-      textarea.select()
+    textarea.focus()
 
-      document.execCommand('copy')
+    textarea.select()
 
-      textarea.remove()
+    const success =
+      document.execCommand(
+        'copy'
+      )
 
-      copied.value = true
+    textarea.remove()
 
-      setTimeout(() => {
-        copied.value = false
-      }, 1800)
-    } catch (copyError) {
-      console.error(
-        '复制颜色失败:',
-        copyError
+    if (!success) {
+      throw new Error(
+        '复制操作失败'
       )
     }
+
+    copiedColor.value = value
+
+    setTimeout(() => {
+      if (
+        copiedColor.value === value
+      ) {
+        copiedColor.value = ''
+      }
+    }, 1800)
+  } catch (error) {
+    console.error(
+      '复制颜色失败:',
+      error
+    )
   }
 }
 
@@ -576,19 +727,25 @@ async function downloadImage() {
       )
     }
 
-    const blob = await response.blob()
+    const blob =
+      await response.blob()
 
-    const url = URL.createObjectURL(blob)
+    const url =
+      URL.createObjectURL(blob)
 
-    const link = document.createElement('a')
+    const link =
+      document.createElement('a')
 
     link.href = url
 
     link.download = `${
-      props.item.date || 'bing-wallpaper'
+      props.item.date ||
+      'bing-wallpaper'
     }.jpg`
 
-    document.body.appendChild(link)
+    document.body.appendChild(
+      link
+    )
 
     link.click()
 
@@ -604,8 +761,7 @@ async function downloadImage() {
     )
 
     /*
-     * 如果 fetch 下载失败，
-     * 直接打开原图。
+     * 下载失败时直接打开原图。
      */
     window.open(
       props.item.image,
@@ -616,6 +772,19 @@ async function downloadImage() {
     downloading.value = false
   }
 }
+
+/*
+ * 当前图片发生变化
+ */
+watch(
+  () => props.item,
+  () => {
+    loadCurrentImage()
+  },
+  {
+    immediate: true
+  }
+)
 
 /*
  * 生命周期
@@ -632,16 +801,14 @@ onBeforeUnmount(() => {
     'keydown',
     handleKeydown
   )
-
-  if (preloadImage) {
-    preloadImage.onload = null
-    preloadImage.onerror = null
-    preloadImage = null
-  }
 })
 </script>
 
 <style scoped>
+/* =========================================================
+ * 查看器
+ * ========================================================= */
+
 .viewer {
   position: fixed;
 
@@ -649,13 +816,12 @@ onBeforeUnmount(() => {
 
   z-index: 9999;
 
-  display: flex;
+  width: 100%;
+  height: 100vh;
 
-  align-items: center;
+  box-sizing: border-box;
 
-  justify-content: center;
-
-  padding: 40px;
+  overflow: hidden;
 
   background:
     linear-gradient(
@@ -664,46 +830,8 @@ onBeforeUnmount(() => {
       rgba(8, 10, 14, 0.97)
     );
 
-  overflow: hidden;
-
-  animation: viewer-in 0.25s ease;
-}
-
-/*
- * 主色调氛围光
- */
-.viewer-color-bg {
-  position: absolute;
-
-  inset: -15%;
-
-  z-index: 0;
-
-  pointer-events: none;
-
-  filter: blur(100px);
-
-  transform: scale(1.15);
-
-  transition:
-    background 0.7s ease,
-    opacity 0.7s ease;
-}
-
-/*
- * 深色遮罩
- */
-.viewer-overlay {
-  position: absolute;
-
-  inset: 0;
-
-  z-index: 1;
-
-  pointer-events: none;
-
-  background:
-    rgba(8, 10, 14, 0.52);
+  animation:
+    viewer-in 0.25s ease;
 }
 
 @keyframes viewer-in {
@@ -716,30 +844,146 @@ onBeforeUnmount(() => {
   }
 }
 
-/*
- * 内容
- */
-.viewer-content {
+
+/* =========================================================
+ * 主色调背景
+ * ========================================================= */
+
+.viewer-color-bg {
+  position: absolute;
+
+  inset: -20%;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  filter:
+    blur(100px)
+    saturate(1.15);
+
+  transform: scale(1.15);
+
+  mix-blend-mode: screen;
+
+  transition:
+    background 0.7s ease,
+    opacity 0.7s ease;
+}
+
+
+/* =========================================================
+ * 深色遮罩
+ * ========================================================= */
+
+.viewer-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 1;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 14, 0.24),
+      rgba(8, 10, 14, 0.42)
+    );
+}
+
+
+/* =========================================================
+ * 内容滚动区域
+ *
+ * 只有这里滚动。
+ * 背景不会跟着移动。
+ * ========================================================= */
+
+.viewer-scroll {
   position: relative;
 
   z-index: 2;
 
+  width: 100%;
+  height: 100%;
+
+  box-sizing: border-box;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  padding:
+    40px 24px 56px;
+
+  overscroll-behavior: contain;
+
+  -webkit-overflow-scrolling:
+    touch;
+
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    rgba(255, 255, 255, 0.18)
+    transparent;
+}
+
+
+/* =========================================================
+ * WebKit 滚动条
+ * ========================================================= */
+
+.viewer-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.viewer-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.viewer-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.18);
+}
+
+.viewer-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(255, 255, 255, 0.28);
+}
+
+
+/* =========================================================
+ * 内容
+ * ========================================================= */
+
+.viewer-content {
+  position: relative;
+
   width: min(1200px, 100%);
 
-  max-height: calc(100vh - 80px);
+  min-width: 0;
+
+  min-height: 100%;
+
+  margin: 0 auto;
+
+  box-sizing: border-box;
 
   display: flex;
 
   flex-direction: column;
 
   align-items: center;
-
-  min-width: 0;
 }
 
-/*
+
+/* =========================================================
  * 图片区域
- */
+ * ========================================================= */
+
 .viewer-image-wrapper {
   position: relative;
 
@@ -760,14 +1004,15 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-/*
+
+/* =========================================================
  * 图片
- */
+ * ========================================================= */
+
 .viewer-image {
   display: block;
 
   width: 100%;
-
   height: 100%;
 
   object-fit: contain;
@@ -779,31 +1024,38 @@ onBeforeUnmount(() => {
   -webkit-user-drag: none;
 
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.42);
+    0 30px 80px
+    rgba(0, 0, 0, 0.42);
 
   transition:
     filter 0.35s ease,
-    opacity 0.35s ease;
+    opacity 0.35s ease,
+    transform 0.35s ease;
 }
 
-/*
- * Base64
- */
+
+/* =========================================================
+ * Base64 占位图
+ * ========================================================= */
+
 .viewer-image.is-placeholder {
   filter: blur(10px);
 
   transform: scale(1.02);
 }
 
-/*
+
+/* =========================================================
  * 高清图
- */
+ * ========================================================= */
+
 .viewer-image.is-high-res {
   filter: none;
 
   transform: scale(1);
 
-  animation: high-res-in 0.35s ease;
+  animation:
+    high-res-in 0.35s ease;
 }
 
 @keyframes high-res-in {
@@ -816,12 +1068,11 @@ onBeforeUnmount(() => {
   }
 }
 
-/*
- * Loading
- *
- * 在图片区域正中央显示，
- * Spinner 下方显示加载提示。
- */
+
+/* =========================================================
+ * 高清图 Loading
+ * ========================================================= */
+
 .viewer-loading {
   position: absolute;
 
@@ -840,9 +1091,11 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/*
+
+/* =========================================================
  * Spinner
- */
+ * ========================================================= */
+
 .viewer-spinner {
   width: 18px;
 
@@ -850,7 +1103,8 @@ onBeforeUnmount(() => {
 
   flex-shrink: 0;
 
-  border: 2px solid
+  border:
+    2px solid
     rgba(255, 255, 255, 0.24);
 
   border-top-color: #fff;
@@ -867,11 +1121,11 @@ onBeforeUnmount(() => {
   }
 }
 
-/*
+
+/* =========================================================
  * Loading 文字
- *
- * 位于 Spinner 正下方。
- */
+ * ========================================================= */
+
 .viewer-loading-text {
   margin-top: 10px;
 
@@ -889,37 +1143,15 @@ onBeforeUnmount(() => {
   text-align: center;
 
   text-shadow:
-    0 1px 5px rgba(0, 0, 0, 0.4);
+    0 1px 5px
+    rgba(0, 0, 0, 0.4);
 }
 
-/*
- * Spinner
- */
-.viewer-spinner {
-  width: 18px;
 
-  height: 18px;
+/* =========================================================
+ * 高清图错误
+ * ========================================================= */
 
-  border: 2px solid
-    rgba(255, 255, 255, 0.24);
-
-  border-top-color: #fff;
-
-  border-radius: 50%;
-
-  animation:
-    spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/*
- * 错误提示
- */
 .viewer-error {
   position: absolute;
 
@@ -950,9 +1182,11 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/*
+
+/* =========================================================
  * 关闭按钮
- */
+ * ========================================================= */
+
 .viewer-close {
   position: fixed;
 
@@ -966,7 +1200,8 @@ onBeforeUnmount(() => {
 
   height: 44px;
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(255, 255, 255, 0.08);
 
   border-radius: 50%;
@@ -978,7 +1213,8 @@ onBeforeUnmount(() => {
 
   backdrop-filter: blur(12px);
 
-  -webkit-backdrop-filter: blur(12px);
+  -webkit-backdrop-filter:
+    blur(12px);
 
   font-size: 30px;
 
@@ -1002,9 +1238,11 @@ onBeforeUnmount(() => {
   transform: rotate(90deg);
 }
 
-/*
- * 左右按钮
- */
+
+/* =========================================================
+ * 左右切换按钮
+ * ========================================================= */
+
 .viewer-nav {
   position: fixed;
 
@@ -1016,7 +1254,8 @@ onBeforeUnmount(() => {
 
   height: 72px;
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(255, 255, 255, 0.07);
 
   border-radius: 16px;
@@ -1028,7 +1267,8 @@ onBeforeUnmount(() => {
 
   backdrop-filter: blur(12px);
 
-  -webkit-backdrop-filter: blur(12px);
+  -webkit-backdrop-filter:
+    blur(12px);
 
   font-size: 50px;
 
@@ -1038,7 +1278,8 @@ onBeforeUnmount(() => {
 
   cursor: pointer;
 
-  transform: translateY(-50%);
+  transform:
+    translateY(-50%);
 
   transition:
     background 0.25s ease,
@@ -1068,9 +1309,11 @@ onBeforeUnmount(() => {
   right: 24px;
 }
 
-/*
- * 信息
- */
+
+/* =========================================================
+ * 图片信息
+ * ========================================================= */
+
 .viewer-info {
   width: min(900px, 100%);
 
@@ -1079,9 +1322,11 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
-/*
+
+/* =========================================================
  * 日期 + 序号
- */
+ * ========================================================= */
+
 .viewer-meta {
   display: flex;
 
@@ -1091,10 +1336,10 @@ onBeforeUnmount(() => {
 }
 
 .viewer-date {
-  font-size: 12px;
-
   color:
     rgba(255, 255, 255, 0.55);
+
+  font-size: 12px;
 }
 
 .viewer-counter {
@@ -1111,11 +1356,13 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 
-/*
+
+/* =========================================================
  * 标题
- */
+ * ========================================================= */
+
 .viewer-info h2 {
-  margin: 5px 0 5px;
+  margin: 5px 0;
 
   font-size: 20px;
 
@@ -1126,105 +1373,141 @@ onBeforeUnmount(() => {
   letter-spacing: -0.01em;
 }
 
-/*
+
+/* =========================================================
  * 描述
- */
+ * ========================================================= */
+
 .viewer-info p {
   margin: 0;
 
   max-width: 850px;
 
+  color:
+    rgba(255, 255, 255, 0.68);
+
   font-size: 13px;
 
   line-height: 1.6;
-
-  color:
-    rgba(255, 255, 255, 0.68);
 }
 
-/*
- * 主色调按钮
- */
-.viewer-color {
-  margin-top: 12px;
 
+/* =========================================================
+ * 主色调
+ * ========================================================= */
+
+.viewer-colors {
+  width: 100%;
+
+  margin-top: 18px;
+}
+
+.viewer-colors-title {
+  margin-bottom: 10px;
+
+  color:
+    rgba(255, 255, 255, 0.65);
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.viewer-color-list {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
+
+/* =========================================================
+ * 主色调按钮
+ * ========================================================= */
+
+.viewer-color {
   display: inline-flex;
 
   align-items: center;
 
-  gap: 9px;
+  gap: 8px;
 
-  height: 34px;
+  min-height: 36px;
 
-  padding: 0 10px 0 6px;
+  padding: 7px 10px;
 
-  border: 1px solid
-    rgba(255, 255, 255, 0.09);
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
 
-  border-radius: 9px;
+  border-radius: 10px;
 
   color:
-    rgba(255, 255, 255, 0.78);
+    rgba(255, 255, 255, 0.82);
 
   background:
-    rgba(255, 255, 255, 0.065);
-
-  backdrop-filter: blur(10px);
-
-  -webkit-backdrop-filter: blur(10px);
-
-  font-family: inherit;
+    rgba(255, 255, 255, 0.07);
 
   cursor: pointer;
 
   transition:
-    background 0.25s ease,
-    border-color 0.25s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
     transform 0.2s ease;
 }
 
 .viewer-color:hover {
-  background:
-    rgba(255, 255, 255, 0.11);
-
   border-color:
-    rgba(255, 255, 255, 0.15);
+    rgba(255, 255, 255, 0.35);
 
-  transform: translateY(-1px);
+  background:
+    rgba(255, 255, 255, 0.14);
+
+  transform:
+    translateY(-1px);
 }
 
 .viewer-color:active {
-  transform: translateY(0);
+  transform:
+    translateY(0);
 }
 
 .viewer-color.copied {
   border-color:
-    rgba(255, 255, 255, 0.2);
+    rgba(120, 220, 150, 0.7);
+
+  background:
+    rgba(120, 220, 150, 0.12);
 }
 
-/*
- * 主色调色块
- */
-.color-preview {
-  width: 21px;
 
-  height: 21px;
+/* =========================================================
+ * 颜色预览
+ * ========================================================= */
+
+.color-preview {
+  width: 20px;
+
+  height: 20px;
 
   flex-shrink: 0;
 
-  border-radius: 6px;
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.3);
 
-  box-shadow:
-    inset 0 0 0 1px
-      rgba(255, 255, 255, 0.2),
-    0 2px 8px
-      rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
 }
 
-/*
+
+/* =========================================================
  * HEX
- */
+ * ========================================================= */
+
 .color-name {
+  font-family: monospace;
+
   font-size: 12px;
 
   font-weight: 600;
@@ -1232,14 +1515,14 @@ onBeforeUnmount(() => {
   letter-spacing: 0.03em;
 }
 
-/*
- * 复制
- */
-.color-copy {
-  padding-left: 2px;
 
+/* =========================================================
+ * 复制提示
+ * ========================================================= */
+
+.color-copy {
   color:
-    rgba(255, 255, 255, 0.42);
+    rgba(255, 255, 255, 0.5);
 
   font-size: 11px;
 
@@ -1257,16 +1540,23 @@ onBeforeUnmount(() => {
     rgba(255, 255, 255, 0.9);
 }
 
-/*
+
+/* =========================================================
  * 操作区域
- */
+ * ========================================================= */
+
 .viewer-actions {
   display: flex;
 
   gap: 10px;
 
-  margin-top: 13px;
+  margin-top: 14px;
 }
+
+
+/* =========================================================
+ * 下载 / 打开按钮
+ * ========================================================= */
 
 .download-button,
 .open-button {
@@ -1281,6 +1571,8 @@ onBeforeUnmount(() => {
   align-items: center;
 
   justify-content: center;
+
+  box-sizing: border-box;
 
   font-family: inherit;
 
@@ -1300,17 +1592,21 @@ onBeforeUnmount(() => {
 
 .download-button:hover,
 .open-button:hover {
-  transform: translateY(-1px);
+  transform:
+    translateY(-1px);
 }
 
 .download-button:active,
 .open-button:active {
-  transform: translateY(0);
+  transform:
+    translateY(0);
 }
 
-/*
+
+/* =========================================================
  * 下载
- */
+ * ========================================================= */
+
 .download-button {
   border: 0;
 
@@ -1329,21 +1625,25 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-/*
+
+/* =========================================================
  * 打开原图
- */
+ * ========================================================= */
+
 .open-button {
   color: #fff;
 
   background:
     rgba(255, 255, 255, 0.08);
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(255, 255, 255, 0.1);
 
   backdrop-filter: blur(10px);
 
-  -webkit-backdrop-filter: blur(10px);
+  -webkit-backdrop-filter:
+    blur(10px);
 }
 
 .open-button:hover {
@@ -1351,33 +1651,44 @@ onBeforeUnmount(() => {
     rgba(255, 255, 255, 0.13);
 }
 
-/*
+
+/* =========================================================
  * 移动端
- */
+ * ========================================================= */
+
 @media (max-width: 700px) {
-  .viewer {
-    padding: 20px;
+
+  /*
+   * 滚动区域
+   */
+  .viewer-scroll {
+    padding:
+      20px 16px 40px;
   }
 
+  /*
+   * 内容
+   */
   .viewer-content {
-    max-height:
-      calc(100vh - 40px);
+    min-height: 100%;
   }
 
+  /*
+   * 图片
+   */
   .viewer-image-wrapper {
-    max-height:
-      calc(100vh - 220px);
+    width: 100%;
 
     border-radius: 9px;
   }
 
   .viewer-image {
-    max-height:
-      calc(100vh - 220px);
-
     border-radius: 9px;
   }
 
+  /*
+   * 左右按钮
+   */
   .viewer-nav {
     width: 40px;
 
@@ -1396,6 +1707,9 @@ onBeforeUnmount(() => {
     right: 8px;
   }
 
+  /*
+   * 关闭
+   */
   .viewer-close {
     top: 10px;
 
@@ -1408,6 +1722,9 @@ onBeforeUnmount(() => {
     font-size: 27px;
   }
 
+  /*
+   * 信息
+   */
   .viewer-info {
     margin-top: 12px;
   }
@@ -1428,10 +1745,23 @@ onBeforeUnmount(() => {
     overflow: hidden;
   }
 
-  .viewer-color {
-    margin-top: 9px;
+  /*
+   * 主色调
+   */
+  .viewer-colors {
+    margin-top: 14px;
   }
 
+  .viewer-color {
+    min-height: 34px;
+
+    padding:
+      6px 9px;
+  }
+
+  /*
+   * 操作
+   */
   .viewer-actions {
     margin-top: 10px;
   }
@@ -1444,22 +1774,10 @@ onBeforeUnmount(() => {
 
     font-size: 12px;
   }
-  .viewer-loading {
-    inset: 0;
 
-    width: auto;
-
-    height: auto;
-
-    background: transparent;
-
-    backdrop-filter: none;
-
-    -webkit-backdrop-filter: none;
-
-    box-shadow: none;
-  }
-
+  /*
+   * Loading
+   */
   .viewer-loading-text {
     margin-top: 8px;
 
@@ -1473,4 +1791,3 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-

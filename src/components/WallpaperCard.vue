@@ -2,19 +2,25 @@
   <article
     class="wallpaper-card"
     :style="cardStyle"
-    @click="$emit('click', item)"
+    tabindex="0"
+    role="button"
+    :aria-label="`查看壁纸：${item.title || item.date}`"
+    :aria-busy="loadState === 'loading'"
+    @click="handleClick"
+    @keydown.enter.prevent="handleKeyboardClick"
+    @keydown.space.prevent="handleKeyboardClick"
   >
     <div class="card-image">
-
       <!-- Base64 模糊占位 -->
       <div
         class="card-placeholder"
         :class="{ loaded: imageLoaded }"
       />
 
-      <!-- 图片 -->
+      <!-- 真实图片 -->
       <img
         v-if="shouldLoad"
+        :key="`${item.date}-${retryKey}`"
         class="wallpaper-image"
         :class="{ loaded: imageLoaded }"
         :src="item.preview || item.image"
@@ -25,12 +31,54 @@
         @error="handleError"
       />
 
-      <!-- 加载动画 -->
+      <!-- 尚未进入加载队列 -->
       <div
-        v-if="!imageLoaded"
+        v-if="loadState === 'idle'"
+        class="image-loading image-waiting"
+        aria-label="等待加载"
+      >
+        <span class="waiting-dots">
+          <i />
+          <i />
+          <i />
+        </span>
+
+        <span class="loading-label">
+          等待加载
+        </span>
+      </div>
+
+      <!-- 正在加载 -->
+      <div
+        v-else-if="loadState === 'loading'"
         class="image-loading"
+        aria-label="正在加载"
       >
         <span class="loading-spinner" />
+
+        <span class="loading-label">
+          正在加载
+        </span>
+      </div>
+
+      <!-- 加载失败 -->
+      <div
+        v-else-if="loadState === 'error'"
+        class="image-error-state"
+      >
+        <span class="error-label">
+          图片加载失败
+        </span>
+
+        <button
+          class="retry-button"
+          type="button"
+          aria-label="重新加载图片"
+          title="重新加载"
+          @click.stop="handleRetry"
+        >
+          ↻
+        </button>
       </div>
 
       <!-- 图片遮罩 -->
@@ -51,7 +99,6 @@
 
       <!-- 底部信息 -->
       <div class="card-content">
-
         <div class="card-title">
           {{ item.title || 'Bing Wallpaper' }}
         </div>
@@ -67,14 +114,18 @@
             ↗
           </span>
         </div>
-
       </div>
+
+      <!-- 屏幕阅读器状态 -->
+      <span class="sr-only" aria-live="polite">
+        {{ statusText }}
+      </span>
     </div>
   </article>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   item: {
@@ -82,36 +133,48 @@ const props = defineProps({
     required: true
   },
 
-  /**
-   * 是否允许开始加载真实图片
-   */
   shouldLoad: {
     type: Boolean,
     default: false
+  },
+
+  loadState: {
+    type: String,
+    default: 'idle'
+  },
+
+  retryKey: {
+    type: Number,
+    default: 0
   }
 })
 
 const emit = defineEmits([
   'click',
   'image-loaded',
-  'image-error'
+  'image-error',
+  'retry-image'
 ])
 
 const imageLoaded = ref(false)
 
 const accentColor = computed(() => {
+  const color = props.item?.color || {}
+
   return (
-    props.item?.color?.Vibrant ||
-    props.item?.color?.LightVibrant ||
-    props.item?.color?.Muted ||
+    color.Vibrant ||
+    color.LightVibrant ||
+    color.Muted ||
+    color.DarkVibrant ||
+    color.LightMuted ||
+    color.DarkMuted ||
     ''
   )
 })
 
 const cardStyle = computed(() => {
-  const base64 = props.item?.base64
-
   const style = {}
+  const base64 = props.item?.base64
 
   if (base64) {
     style['--placeholder-image'] = `url("${base64}")`
@@ -124,6 +187,25 @@ const cardStyle = computed(() => {
   return style
 })
 
+const statusText = computed(() => {
+  const statusMap = {
+    idle: '图片等待加载',
+    loading: '图片正在加载',
+    loaded: '图片加载完成',
+    error: '图片加载失败'
+  }
+
+  return statusMap[props.loadState] || ''
+})
+
+function handleClick() {
+  emit('click', props.item)
+}
+
+function handleKeyboardClick() {
+  emit('click', props.item)
+}
+
 function handleLoaded() {
   imageLoaded.value = true
 
@@ -134,6 +216,12 @@ function handleError() {
   imageLoaded.value = false
 
   emit('image-error', props.item.date)
+}
+
+function handleRetry() {
+  imageLoaded.value = false
+
+  emit('retry-image', props.item.date)
 }
 
 function formatDate(date) {
@@ -149,6 +237,14 @@ function formatDate(date) {
 
   return `${parts[0]}.${parts[1]}.${parts[2]}`
 }
+
+// 重新加载时先恢复占位图状态
+watch(
+  () => props.retryKey,
+  () => {
+    imageLoaded.value = false
+  }
+)
 </script>
 
 <style scoped>
@@ -618,5 +714,120 @@ function formatDate(date) {
   .color-dot {
     display: none;
   }
+}
+/* 键盘聚焦 */
+.wallpaper-card:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 4px;
+}
+
+/* 加载文字 */
+.loading-label,
+.error-label {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* 等待加载状态 */
+.image-waiting {
+  gap: 2px;
+}
+
+.waiting-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.waiting-dots i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  animation: waiting-pulse 1.4s ease-in-out infinite;
+}
+
+.waiting-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.waiting-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes waiting-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+/* 加载失败 */
+.image-error-state {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(8, 10, 14, 0.2);
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  margin-top: 10px;
+
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+
+  color: #fff;
+  background: rgba(20, 24, 32, 0.8);
+
+  font-size: 20px;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.retry-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(-30deg) scale(1.08);
+}
+
+.retry-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* 隐藏但可被屏幕阅读器识别 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

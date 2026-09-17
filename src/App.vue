@@ -77,9 +77,12 @@
           :key="item.date"
           :item="item"
           :should-load="imageLoadQueue.has(item.date)"
+          :load-state="imageStates[item.date]?.state || 'idle'"
+          :retry-key="imageStates[item.date]?.retryKey || 0"
           @click="openViewer(item)"
           @image-loaded="handleImageLoaded"
           @image-error="handleImageError"
+          @retry-image="retryImage"
         />
       </section>
 
@@ -109,7 +112,7 @@
     </main>
 
     <ImageViewer
-      v-if="viewerVisible"
+      :visible="viewerVisible"
       :item="currentItem"
       :items="items"
       @close="closeViewer"
@@ -154,35 +157,41 @@ let observer = null
  */
 const IMAGE_CONCURRENCY = 6
 
-/**
- * 当前允许开始加载的图片
- */
 const imageLoadQueue = ref(new Set())
 
-/**
- * 已经进入过加载队列的图片
- *
- * 防止同一张图片重复进入队列
- */
+// 图片状态：idle / loading / loaded / error
+const imageStates = ref({})
+
+// 已经开始过加载的图片
 const startedImages = new Set()
 
-/**
- * 当前正在加载中的图片
- */
+// 当前正在加载的图片
 const loadingImages = new Set()
+
+function getImageState(date) {
+  return imageStates.value[date]?.state || 'idle'
+}
+
+function setImageState(date, state) {
+  imageStates.value = {
+    ...imageStates.value,
+    [date]: {
+      ...(imageStates.value[date] || {}),
+      state
+    }
+  }
+}
 const totalCount = computed(() => {
   return items.value.length
 })
 
-
 function fillImageLoadQueue() {
-  while (
-    loadingImages.size < IMAGE_CONCURRENCY
-  ) {
+  while (loadingImages.size < IMAGE_CONCURRENCY) {
     const nextItem = items.value.find(item => {
       return (
         item?.date &&
-        !startedImages.has(item.date)
+        !startedImages.has(item.date) &&
+        getImageState(item.date) !== 'loaded'
       )
     })
 
@@ -190,24 +199,53 @@ function fillImageLoadQueue() {
       break
     }
 
-    startedImages.add(nextItem.date)
-    loadingImages.add(nextItem.date)
+    const date = nextItem.date
+
+    startedImages.add(date)
+    loadingImages.add(date)
+
+    setImageState(date, 'loading')
 
     imageLoadQueue.value = new Set([
       ...imageLoadQueue.value,
-      nextItem.date
+      date
     ])
   }
 }
 
 function handleImageLoaded(date) {
   loadingImages.delete(date)
+  setImageState(date, 'loaded')
 
   fillImageLoadQueue()
 }
 
 function handleImageError(date) {
   loadingImages.delete(date)
+  setImageState(date, 'error')
+
+  // 失败后不自动循环重试，避免异常时反复请求
+  fillImageLoadQueue()
+}
+
+function retryImage(date) {
+  if (!date) {
+    return
+  }
+
+  // 允许该图片重新进入队列
+  startedImages.delete(date)
+
+  setImageState(date, 'idle')
+
+  imageStates.value = {
+    ...imageStates.value,
+    [date]: {
+      ...(imageStates.value[date] || {}),
+      state: 'idle',
+      retryKey: (imageStates.value[date]?.retryKey || 0) + 1
+    }
+  }
 
   fillImageLoadQueue()
 }
