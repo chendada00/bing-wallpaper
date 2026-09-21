@@ -1,5 +1,6 @@
 <template>
   <article
+    :id="`wallpaper-${item.date}`"
     class="wallpaper-card"
     :style="cardStyle"
     tabindex="0"

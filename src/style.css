@@ -274,3 +274,7 @@ button {
     background: #fff;
   }
 }
+
+.wallpaper-card {
+  scroll-margin-top: 88px;
+}

@@ -223,7 +223,15 @@
 
     </main>
 
-
+    <Timeline
+      v-if="!viewerVisible"
+      :items="result"
+      :active-month="activeMonth"
+      :visible="timelineVisible"
+      @select="scrollToMonth"
+      @mouseenter="keepTimelineVisible"
+      @mouseleave="allowTimelineFade"
+    />
 
     <ImageViewer
       :visible="viewerVisible"
@@ -251,7 +259,7 @@ import ImageViewer from './components/ImageViewer.vue'
 import LoadingState from './components/LoadingState.vue'
 import EndState from './components/EndState.vue'
 import SearchPanel from './components/SearchPanel.vue'
-
+import Timeline from './components/Timeline.vue'
 
 import {
   useBingData
@@ -305,6 +313,155 @@ const loadMoreTrigger=ref(null)
 
 let observer=null
 
+/**
+ * 时间轴状态
+ */
+const timelineVisible = ref(false)
+const activeMonth = ref('')
+
+let timelineHideTimer = null
+let timelineMouseInside = false
+let scrollTimer = null
+
+
+/**
+ * 显示时间轴，并在停止操作后自动隐藏
+ */
+function showTimeline() {
+  if (viewerVisible.value) {
+    return
+  }
+
+  timelineVisible.value = true
+
+  if (timelineHideTimer) {
+    clearTimeout(timelineHideTimer)
+  }
+
+  if (!timelineMouseInside) {
+    timelineHideTimer = setTimeout(() => {
+      if (!timelineMouseInside) {
+        timelineVisible.value = false
+      }
+    }, 5000)
+  }
+}
+
+/**
+ * 鼠标位于时间轴上时保持显示
+ */
+function keepTimelineVisible() {
+  timelineMouseInside = true
+
+  if (timelineHideTimer) {
+    clearTimeout(timelineHideTimer)
+  }
+
+  timelineVisible.value = true
+}
+
+/**
+ * 鼠标离开时间轴后允许自动隐藏
+ */
+function allowTimelineFade() {
+  timelineMouseInside = false
+  showTimeline()
+}
+
+/**
+ * 根据月份滚动到对应壁纸
+ */
+function scrollToMonth(month) {
+  if (!month?.firstDate) {
+    return
+  }
+
+  const target = document.getElementById(
+    `wallpaper-${month.firstDate}`
+  )
+
+  if (!target) {
+    return
+  }
+
+  activeMonth.value = month.key
+
+  target.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+
+  showTimeline()
+}
+
+/**
+ * 根据当前滚动位置更新激活月份
+ */
+function updateActiveMonth() {
+  if (viewerVisible.value) {
+    return
+  }
+
+  const cards = Array.from(
+    document.querySelectorAll('.wallpaper-card')
+  )
+
+  if (cards.length === 0) {
+    return
+  }
+
+  const headerOffset = 120
+
+  let currentCard = cards[0]
+
+  for (const card of cards) {
+    const rect = card.getBoundingClientRect()
+
+    if (rect.top <= headerOffset) {
+      currentCard = card
+    } else {
+      break
+    }
+  }
+
+  const date = currentCard.id.replace(
+    'wallpaper-',
+    ''
+  )
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return
+  }
+
+  const month = date.slice(0, 7)
+
+  if (activeMonth.value !== month) {
+    activeMonth.value = month
+  }
+}
+
+/**
+ * 滚动事件
+ */
+function handleWindowScroll() {
+  showTimeline()
+  updateActiveMonth()
+
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+
+  scrollTimer = setTimeout(() => {
+    updateActiveMonth()
+  }, 80)
+}
+
+/**
+ * 鼠标移动事件
+ */
+function handleMouseMove() {
+  showTimeline()
+}
 
 
 /**
@@ -543,34 +700,28 @@ function retryImage(date){
 
 
 
-function openViewer(item){
+function openViewer(item) {
+  currentItem.value = item
+  viewerVisible.value = true
 
+  timelineVisible.value = false
 
-  currentItem.value=item
+  if (timelineHideTimer) {
+    clearTimeout(timelineHideTimer)
+  }
 
-
-  viewerVisible.value=true
-
-
-  document.body.style.overflow='hidden'
-
-
+  document.body.style.overflow = 'hidden'
 }
 
 
 
-function closeViewer(){
+function closeViewer() {
+  viewerVisible.value = false
+  currentItem.value = null
+  document.body.style.overflow = ''
 
-
-  viewerVisible.value=false
-
-
-  currentItem.value=null
-
-
-  document.body.style.overflow=''
-
-
+  updateActiveMonth()
+  showTimeline()
 }
 
 
@@ -677,6 +828,20 @@ onMounted(async()=>{
     loadMoreTrigger.value
   )
 
+  window.addEventListener(
+    'scroll',
+    handleWindowScroll,
+    { passive: true }
+  )
+
+  window.addEventListener(
+    'mousemove',
+    handleMouseMove,
+    { passive: true }
+  )
+
+  updateActiveMonth()
+
 
 })
 
@@ -697,6 +862,23 @@ onBeforeUnmount(()=>{
 
   document.body.style.overflow=''
 
+  window.removeEventListener(
+    'scroll',
+    handleWindowScroll
+  )
+
+  window.removeEventListener(
+    'mousemove',
+    handleMouseMove
+  )
+
+  if (timelineHideTimer) {
+    clearTimeout(timelineHideTimer)
+  }
+
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
 
 })
 
