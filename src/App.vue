@@ -223,15 +223,23 @@
 
     </main>
 
+
+
     <Timeline
       v-if="!viewerVisible"
-      :items="result"
+      :items="items"
       :active-month="activeMonth"
       :visible="timelineVisible"
+      :progress="scrollProgress"
+      :at-top="atTop"
+      :at-bottom="atBottom"
       @select="scrollToMonth"
+      @top="scrollToTop"
+      @bottom="scrollToBottom"
       @mouseenter="keepTimelineVisible"
       @mouseleave="allowTimelineFade"
     />
+
 
     <ImageViewer
       :visible="viewerVisible"
@@ -260,6 +268,7 @@ import LoadingState from './components/LoadingState.vue'
 import EndState from './components/EndState.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Timeline from './components/Timeline.vue'
+
 
 import {
   useBingData
@@ -309,159 +318,24 @@ const currentItem=ref(null)
 
 const loadMoreTrigger=ref(null)
 
+const timelineVisible=ref(false)
+const activeMonth=ref('')
+const scrollProgress=ref(0)
+const atTop=ref(true)
+const atBottom=ref(false)
 
+let timelineHideTimer=null
+let scrollUpdateFrame=null
+let timelineMouseInside=false
+
+// 时间轴主动跳转目标
+let timelineTargetMonth=null
+
+// 时间轴主动跳转期间，暂时不根据滚动位置修改月份
+let timelineScrolling=false
 
 let observer=null
 
-/**
- * 时间轴状态
- */
-const timelineVisible = ref(false)
-const activeMonth = ref('')
-
-let timelineHideTimer = null
-let timelineMouseInside = false
-let scrollTimer = null
-
-
-/**
- * 显示时间轴，并在停止操作后自动隐藏
- */
-function showTimeline() {
-  if (viewerVisible.value) {
-    return
-  }
-
-  timelineVisible.value = true
-
-  if (timelineHideTimer) {
-    clearTimeout(timelineHideTimer)
-  }
-
-  if (!timelineMouseInside) {
-    timelineHideTimer = setTimeout(() => {
-      if (!timelineMouseInside) {
-        timelineVisible.value = false
-      }
-    }, 5000)
-  }
-}
-
-/**
- * 鼠标位于时间轴上时保持显示
- */
-function keepTimelineVisible() {
-  timelineMouseInside = true
-
-  if (timelineHideTimer) {
-    clearTimeout(timelineHideTimer)
-  }
-
-  timelineVisible.value = true
-}
-
-/**
- * 鼠标离开时间轴后允许自动隐藏
- */
-function allowTimelineFade() {
-  timelineMouseInside = false
-  showTimeline()
-}
-
-/**
- * 根据月份滚动到对应壁纸
- */
-function scrollToMonth(month) {
-  if (!month?.firstDate) {
-    return
-  }
-
-  const target = document.getElementById(
-    `wallpaper-${month.firstDate}`
-  )
-
-  if (!target) {
-    return
-  }
-
-  activeMonth.value = month.key
-
-  target.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  })
-
-  showTimeline()
-}
-
-/**
- * 根据当前滚动位置更新激活月份
- */
-function updateActiveMonth() {
-  if (viewerVisible.value) {
-    return
-  }
-
-  const cards = Array.from(
-    document.querySelectorAll('.wallpaper-card')
-  )
-
-  if (cards.length === 0) {
-    return
-  }
-
-  const headerOffset = 120
-
-  let currentCard = cards[0]
-
-  for (const card of cards) {
-    const rect = card.getBoundingClientRect()
-
-    if (rect.top <= headerOffset) {
-      currentCard = card
-    } else {
-      break
-    }
-  }
-
-  const date = currentCard.id.replace(
-    'wallpaper-',
-    ''
-  )
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return
-  }
-
-  const month = date.slice(0, 7)
-
-  if (activeMonth.value !== month) {
-    activeMonth.value = month
-  }
-}
-
-/**
- * 滚动事件
- */
-function handleWindowScroll() {
-  showTimeline()
-  updateActiveMonth()
-
-  if (scrollTimer) {
-    clearTimeout(scrollTimer)
-  }
-
-  scrollTimer = setTimeout(() => {
-    updateActiveMonth()
-  }, 80)
-}
-
-/**
- * 鼠标移动事件
- */
-function handleMouseMove() {
-  showTimeline()
-}
 
 
 /**
@@ -700,27 +574,22 @@ function retryImage(date){
 
 
 
-function openViewer(item) {
-  currentItem.value = item
-  viewerVisible.value = true
-
-  timelineVisible.value = false
-
-  if (timelineHideTimer) {
+function openViewer(item){
+  currentItem.value=item
+  viewerVisible.value=true
+  timelineVisible.value=false
+  if(timelineHideTimer){
     clearTimeout(timelineHideTimer)
+    timelineHideTimer=null
   }
-
-  document.body.style.overflow = 'hidden'
+  document.body.style.overflow='hidden'
 }
 
-
-
-function closeViewer() {
-  viewerVisible.value = false
-  currentItem.value = null
-  document.body.style.overflow = ''
-
-  updateActiveMonth()
+function closeViewer(){
+  viewerVisible.value=false
+  currentItem.value=null
+  document.body.style.overflow=''
+  updateScrollState()
   showTimeline()
 }
 
@@ -739,6 +608,321 @@ function changeViewer(item){
 }
 
 
+
+
+function showTimeline(){
+  if(viewerVisible.value){
+    return
+  }
+  timelineVisible.value=true
+  if(timelineHideTimer){
+    clearTimeout(timelineHideTimer)
+  }
+  if(!timelineMouseInside){
+    timelineHideTimer=setTimeout(()=>{
+      if(!timelineMouseInside && !viewerVisible.value){
+        timelineVisible.value=false
+      }
+    },3000)
+  }
+}
+
+function keepTimelineVisible(){
+  timelineMouseInside=true
+  if(timelineHideTimer){
+    clearTimeout(timelineHideTimer)
+    timelineHideTimer=null
+  }
+  timelineVisible.value=true
+}
+
+function allowTimelineFade(){
+  timelineMouseInside=false
+  showTimeline()
+}
+
+function scrollToMonth(month){
+
+  if(!month?.firstDate){
+    return
+  }
+
+  const target=document.getElementById(
+    `wallpaper-${month.firstDate}`
+  )
+
+  if(!target){
+    return
+  }
+
+  /*
+   * 记录用户点击的目标月份
+   */
+  timelineTargetMonth=month.key
+
+  /*
+   * 立即激活。
+   */
+  activeMonth.value=month.key
+
+  /*
+   * 告诉滚动监听：
+   * 现在是时间轴主动导航，不要抢着修改 activeMonth。
+   */
+  timelineScrolling=true
+
+  showTimeline()
+
+  /*
+   * 不再使用 scrollIntoView。
+   *
+   * 因为 scrollIntoView 会把元素直接顶到 viewport 顶部，
+   * 和你后面的 headerOffset=110 判断存在偏差。
+   *
+   * 改成自己计算最终 scrollTop。
+   */
+  const rect=target.getBoundingClientRect()
+
+  const currentScrollTop=
+    window.scrollY ||
+    window.pageYOffset ||
+    0
+
+  /*
+   * 你的 header 高度大约为 80~100px，
+   * 这里使用和 updateActiveMonth 一致的 110px。
+   */
+  const headerOffset=110
+
+  const targetTop=
+    currentScrollTop +
+    rect.top -
+    headerOffset
+
+  window.scrollTo({
+    top:Math.max(0,targetTop),
+    behavior:'smooth'
+  })
+
+  /*
+   * 等平滑滚动结束。
+   *
+   * 这里不是简单地立即 updateActiveMonth，
+   * 而是先确认页面已经接近目标位置。
+   */
+  waitForTimelineScrollEnd(
+    month.key,
+    target
+  )
+}
+
+function waitForTimelineScrollEnd(
+  monthKey,
+  target
+){
+
+  let lastScrollY=
+    window.scrollY ||
+    window.pageYOffset ||
+    0
+
+  let stableFrames=0
+
+  const check=()=>{
+
+    const currentScrollY=
+      window.scrollY ||
+      window.pageYOffset ||
+      0
+
+    /*
+     * 页面还在滚动
+     */
+    if(Math.abs(currentScrollY-lastScrollY)>0.5){
+
+      lastScrollY=currentScrollY
+
+      stableFrames=0
+
+      requestAnimationFrame(check)
+
+      return
+    }
+
+    /*
+     * 连续多个 frame 没有明显变化，
+     * 认为 smooth scroll 已经结束。
+     */
+    stableFrames++
+
+    if(stableFrames<6){
+
+      requestAnimationFrame(check)
+
+      return
+    }
+
+    /*
+     * 滚动完成。
+     */
+    timelineScrolling=false
+
+    /*
+     * 最终强制使用用户点击的月份。
+     */
+    activeMonth.value=monthKey
+
+    timelineTargetMonth=null
+
+    /*
+     * 更新顶部/底部状态，
+     * 但这里不要再让 updateActiveMonth()
+     * 覆盖刚刚确定的月份。
+     */
+    updateScrollPositionOnly()
+
+  }
+
+  requestAnimationFrame(check)
+}
+
+function updateScrollPositionOnly(){
+
+  const doc=document.documentElement
+
+  const scrollTop=
+    window.scrollY ||
+    window.pageYOffset ||
+    0
+
+  const maxScroll=
+    Math.max(
+      0,
+      doc.scrollHeight-window.innerHeight
+    )
+
+  scrollProgress.value=
+    maxScroll===0
+      ? 0
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            (scrollTop/maxScroll)*100
+          )
+        )
+
+  atTop.value=
+    scrollTop<=8
+
+  atBottom.value=
+    scrollTop>=maxScroll-8
+}
+
+function scrollToTop(){
+  window.scrollTo({top:0,behavior:'smooth'})
+  showTimeline()
+}
+
+function scrollToBottom(){
+  window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'})
+  showTimeline()
+}
+
+function updateActiveMonth(){
+
+  if(viewerVisible.value){
+    return
+  }
+
+  /*
+   * 如果是时间轴主动跳转，
+   * 不允许普通滚动检测覆盖用户点击的月份。
+   */
+  if(timelineScrolling){
+
+    if(timelineTargetMonth){
+
+      activeMonth.value=timelineTargetMonth
+
+    }
+
+    return
+  }
+
+  const cards=Array.from(
+    document.querySelectorAll('.wallpaper-card')
+  )
+
+  if(!cards.length){
+    return
+  }
+
+  /*
+   * 使用距离顶部最近的卡片作为当前卡片。
+   *
+   * 不再使用“最后一个 top <= 110px”的方式，
+   * 避免点击月份后出现临界位置判断错误。
+   */
+  const headerOffset=110
+
+  let currentCard=cards[0]
+
+  let bestDistance=Infinity
+
+  for(const card of cards){
+
+    const rect=card.getBoundingClientRect()
+
+    const distance=Math.abs(
+      rect.top-headerOffset
+    )
+
+    if(distance<bestDistance){
+
+      bestDistance=distance
+
+      currentCard=card
+
+    }
+  }
+
+  const date=currentCard.id.replace(
+    'wallpaper-',
+    ''
+  )
+
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+    return
+  }
+
+  activeMonth.value=date.slice(0,7)
+}
+
+function updateScrollState(){
+  const doc=document.documentElement
+  const scrollTop=window.scrollY||window.pageYOffset||0
+  const maxScroll=Math.max(0,doc.scrollHeight-window.innerHeight)
+  scrollProgress.value=maxScroll===0?0:Math.min(100,Math.max(0,(scrollTop/maxScroll)*100))
+  atTop.value=scrollTop<=8
+  atBottom.value=scrollTop>=maxScroll-8
+  updateActiveMonth()
+}
+
+function handleWindowScroll(){
+  showTimeline()
+  if(scrollUpdateFrame!==null){
+    return
+  }
+  scrollUpdateFrame=requestAnimationFrame(()=>{
+    updateScrollState()
+    scrollUpdateFrame=null
+  })
+}
+
+function handleMouseMove(){
+  showTimeline()
+}
 
 
 async function handleLoadMore(entries){
@@ -792,57 +976,21 @@ async function handleLoadMore(entries){
 
 
 onMounted(async()=>{
-
-
   await loadInitial()
-
-
-
   fillImageLoadQueue()
-
-
+  updateScrollState()
+  window.addEventListener('scroll',handleWindowScroll,{passive:true})
+  window.addEventListener('mousemove',handleMouseMove,{passive:true})
 
   if(!loadMoreTrigger.value){
-
     return
-
   }
 
-
-
   observer=new IntersectionObserver(
-
     handleLoadMore,
-
-    {
-
-      rootMargin:'800px 0px'
-
-    }
-
+    {rootMargin:'800px 0px'}
   )
-
-
-
-  observer.observe(
-    loadMoreTrigger.value
-  )
-
-  window.addEventListener(
-    'scroll',
-    handleWindowScroll,
-    { passive: true }
-  )
-
-  window.addEventListener(
-    'mousemove',
-    handleMouseMove,
-    { passive: true }
-  )
-
-  updateActiveMonth()
-
-
+  observer.observe(loadMoreTrigger.value)
 })
 
 
@@ -850,36 +998,18 @@ onMounted(async()=>{
 
 
 onBeforeUnmount(()=>{
-
-
   if(observer){
-
     observer.disconnect()
-
   }
-
-
-
-  document.body.style.overflow=''
-
-  window.removeEventListener(
-    'scroll',
-    handleWindowScroll
-  )
-
-  window.removeEventListener(
-    'mousemove',
-    handleMouseMove
-  )
-
-  if (timelineHideTimer) {
+  window.removeEventListener('scroll',handleWindowScroll)
+  window.removeEventListener('mousemove',handleMouseMove)
+  if(timelineHideTimer){
     clearTimeout(timelineHideTimer)
   }
-
-  if (scrollTimer) {
-    clearTimeout(scrollTimer)
+  if(scrollUpdateFrame!==null){
+    cancelAnimationFrame(scrollUpdateFrame)
   }
-
+  document.body.style.overflow=''
 })
 
 

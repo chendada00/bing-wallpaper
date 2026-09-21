@@ -250,6 +250,8 @@ watch(
 
 <style scoped>
 .wallpaper-card {
+  scroll-margin-top: 110px;
+
   --accent-color: #ffffff;
 
   position: relative;
