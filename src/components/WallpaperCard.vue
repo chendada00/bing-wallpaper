@@ -106,19 +106,57 @@
         <div
           v-if="colorFingerprint.length"
           class="color-fingerprint"
-          :title="`色彩指纹 · ${colorFingerprint.length} 个色彩区域`"
           aria-label="图片色彩指纹"
         >
-          <span
+          <button
             v-for="(cell, index) in colorFingerprint"
             :key="index"
+            type="button"
             class="color-fingerprint-cell"
-            :style="{
-              backgroundColor: cell.color,
-              opacity: cell.opacity
+            :class="{
+              active: hoveredFingerprintIndex === index
             }"
-            :title="`${cell.hueName} · ${cell.saturationName} · 占比 ${cell.percentage}%`"
+            :style="{
+              '--fingerprint-color': cell.color,
+              '--fingerprint-opacity': cell.opacity
+            }"
+            :aria-label="cell.description"
+            @mouseenter="hoveredFingerprintIndex = index"
+            @mouseleave="hoveredFingerprintIndex = -1"
+            @focus="hoveredFingerprintIndex = index"
+            @blur="hoveredFingerprintIndex = -1"
+            @click.stop
           />
+        </div>
+
+        <div
+          v-if="hoveredFingerprintCell"
+          class="color-fingerprint-info"
+        >
+          <span
+            class="color-fingerprint-info-color"
+            :style="{
+              backgroundColor: hoveredFingerprintCell.color
+            }"
+          />
+
+          <span class="color-fingerprint-info-main">
+            {{ hoveredFingerprintCell.hueName }}
+            ·
+            {{ hoveredFingerprintCell.hueRange }}
+          </span>
+
+          <span class="color-fingerprint-info-total">
+            {{ hoveredFingerprintCell.percentage }}%
+          </span>
+
+          <span class="color-fingerprint-info-detail">
+            低 {{ hoveredFingerprintCell.saturationPercentages[0] }}%
+            ·
+            中 {{ hoveredFingerprintCell.saturationPercentages[1] }}%
+            ·
+            高 {{ hoveredFingerprintCell.saturationPercentages[2] }}%
+          </span>
         </div>
         <div class="card-description">
           {{ item.description || item.copyright || '' }}
@@ -175,19 +213,85 @@ const emit = defineEmits([
 
 const imageLoaded = ref(false)
 
-const HUE_COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#84cc16',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#3b82f6',
-  '#6366f1',
-  '#8b5cf6',
-  '#d946ef',
-  '#ec4899'
+const HUE_DEFINITIONS = [
+  {
+    name: '红',
+    range: '0°–30°',
+    degrees: 0
+  },
+  {
+    name: '橙',
+    range: '30°–60°',
+    degrees: 30
+  },
+  {
+    name: '黄',
+    range: '60°–90°',
+    degrees: 60
+  },
+  {
+    name: '黄绿',
+    range: '90°–120°',
+    degrees: 90
+  },
+  {
+    name: '绿',
+    range: '120°–150°',
+    degrees: 120
+  },
+  {
+    name: '青绿',
+    range: '150°–180°',
+    degrees: 150
+  },
+  {
+    name: '青',
+    range: '180°–210°',
+    degrees: 180
+  },
+  {
+    name: '蓝',
+    range: '210°–240°',
+    degrees: 210
+  },
+  {
+    name: '蓝紫',
+    range: '240°–270°',
+    degrees: 240
+  },
+  {
+    name: '紫',
+    range: '270°–300°',
+    degrees: 270
+  },
+  {
+    name: '品红',
+    range: '300°–330°',
+    degrees: 300
+  },
+  {
+    name: '玫红',
+    range: '330°–360°',
+    degrees: 330
+  }
+]
+
+const SATURATION_NAMES = [
+  '低饱和度',
+  '中饱和度',
+  '高饱和度'
+]
+
+const SATURATION_VALUES = [
+  25,
+  60,
+  90
+]
+
+const VALUE_VALUES = [
+  35,
+  65,
+  92
 ]
 
 const colorFingerprint = computed(() => {
@@ -202,76 +306,138 @@ const colorFingerprint = computed(() => {
     return []
   }
 
-  const bins = histogram.bins
+  const bins = histogram.bins.map(
+    value => Number(value) || 0
+  )
 
-  /*
-   * 108 bins:
-   * 12 Hue × 3 Saturation × 3 Value
-   *
-   * 首页只展示 12 × 3 = 36 个视觉区域。
-   * Value 三层合并成一个权重。
-   */
+  const total = bins.reduce(
+    (sum, value) => sum + value,
+    0
+  )
+
+  if (total <= 0) {
+    return []
+  }
+
   const cells = []
 
-  for (let saturation = 0; saturation < 3; saturation += 1 ) {
-    for ( let hue = 0; hue < 12; hue += 1 ) {
-      let weight = 0
+  /*
+   * 首页只展示 12 个 Hue。
+   *
+   * 每个 Hue：
+   * 12 × 3 × 3
+   *      ↓
+   * 1 个色块
+   *
+   * 也就是说：
+   *
+   * 108 个原始 bin
+   *        ↓
+   * 12 个首页色块
+   */
+  for (let hue = 0; hue < 12; hue += 1) {
+    let totalWeight = 0
 
+    const saturationWeights = [
+      0,
+      0,
+      0
+    ]
+
+    let saturationWeightedSum = 0
+    let valueWeightedSum = 0
+
+    for (let saturation = 0; saturation < 3; saturation += 1) {
       for (let value = 0; value < 3; value += 1) {
         const index =
           hue * 9 +
           saturation * 3 +
           value
 
-        weight += bins[index] || 0
+        const weight = bins[index]
+
+        totalWeight += weight
+
+        saturationWeights[saturation] += weight
+
+        saturationWeightedSum +=
+          weight * SATURATION_VALUES[saturation]
+
+        valueWeightedSum +=
+          weight * VALUE_VALUES[value]
       }
-
-const total = bins.reduce(
-  (sum, value) => sum + (Number(value) || 0),
-  0
-)
- 
-
-const percentage = total > 0
-  ? weight / total * 100
-  : 0
-
-cells.push({
-  color: HUE_COLORS[hue],
-  weight,
-  saturationName: [
-    '低饱和度',
-    '中饱和度',
-    '高饱和度'
-  ][saturation],
-  hueName: [
-    '红',
-    '橙',
-    '黄',
-    '黄绿',
-    '绿',
-    '青绿',
-    '青',
-    '蓝',
-    '蓝紫',
-    '紫',
-    '品红',
-    '玫红'
-  ][hue],
-  percentage: percentage.toFixed(1)
-})
     }
+
+    const percentage =
+      totalWeight / total * 100
+
+    const averageSaturation =
+      totalWeight > 0
+        ? saturationWeightedSum / totalWeight
+        : 60
+
+    const averageValue =
+      totalWeight > 0
+        ? valueWeightedSum / totalWeight
+        : 65
+
+    const hueInfo =
+      HUE_DEFINITIONS[hue]
+
+    const saturationPercentages =
+      saturationWeights.map(weight => {
+        return (
+          weight / total * 100
+        ).toFixed(1)
+      })
+
+    cells.push({
+      color: `hsl(
+        ${hueInfo.degrees}
+        ${Math.round(averageSaturation)}%
+        ${Math.round(averageValue)}%
+      )`,
+
+      weight: totalWeight,
+
+      percentage:
+        percentage.toFixed(1),
+
+      opacity:
+        totalWeight > 0
+          ? 0.28 + (
+              percentage / 100
+            ) * 0.72
+          : 0.08,
+
+      hueName: hueInfo.name,
+
+      hueRange: hueInfo.range,
+
+      saturationPercentages,
+
+      description:
+        `${hueInfo.name} · ` +
+        `${hueInfo.range} · ` +
+        `占整张图片 ${percentage.toFixed(1)}%`
+    })
   }
 
-  const maxWeight = Math.max(
-    ...cells.map(cell => cell.weight),
-    1
-  )
+  return cells
+})
 
-  return cells.map(cell => ({
-    ...cell,
-    opacity: 0.18 + (cell.weight / maxWeight) * 0.82
-  }))
+const hoveredFingerprintIndex = ref(-1)
+
+const hoveredFingerprintCell = computed(() => {
+  if (hoveredFingerprintIndex.value < 0) {
+    return null
+  }
+
+  return (
+    colorFingerprint.value[
+      hoveredFingerprintIndex.value
+    ] || null
+  )
 })
 
 const accentColor = computed(() => {
@@ -948,76 +1114,306 @@ watch(
   white-space: nowrap;
   border: 0;
 }
-
 /* ================================
    Color Fingerprint
 ================================ */
 
 .color-fingerprint {
-  display: grid;
+  position: relative;
 
-  grid-template-columns: repeat(12, 1fr);
-
-  gap: 2px;
+  display: flex;
 
   width: 100%;
+  height: 9px;
 
-  margin-top: 9px;
+  margin-top: 10px;
 
-  padding: 4px;
+  overflow: visible;
 
-  border-radius: 7px;
+  border-radius: 999px;
 
   background: rgba(255, 255, 255, 0.08);
 
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 3px 12px rgba(0, 0, 0, 0.12);
 
-  opacity: 0.82;
+  isolation: isolate;
 
   transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+    height 0.22s ease;
 }
 
 .color-fingerprint-cell {
-  display: block;
+  position: relative;
 
-  height: 4px;
+  flex: 1 1 0;
+
+  width: 0;
+  height: 100%;
 
   min-width: 0;
+  min-height: 0;
 
-  border-radius: 2px;
+  padding: 0;
 
-  box-shadow:
-    0 0 5px rgba(255, 255, 255, 0.08);
+  border: 0;
+
+  background:
+    var(--fingerprint-color);
+
+  opacity:
+    var(--fingerprint-opacity);
+
+  cursor: crosshair;
 
   transition:
-    transform 0.25s ease,
-    opacity 0.25s ease;
+    transform 0.18s cubic-bezier(.2, .8, .2, 1),
+    opacity 0.18s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
+
+  z-index: 1;
 }
 
-.wallpaper-card:hover .color-fingerprint {
+/*
+ * 让整条色彩带保持连续，
+ * 只有最外侧两个色块拥有圆角。
+ */
+.color-fingerprint-cell:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.color-fingerprint-cell:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+/*
+ * Hover 时：
+ *
+ * - 色块变高
+ * - 稍微放大
+ * - 提升亮度
+ * - 覆盖相邻色块
+ *
+ * 但不改变它原本的位置。
+ */
+.color-fingerprint-cell:hover,
+.color-fingerprint-cell.active {
   opacity: 1;
 
-  transform: translateY(-1px);
+  transform:
+    scaleY(2.5)
+    scaleX(1.12);
+
+  filter:
+    saturate(1.12)
+    brightness(1.08);
+
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 5px 14px rgba(0, 0, 0, 0.35);
+
+  z-index: 10;
 }
 
-.wallpaper-card:hover .color-fingerprint-cell {
-  transform: scaleY(1.35);
+
+
+/*
+ * 键盘聚焦
+ */
+.color-fingerprint-cell:focus-visible {
+  outline:
+    2px solid
+    rgba(255, 255, 255, 0.95);
+
+  outline-offset: 3px;
+
+  opacity: 1;
+
+  transform:
+    scaleY(2.5)
+    scaleX(1.12);
+
+  z-index: 10;
+}
+
+/* ================================
+   Fingerprint Detail
+================================ */
+.color-fingerprint-info {
+  position: absolute;
+
+  left: 50%;
+
+  bottom: calc(100% + 12px);
+
+  transform: translateX(-50%);
+
+  z-index: 30;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  width: max-content;
+
+  max-width: min(
+    280px,
+    calc(100vw - 32px)
+  );
+
+  min-height: 26px;
+
+  padding: 6px 9px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  border-radius: 8px;
+
+  background:
+    rgba(15, 15, 18, 0.88);
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    0 1px 2px rgba(0, 0, 0, 0.18);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  color:
+    rgba(255, 255, 255, 0.7);
+
+  font-size: 9px;
+
+  line-height: 1.3;
+
+  white-space: nowrap;
+
+  pointer-events: none;
+
+  opacity: 0;
+
+  animation:
+    color-fingerprint-info-in
+    0.16s ease forwards;
+}
+
+.color-fingerprint-info::after {
+  content: '';
+
+  position: absolute;
+
+  left: 50%;
+
+  top: 100%;
+
+  width: 7px;
+  height: 7px;
+
+  transform:
+    translate(-50%, -4px)
+    rotate(45deg);
+
+  border-right:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  border-bottom:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  background:
+    rgba(15, 15, 18, 0.88);
+}
+
+@keyframes color-fingerprint-info-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateX(-50%)
+      translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateX(-50%)
+      translateY(0);
+  }
+}
+
+.color-fingerprint-info-color {
+  width: 10px;
+  height: 10px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.65);
+
+  box-shadow:
+    0 0 7px rgba(255, 255, 255, 0.16);
+}
+
+.color-fingerprint-info-main {
+  color:
+    rgba(255, 255, 255, 0.92);
+
+  font-weight: 600;
+}
+
+.color-fingerprint-info-total {
+  color:
+    rgba(255, 255, 255, 0.88);
+
+  font-weight: 600;
+}
+
+.color-fingerprint-info-detail {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  color:
+    rgba(255, 255, 255, 0.48);
 }
 
 @media (max-width: 700px) {
   .color-fingerprint {
-    margin-top: 7px;
+    height: 7px;
 
-    padding: 3px;
-
-    gap: 1.5px;
+    margin-top: 8px;
   }
 
-  .color-fingerprint-cell {
-    height: 3px;
+  .wallpaper-card:hover .color-fingerprint {
+    height: 8px;
+  }
+
+  .color-fingerprint-info {
+    margin-top: 5px;
+
+    font-size: 8px;
+  }
+
+  .color-fingerprint-cell:hover,
+  .color-fingerprint-cell.active {
+    transform:
+      scaleY(2.2)
+      scaleX(1.08);
   }
 }
 </style>
