@@ -161,6 +161,34 @@
               </div>
             </div>
 
+
+            <!-- ==================== 色彩分布 ==================== -->
+            <div
+              v-if="histogramCells.length"
+              class="viewer-histogram"
+            >
+              <div class="viewer-section-title">
+                色彩分布
+              </div>
+
+              <div class="histogram-grid">
+                <span
+                  v-for="(cell, index) in histogramCells"
+                  :key="index"
+                  class="histogram-cell"
+                  :style="{
+                    backgroundColor: cell.color,
+                    opacity: cell.opacity
+                  }"
+                  :title="`${cell.hueName} · ${cell.saturationName} · ${cell.valueName}`"
+                />
+              </div>
+
+              <div class="histogram-caption">
+                HSV · 108 色彩区域
+              </div>
+            </div>
+
             <!-- ==================== 操作 ==================== -->
             <div class="viewer-actions">
 
@@ -170,8 +198,29 @@
                 :disabled="downloading"
                 @click="downloadImage"
               >
-                <span v-if="downloading">
-                  下载中...
+                <span v-if="downloading" class="download-progress-content">
+                  <span class="download-progress-track">
+                    <span
+                      class="download-progress-bar"
+                      :style="{
+                        width: `${downloadProgress}%`
+                      }"
+                    />
+                  </span>
+
+                  <span class="download-progress-text">
+                    <template v-if="downloadTotal">
+                      {{ downloadProgress }}%
+                      ·
+                      {{ formatBytes(downloadLoaded) }}
+                      /
+                      {{ formatBytes(downloadTotal) }}
+                    </template>
+
+                    <template v-else>
+                      下载中...
+                    </template>
+                  </span>
                 </span>
 
                 <span v-else>
@@ -269,6 +318,88 @@ let loadToken = 0
  * 下载状态
  */
 const downloading = ref(false)
+
+const downloadProgress = ref(0)
+
+const downloadLoaded = ref(0)
+
+const downloadTotal = ref(0)
+
+
+const HISTOGRAM_HUES = [
+  '红',
+  '橙',
+  '黄',
+  '黄绿',
+  '绿',
+  '青绿',
+  '青',
+  '蓝',
+  '蓝紫',
+  '紫',
+  '品红',
+  '玫红'
+]
+
+const HISTOGRAM_SATURATIONS = [
+  '低饱和度',
+  '中饱和度',
+  '高饱和度'
+]
+
+const HISTOGRAM_VALUES = [
+  '暗',
+  '中',
+  '亮'
+]
+
+const histogramCells = computed(() => {
+  const histogram = props.item?.colorHistogram
+
+  if (
+    !histogram ||
+    histogram.version !== 1 ||
+    !Array.isArray(histogram.bins) ||
+    histogram.bins.length !== 108
+  ) {
+    return []
+  }
+
+  const bins = histogram.bins
+  const max = Math.max(...bins, 1)
+
+  const cells = []
+
+  for (let hue = 0; hue < 12; hue += 1) {
+    for (let saturation = 0; saturation < 3; saturation += 1) {
+      for (let value = 0; value < 3; value += 1) {
+        const index =
+          hue * 9 +
+          saturation * 3 +
+          value
+
+        const weight = bins[index] || 0
+
+        const hueDegrees = hue * 30
+
+        const saturationValue = [25, 60, 90][saturation]
+        const valueValue = [35, 65, 92][value]
+
+        cells.push({
+          color: `hsl(${hueDegrees} ${saturationValue}% ${valueValue}%)`,
+          opacity: 0.12 + (weight / max) * 0.88,
+          hueName: HISTOGRAM_HUES[hue],
+          saturationName: HISTOGRAM_SATURATIONS[saturation],
+          valueName: HISTOGRAM_VALUES[value]
+        })
+      }
+    }
+  }
+
+  return cells
+})
+
+
 
 /*
  * 当前复制成功的颜色
@@ -699,70 +830,129 @@ async function copyColor(color) {
  * 下载原图
  */
 async function downloadImage() {
-  if (
-    !props.item?.image ||
-    downloading.value
-  ) {
+  if (!props.item?.image || downloading.value) {
     return
   }
 
   downloading.value = true
+  downloadProgress.value = 0
+  downloadLoaded.value = 0
+  downloadTotal.value = 0
 
   try {
-    const response = await fetch(
-      props.item.image
-    )
+    const response = await fetch(props.item.image)
 
     if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status}`
-      )
+      throw new Error(`HTTP ${response.status}`)
     }
 
-    const blob =
-      await response.blob()
+    /*
+     * 某些浏览器 / CDN 环境可能没有 ReadableStream。
+     * 这种情况下退回普通 blob 下载。
+     */
+    if (!response.body) {
+      const blob = await response.blob()
 
-    const url =
-      URL.createObjectURL(blob)
+      triggerDownload(blob)
 
-    const link =
-      document.createElement('a')
+      return
+    }
 
-    link.href = url
+    const contentLength = response.headers.get('Content-Length')
+    const total = Number(contentLength)
 
-    link.download = `${
-      props.item.date ||
-      'bing-wallpaper'
-    }.jpg`
+    downloadTotal.value = Number.isFinite(total)
+      ? total
+      : 0
 
-    document.body.appendChild(
-      link
-    )
+    const reader = response.body.getReader()
 
-    link.click()
+    const chunks = []
 
-    link.remove()
+    let received = 0
 
-    setTimeout(() => {
-      URL.revokeObjectURL(url)
-    }, 1000)
-  } catch (error) {
-    console.error(
-      '下载失败:',
-      error
-    )
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      chunks.push(value)
+
+      received += value.length
+
+      downloadLoaded.value = received
+
+      if (total > 0) {
+        downloadProgress.value =
+          Math.min(
+            100,
+            Math.round(received / total * 100)
+          )
+      }
+    }
+
+    const blob = new Blob(chunks)
 
     /*
-     * 下载失败时直接打开原图。
+     * 没有 Content-Length 时，
+     * 下载完成之前无法计算百分比。
      */
+    if (total <= 0) {
+      downloadProgress.value = 100
+    }
+
+    triggerDownload(blob)
+  } catch (error) {
+    console.error('下载失败:', error)
+
     window.open(
       props.item.image,
       '_blank',
       'noopener,noreferrer'
     )
   } finally {
-    downloading.value = false
+    setTimeout(() => {
+      downloading.value = false
+      downloadProgress.value = 0
+      downloadLoaded.value = 0
+      downloadTotal.value = 0
+    }, 500)
   }
+}
+
+function triggerDownload(blob) {
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+
+  link.href = url
+
+  link.download =
+    `${props.item?.date || 'bing-wallpaper'}.jpg`
+
+  document.body.appendChild(link)
+
+  link.click()
+
+  link.remove()
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+  }, 1000)
+}
+
+function formatBytes(bytes) {
+  if (!bytes) {
+    return ''
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`
+  }
+
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 /*
@@ -1857,4 +2047,120 @@ onBeforeUnmount(() => {
 .viewer-loading {
   z-index: 5;
 }
+
+/* ================================
+   Histogram
+================================ */
+
+.viewer-histogram {
+  margin-top: 24px;
+}
+
+.viewer-section-title {
+  margin-bottom: 10px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  color: rgba(255, 255, 255, 0.72);
+
+  letter-spacing: 0.3px;
+}
+
+.histogram-grid {
+  display: grid;
+
+  grid-template-columns: repeat(12, 1fr);
+
+  gap: 3px;
+
+  padding: 7px;
+
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.055);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.histogram-cell {
+  display: block;
+
+  aspect-ratio: 1;
+
+  min-width: 0;
+
+  border-radius: 3px;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.histogram-cell:hover {
+  transform: scale(1.45);
+
+  z-index: 2;
+
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.histogram-caption {
+  margin-top: 7px;
+
+  font-size: 10px;
+
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.download-progress-content {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  width: 100%;
+}
+
+.download-progress-track {
+  position: relative;
+
+  flex: 1;
+
+  height: 4px;
+
+  overflow: hidden;
+
+  border-radius: 99px;
+
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.download-progress-bar {
+  position: absolute;
+
+  inset: 0 auto 0 0;
+
+  border-radius: inherit;
+
+  background: currentColor;
+
+  transition: width 0.15s ease;
+}
+
+.download-progress-text {
+  min-width: 92px;
+
+  font-size: 10px;
+
+  text-align: right;
+
+  white-space: nowrap;
+}
+
 </style>

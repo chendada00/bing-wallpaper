@@ -74,7 +74,7 @@ export function useBingData() {
       const url = `${DATA_BASE_URL}/data/${year}/${pad2(month)}.json`
 
       try {
-        const response = await fetch(url, { cache: 'no-cache' })
+        const response = await fetch(url)
 
         if (response.status === 404) {
           monthCache.set(key, [])

@@ -103,7 +103,22 @@
         <div class="card-title">
           {{ item.title || 'Bing Wallpaper' }}
         </div>
-
+        <div
+          v-if="colorFingerprint.length"
+          class="color-fingerprint"
+          :title="`色彩指纹 · ${colorFingerprint.length} 个色彩区域`"
+          aria-label="图片色彩指纹"
+        >
+          <span
+            v-for="(cell, index) in colorFingerprint"
+            :key="index"
+            class="color-fingerprint-cell"
+            :style="{
+              backgroundColor: cell.color,
+              opacity: cell.opacity
+            }"
+          />
+        </div>
         <div class="card-description">
           {{ item.description || item.copyright || '' }}
         </div>
@@ -158,6 +173,75 @@ const emit = defineEmits([
 ])
 
 const imageLoaded = ref(false)
+
+const HUE_COLORS = [
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#84cc16',
+  '#22c55e',
+  '#14b8a6',
+  '#06b6d4',
+  '#3b82f6',
+  '#6366f1',
+  '#8b5cf6',
+  '#d946ef',
+  '#ec4899'
+]
+
+const colorFingerprint = computed(() => {
+  const histogram = props.item?.colorHistogram
+
+  if (
+    !histogram ||
+    histogram.version !== 1 ||
+    !Array.isArray(histogram.bins) ||
+    histogram.bins.length !== 108
+  ) {
+    return []
+  }
+
+  const bins = histogram.bins
+
+  /*
+   * 108 bins:
+   * 12 Hue × 3 Saturation × 3 Value
+   *
+   * 首页只展示 12 × 3 = 36 个视觉区域。
+   * Value 三层合并成一个权重。
+   */
+  const cells = []
+
+  for (let hue = 0; hue < 12; hue += 1) {
+    for (let saturation = 0; saturation < 3; saturation += 1) {
+      let weight = 0
+
+      for (let value = 0; value < 3; value += 1) {
+        const index =
+          hue * 9 +
+          saturation * 3 +
+          value
+
+        weight += bins[index] || 0
+      }
+
+      cells.push({
+        color: HUE_COLORS[hue],
+        weight
+      })
+    }
+  }
+
+  const maxWeight = Math.max(
+    ...cells.map(cell => cell.weight),
+    1
+  )
+
+  return cells.map(cell => ({
+    color: cell.color,
+    opacity: 0.18 + (cell.weight / maxWeight) * 0.82
+  }))
+})
 
 const accentColor = computed(() => {
   const color = props.item?.color || {}
@@ -572,7 +656,7 @@ watch(
 
   display: -webkit-box;
 
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 
   -webkit-box-orient: vertical;
 
@@ -832,5 +916,77 @@ watch(
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ================================
+   Color Fingerprint
+================================ */
+
+.color-fingerprint {
+  display: grid;
+
+  grid-template-columns: repeat(12, 1fr);
+
+  gap: 2px;
+
+  width: 100%;
+
+  margin-top: 9px;
+
+  padding: 4px;
+
+  border-radius: 7px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  opacity: 0.82;
+
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.color-fingerprint-cell {
+  display: block;
+
+  height: 4px;
+
+  min-width: 0;
+
+  border-radius: 2px;
+
+  box-shadow:
+    0 0 5px rgba(255, 255, 255, 0.08);
+
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
+}
+
+.wallpaper-card:hover .color-fingerprint {
+  opacity: 1;
+
+  transform: translateY(-1px);
+}
+
+.wallpaper-card:hover .color-fingerprint-cell {
+  transform: scaleY(1.35);
+}
+
+@media (max-width: 700px) {
+  .color-fingerprint {
+    margin-top: 7px;
+
+    padding: 3px;
+
+    gap: 1.5px;
+  }
+
+  .color-fingerprint-cell {
+    height: 3px;
+  }
 }
 </style>
