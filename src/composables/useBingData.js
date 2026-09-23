@@ -201,7 +201,7 @@ export function useBingData() {
     }
 
     const loaded = results.flatMap(result => result.items)
-    appendUnique(loaded)
+    // appendUnique(loaded)
 
     return loaded
   }
