@@ -47,7 +47,7 @@
             v-model:date="date"
 
             v-model:color="color"
-
+            v-model:scope="scope"
             @clear="clear"
 
           />
@@ -258,7 +258,9 @@
 import {
   onBeforeUnmount,
   onMounted,
-  ref
+  ref,
+  nextTick,
+  watch
 } from 'vue'
 
 
@@ -279,7 +281,9 @@ import {
   useWallpaperSearch
 } from './composables/useWallpaperSearch'
 
-
+import {
+  useHistoryIndex
+} from './composables/useHistoryIndex'
 
 const {
   items,
@@ -289,10 +293,12 @@ const {
   noMore,
   loadInitial,
   loadNextMonth,
-  retry
+  loadDates,
+  retry,
+  dataBaseUrl
 }=useBingData()
 
-
+const historyIndex=useHistoryIndex(dataBaseUrl)
 
 const {
 
@@ -301,14 +307,11 @@ const {
   date,
 
   color,
-
+  scope,
   result,
-
   searching,
-
   clear
-
-}=useWallpaperSearch(items)
+}=useWallpaperSearch(items,historyIndex)
 
 
 
@@ -570,7 +573,51 @@ function retryImage(date){
 
 }
 
+// 搜索结果是 computed。原逻辑只在初次加载/图片完成后填队列，
+// 搜索条件变化时没有重新触发，因此新出现的结果可能永久停留在 idle。
+watch(
+  [result,items],
+  async ()=>{
+    await nextTick()
+    fillImageLoadQueue()
+  },
+  {flush:'post'}
+)
 
+watch(
+  [scope,keyword,date],
+  async ()=>{
+    if(scope.value!=='all'){
+      await nextTick()
+      fillImageLoadQueue()
+      return
+    }
+
+    // 防止用户只是切换到“全历史”就把整个历史全部下载下来。
+    if(!keyword.value && !date.value){
+      return
+    }
+
+    try{
+      await historyIndex.load()
+
+      const dates=historyIndex.search(
+        keyword.value,
+        date.value
+      )
+
+      // loadDates 会按 YYYY-MM 分组，同一个月只请求一次。
+      await loadDates(dates)
+
+      await nextTick()
+      fillImageLoadQueue()
+      updateScrollState()
+    }catch(error){
+      console.error('全历史搜索失败:',error)
+    }
+  },
+  {flush:'post'}
+)
 
 
 
