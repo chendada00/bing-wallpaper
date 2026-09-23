@@ -117,6 +117,7 @@
               backgroundColor: cell.color,
               opacity: cell.opacity
             }"
+            :title="`${cell.hueName} · ${cell.saturationName} · 占比 ${cell.percentage}%`"
           />
         </div>
         <div class="card-description">
@@ -212,8 +213,8 @@ const colorFingerprint = computed(() => {
    */
   const cells = []
 
-  for (let hue = 0; hue < 12; hue += 1) {
-    for (let saturation = 0; saturation < 3; saturation += 1) {
+  for (let saturation = 0; saturation < 3; saturation += 1 ) {
+    for ( let hue = 0; hue < 12; hue += 1 ) {
       let weight = 0
 
       for (let value = 0; value < 3; value += 1) {
@@ -225,10 +226,40 @@ const colorFingerprint = computed(() => {
         weight += bins[index] || 0
       }
 
-      cells.push({
-        color: HUE_COLORS[hue],
-        weight
-      })
+const total = bins.reduce(
+  (sum, value) => sum + (Number(value) || 0),
+  0
+)
+ 
+
+const percentage = total > 0
+  ? weight / total * 100
+  : 0
+
+cells.push({
+  color: HUE_COLORS[hue],
+  weight,
+  saturationName: [
+    '低饱和度',
+    '中饱和度',
+    '高饱和度'
+  ][saturation],
+  hueName: [
+    '红',
+    '橙',
+    '黄',
+    '黄绿',
+    '绿',
+    '青绿',
+    '青',
+    '蓝',
+    '蓝紫',
+    '紫',
+    '品红',
+    '玫红'
+  ][hue],
+  percentage: percentage.toFixed(1)
+})
     }
   }
 
@@ -238,7 +269,7 @@ const colorFingerprint = computed(() => {
   )
 
   return cells.map(cell => ({
-    color: cell.color,
+    ...cell,
     opacity: 0.18 + (cell.weight / maxWeight) * 0.82
   }))
 })

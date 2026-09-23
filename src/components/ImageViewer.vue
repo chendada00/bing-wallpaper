@@ -162,32 +162,6 @@
             </div>
 
 
-            <!-- ==================== 色彩分布 ==================== -->
-            <div
-              v-if="histogramCells.length"
-              class="viewer-histogram"
-            >
-              <div class="viewer-section-title">
-                色彩分布
-              </div>
-
-              <div class="histogram-grid">
-                <span
-                  v-for="(cell, index) in histogramCells"
-                  :key="index"
-                  class="histogram-cell"
-                  :style="{
-                    backgroundColor: cell.color,
-                    opacity: cell.opacity
-                  }"
-                  :title="`${cell.hueName} · ${cell.saturationName} · ${cell.valueName}`"
-                />
-              </div>
-
-              <div class="histogram-caption">
-                HSV · 108 色彩区域
-              </div>
-            </div>
 
             <!-- ==================== 操作 ==================== -->
             <div class="viewer-actions">
@@ -240,6 +214,107 @@
               </a>
 
             </div>
+
+            <!-- ==================== 色彩分布 ==================== -->
+            <div
+              v-if="histogramCells.length"
+              class="viewer-histogram"
+            >
+              <div class="viewer-section-title">
+                <span>颜色分布</span>
+
+                <span class="viewer-section-meta">
+                  108 个 HSV 色彩区域
+                </span>
+              </div>
+
+              <div class="histogram-description">
+                统计整张图片的颜色组成，不对应图片中的空间位置。
+              </div>
+
+              <div class="histogram-wrapper">
+                <!-- Hue 横轴 -->
+                <div class="histogram-hue-axis">
+                  <span
+                    v-for="hue in HISTOGRAM_HUES"
+                    :key="hue.name"
+                    class="histogram-hue-label"
+                  >
+                    {{ hue.name }}
+                  </span>
+                </div>
+
+                <div class="histogram-main">
+                  <!-- 左侧 Saturation / Value 标签 -->
+                  <div class="histogram-row-labels">
+                    <span
+                      v-for="row in HISTOGRAM_ROWS"
+                      :key="row.key"
+                      class="histogram-row-label"
+                    >
+                      {{ row.label }}
+                    </span>
+                  </div>
+
+                  <!-- 108 个颜色区域 -->
+                  <div class="histogram-grid">
+                    <button
+                      v-for="(cell, index) in histogramCells"
+                      :key="index"
+                      type="button"
+                      class="histogram-cell"
+                      :class="{
+                        active: hoveredHistogramIndex === index
+                      }"
+                      :style="{
+                        backgroundColor: cell.color,
+                        opacity: cell.opacity
+                      }"
+                      :aria-label="cell.description"
+                      @mouseenter="hoveredHistogramIndex = index"
+                      @mouseleave="hoveredHistogramIndex = -1"
+                      @focus="hoveredHistogramIndex = index"
+                      @blur="hoveredHistogramIndex = -1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- 当前格子的详细说明 -->
+              <div class="histogram-hover-info">
+                <template v-if="hoveredHistogramCell">
+                  <span
+                    class="histogram-hover-color"
+                    :style="{
+                      backgroundColor: hoveredHistogramCell.color
+                    }"
+                  />
+
+                  <span class="histogram-hover-main">
+                    {{ hoveredHistogramCell.hueName }}
+                    ·
+                    {{ hoveredHistogramCell.saturationName }}
+                    ·
+                    {{ hoveredHistogramCell.valueName }}
+                  </span>
+
+                  <span class="histogram-hover-range">
+                    Hue {{ hoveredHistogramCell.hueRange }}
+                  </span>
+
+                  <strong>
+                    {{ hoveredHistogramCell.percentage }}%
+                  </strong>
+                </template>
+
+                <template v-else>
+                  <span class="histogram-hover-placeholder">
+                    将鼠标移动到色彩区域，可查看该区域的颜色和像素占比
+                  </span>
+                </template>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -327,31 +402,79 @@ const downloadTotal = ref(0)
 
 
 const HISTOGRAM_HUES = [
-  '红',
-  '橙',
-  '黄',
-  '黄绿',
-  '绿',
-  '青绿',
-  '青',
-  '蓝',
-  '蓝紫',
-  '紫',
-  '品红',
-  '玫红'
+  { name: '红', range: '0°–30°' },
+  { name: '橙', range: '30°–60°' },
+  { name: '黄', range: '60°–90°' },
+  { name: '黄绿', range: '90°–120°' },
+  { name: '绿', range: '120°–150°' },
+  { name: '青绿', range: '150°–180°' },
+  { name: '青', range: '180°–210°' },
+  { name: '蓝', range: '210°–240°' },
+  { name: '蓝紫', range: '240°–270°' },
+  { name: '紫', range: '270°–300°' },
+  { name: '品红', range: '300°–330°' },
+  { name: '玫红', range: '330°–360°' }
 ]
 
-const HISTOGRAM_SATURATIONS = [
-  '低饱和度',
-  '中饱和度',
-  '高饱和度'
+const HISTOGRAM_ROWS = [
+  {
+    key: 'low-dark',
+    label: '低饱和 · 暗',
+    saturation: 0,
+    value: 0
+  },
+  {
+    key: 'low-medium',
+    label: '低饱和 · 中',
+    saturation: 0,
+    value: 1
+  },
+  {
+    key: 'low-bright',
+    label: '低饱和 · 亮',
+    saturation: 0,
+    value: 2
+  },
+  {
+    key: 'medium-dark',
+    label: '中饱和 · 暗',
+    saturation: 1,
+    value: 0
+  },
+  {
+    key: 'medium-medium',
+    label: '中饱和 · 中',
+    saturation: 1,
+    value: 1
+  },
+  {
+    key: 'medium-bright',
+    label: '中饱和 · 亮',
+    saturation: 1,
+    value: 2
+  },
+  {
+    key: 'high-dark',
+    label: '高饱和 · 暗',
+    saturation: 2,
+    value: 0
+  },
+  {
+    key: 'high-medium',
+    label: '高饱和 · 中',
+    saturation: 2,
+    value: 1
+  },
+  {
+    key: 'high-bright',
+    label: '高饱和 · 亮',
+    saturation: 2,
+    value: 2
+  }
 ]
 
-const HISTOGRAM_VALUES = [
-  '暗',
-  '中',
-  '亮'
-]
+const SATURATION_VALUES = [25, 60, 90]
+const VALUE_VALUES = [35, 65, 92]
 
 const histogramCells = computed(() => {
   const histogram = props.item?.colorHistogram
@@ -366,39 +489,112 @@ const histogramCells = computed(() => {
   }
 
   const bins = histogram.bins
-  const max = Math.max(...bins, 1)
+
+  const total = bins.reduce(
+    (sum, value) => sum + (Number(value) || 0),
+    0
+  )
+
+  const max = Math.max(
+    ...bins.map(value => Number(value) || 0),
+    1
+  )
 
   const cells = []
 
-  for (let hue = 0; hue < 12; hue += 1) {
-    for (let saturation = 0; saturation < 3; saturation += 1) {
-      for (let value = 0; value < 3; value += 1) {
-        const index =
-          hue * 9 +
-          saturation * 3 +
-          value
+  /*
+   * 视觉顺序：
+   *
+   * 9 行：
+   * Saturation × Value
+   *
+   * 12 列：
+   * Hue
+   */
+  for (const row of HISTOGRAM_ROWS) {
+    for (let hue = 0; hue < 12; hue += 1) {
+      const index =
+        hue * 9 +
+        row.saturation * 3 +
+        row.value
 
-        const weight = bins[index] || 0
+      const weight = Number(bins[index]) || 0
 
-        const hueDegrees = hue * 30
+      const hueDegrees = hue * 30
+      const saturation = SATURATION_VALUES[row.saturation]
+      const value = VALUE_VALUES[row.value]
 
-        const saturationValue = [25, 60, 90][saturation]
-        const valueValue = [35, 65, 92][value]
+      const percentage = total > 0
+        ? weight / total * 100
+        : 0
 
-        cells.push({
-          color: `hsl(${hueDegrees} ${saturationValue}% ${valueValue}%)`,
-          opacity: 0.12 + (weight / max) * 0.88,
-          hueName: HISTOGRAM_HUES[hue],
-          saturationName: HISTOGRAM_SATURATIONS[saturation],
-          valueName: HISTOGRAM_VALUES[value]
-        })
-      }
+      cells.push({
+        color: `hsl(${hueDegrees} ${saturation}% ${value}%)`,
+        opacity: weight > 0
+          ? 0.22 + (weight / max) * 0.78
+          : 0.08,
+        weight,
+        percentage: percentage.toFixed(1),
+        hueName: HISTOGRAM_HUES[hue].name,
+        hueRange: HISTOGRAM_HUES[hue].range,
+        saturationName: [
+          '低饱和度',
+          '中饱和度',
+          '高饱和度'
+        ][row.saturation],
+        valueName: [
+          '暗',
+          '中',
+          '亮'
+        ][row.value],
+        description:
+          `${HISTOGRAM_HUES[hue].name} · ` +
+          `${HISTOGRAM_HUES[hue].range} · ` +
+          `${[
+            '低饱和度',
+            '中饱和度',
+            '高饱和度'
+          ][row.saturation]} · ` +
+          `${[
+            '暗',
+            '中',
+            '亮'
+          ][row.value]} · ` +
+          `${percentage.toFixed(1)}%`
+      })
     }
   }
 
   return cells
 })
 
+const hoveredHistogramIndex = ref(-1)
+
+const hoveredHistogramCell = computed(() => {
+  if (
+    hoveredHistogramIndex.value < 0
+  ) {
+    return null
+  }
+
+  return (
+    histogramCells.value[
+      hoveredHistogramIndex.value
+    ] || null
+  )
+})
+
+const HISTOGRAM_SATURATIONS = [
+  '低饱和度',
+  '中饱和度',
+  '高饱和度'
+]
+
+const HISTOGRAM_VALUES = [
+  '暗',
+  '中',
+  '亮'
+]
 
 
 /*
@@ -1591,6 +1787,336 @@ onBeforeUnmount(() => {
 
   margin-top: 18px;
 }
+
+
+/* =========================================================
+ * 色彩分布
+ * ========================================================= */
+
+.viewer-histogram {
+  width: 100%;
+
+  margin-top: 22px;
+}
+
+.viewer-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  margin-bottom: 6px;
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.viewer-section-meta {
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.histogram-description {
+  margin-bottom: 12px;
+
+  color: rgba(255, 255, 255, 0.42);
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+
+/* =========================
+   Histogram wrapper
+========================= */
+
+.histogram-wrapper {
+  width: 100%;
+
+  padding: 12px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 14px;
+
+  background:
+    rgba(255, 255, 255, 0.045);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+
+/* =========================
+   Hue 横轴
+========================= */
+
+.histogram-hue-axis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr));
+
+  gap: 4px;
+
+  margin-left: 92px;
+
+  margin-bottom: 6px;
+}
+
+.histogram-hue-label {
+  min-width: 0;
+
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 9px;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+
+/* =========================
+   主体
+========================= */
+
+.histogram-main {
+  display: grid;
+
+  grid-template-columns:
+    84px minmax(0, 1fr);
+
+  gap: 8px;
+}
+
+
+/* =========================
+   左侧标签
+========================= */
+
+.histogram-row-labels {
+  display: grid;
+
+  grid-template-rows:
+    repeat(9, minmax(0, 1fr));
+
+  gap: 4px;
+}
+
+.histogram-row-label {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  padding-right: 4px;
+
+  color: rgba(255, 255, 255, 0.38);
+
+  font-size: 9px;
+
+  line-height: 1.2;
+
+  text-align: right;
+
+  white-space: nowrap;
+}
+
+
+/* =========================
+   108 色彩格
+========================= */
+
+.histogram-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr));
+
+  grid-template-rows:
+    repeat(9, minmax(24px, 1fr));
+
+  gap: 4px;
+}
+
+.histogram-cell {
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 24px;
+
+  padding: 0;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 5px;
+
+  cursor: crosshair;
+
+  box-sizing: border-box;
+
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.histogram-cell:hover,
+.histogram-cell.active {
+  opacity: 1 !important;
+
+  transform: scale(1.08);
+
+  border-color:
+    rgba(255, 255, 255, 0.8);
+
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.12),
+    0 5px 16px rgba(0, 0, 0, 0.28);
+
+  position: relative;
+
+  z-index: 2;
+}
+
+.histogram-cell:focus-visible {
+  outline:
+    2px solid
+    rgba(255, 255, 255, 0.9);
+
+  outline-offset: 2px;
+}
+
+
+/* =========================
+   Hover 信息
+========================= */
+
+.histogram-hover-info {
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  min-height: 36px;
+
+  margin-top: 9px;
+
+  padding: 8px 10px;
+
+  box-sizing: border-box;
+
+  border-radius: 9px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  color: rgba(255, 255, 255, 0.68);
+
+  font-size: 10px;
+}
+
+.histogram-hover-color {
+  width: 12px;
+  height: 12px;
+
+  flex-shrink: 0;
+
+  border-radius: 4px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.35);
+}
+
+.histogram-hover-main {
+  color: rgba(255, 255, 255, 0.9);
+
+  font-weight: 600;
+}
+
+.histogram-hover-range {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.histogram-hover-info strong {
+  margin-left: auto;
+
+  color: rgba(255, 255, 255, 0.9);
+
+  font-size: 11px;
+}
+
+.histogram-hover-placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+
+/* =========================
+   移动端
+========================= */
+
+@media (max-width: 700px) {
+  .histogram-wrapper {
+    padding: 8px;
+  }
+
+  .histogram-hue-axis {
+    margin-left: 70px;
+
+    gap: 2px;
+  }
+
+  .histogram-hue-label {
+    font-size: 7px;
+  }
+
+  .histogram-main {
+    grid-template-columns: 64px minmax(0, 1fr);
+
+    gap: 5px;
+  }
+
+  .histogram-row-label {
+    font-size: 7px;
+  }
+
+  .histogram-grid {
+    gap: 2px;
+
+    grid-template-rows:
+      repeat(9, minmax(18px, 1fr));
+  }
+
+  .histogram-cell {
+    min-height: 18px;
+
+    border-radius: 3px;
+  }
+
+  .histogram-hover-info {
+    min-height: 34px;
+
+    font-size: 9px;
+  }
+}
+
 
 .viewer-colors-title {
   margin-bottom: 10px;
