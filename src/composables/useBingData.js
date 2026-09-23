@@ -183,16 +183,47 @@ export function useBingData() {
       }
     }
 
-    const results = await Promise.all(
-      Array.from(groups.values()).map(({ year, month }) =>
-        fetchMonth(year, month)
+    const groupList = Array.from(groups.values())
+    const results = []
+
+    // 全历史搜索可能命中很多月份。
+    // 限制月份 JSON 的并发请求，避免一次搜索突然制造大量网络连接。
+    const MONTH_CONCURRENCY = 4
+
+    for (let index = 0; index < groupList.length; index += MONTH_CONCURRENCY) {
+      const batch = groupList.slice(index, index + MONTH_CONCURRENCY)
+
+      const batchResults = await Promise.all(
+        batch.map(({ year, month }) => fetchMonth(year, month))
       )
-    )
+
+      results.push(...batchResults)
+    }
 
     const loaded = results.flatMap(result => result.items)
     appendUnique(loaded)
 
     return loaded
+  }
+
+  async function loadAllHistory() {
+    if (initialLoading.value) return false
+
+    noMore.value = false
+
+    let safety = 0
+
+    while (!noMore.value && safety < 600) {
+      const found = await loadNextMonth()
+      safety += 1
+
+      // 让浏览器有机会处理渲染/输入事件，避免长时间同步占用主线程。
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      if (!found && noMore.value) break
+    }
+
+    return noMore.value
   }
 
   async function loadInitial() {
@@ -224,6 +255,7 @@ export function useBingData() {
     loadInitial,
     loadNextMonth,
     loadDates,
+    loadAllHistory,
     retry,
     dataBaseUrl: DATA_BASE_URL
   }

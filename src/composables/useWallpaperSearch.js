@@ -1,18 +1,16 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { getColorDistance } from '../utils/colorSimilarity'
 
 const COLOR_MATCH_THRESHOLD = 65
+const HISTORY_PAGE_SIZE = 60
 
-export function useWallpaperSearch(items, historyIndex = null) {
+export function useWallpaperSearch(items, historyItems = ref([])) {
   const keyword = ref('')
   const date = ref('')
   const color = ref('')
   const scope = ref('loaded')
-
-  const searching = computed(() => {
-    return Boolean(keyword.value || date.value || color.value)
-  })
+  const historyVisibleCount = ref(HISTORY_PAGE_SIZE)
 
   const loadedResult = computed(() => {
     let list = items.value.filter(item => {
@@ -29,7 +27,6 @@ export function useWallpaperSearch(items, historyIndex = null) {
           color.value,
           item.colorHistogram
         )
-
         if (distance > COLOR_MATCH_THRESHOLD) return false
       }
 
@@ -46,26 +43,47 @@ export function useWallpaperSearch(items, historyIndex = null) {
     return list
   })
 
-  const historyDates = computed(() => {
-    if (!historyIndex || color.value) return []
-    return historyIndex.search(keyword.value, date.value)
+  const historyTotal = computed(() => historyItems.value.length)
+
+  const historyResult = computed(() => {
+    return historyItems.value.slice(0, historyVisibleCount.value)
   })
 
-  const result = computed(() => loadedResult.value)
+  const searching = computed(() => {
+    return Boolean(keyword.value || date.value || color.value)
+  })
+
+  const result = computed(() => {
+    if (!searching.value) {
+      return items.value
+    }
+
+    return scope.value === 'all'
+      ? historyResult.value
+      : loadedResult.value
+  })
+
+  function loadMoreHistoryResults() {
+    historyVisibleCount.value = Math.min(
+      historyVisibleCount.value + HISTORY_PAGE_SIZE,
+      historyTotal.value
+    )
+  }
+
+  function resetHistoryPagination() {
+    historyVisibleCount.value = HISTORY_PAGE_SIZE
+  }
+
+  watch(
+    [keyword, date, scope],
+    resetHistoryPagination
+  )
 
   function clear() {
     keyword.value = ''
     date.value = ''
     color.value = ''
-  }
-
-  function setScope(value) {
-    scope.value = value === 'all' ? 'all' : 'loaded'
-
-    // 全历史索引不包含颜色直方图，因此切换到 all 时清掉颜色条件。
-    if (scope.value === 'all') {
-      color.value = ''
-    }
+    resetHistoryPagination()
   }
 
   return {
@@ -73,11 +91,13 @@ export function useWallpaperSearch(items, historyIndex = null) {
     date,
     color,
     scope,
-    searching,
     result,
     loadedResult,
-    historyDates,
-    clear,
-    setScope
+    historyTotal,
+    historyVisibleCount,
+    searching,
+    loadMoreHistoryResults,
+    resetHistoryPagination,
+    clear
   }
 }

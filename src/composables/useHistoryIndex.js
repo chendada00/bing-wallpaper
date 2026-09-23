@@ -47,14 +47,12 @@ export function useHistoryIndex(dataBaseUrl) {
   }
 
   function search(keyword = '', date = '') {
-    const data = index.value
-
-    if (!data) return []
+    if (!index.value) return []
 
     const query = String(keyword).trim().toLowerCase()
     const dateQuery = String(date).trim()
 
-    return data.items
+    return index.value.items
       .filter(item => {
         if (!Array.isArray(item) || item.length < 1) {
           return false

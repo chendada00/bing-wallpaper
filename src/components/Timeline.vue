@@ -23,11 +23,12 @@
 
       <!-- 月份列表 -->
       <div class="timeline-body">
-        <div class="timeline-items">
+        <div ref="timelineItemsRef" class="timeline-items">
 
           <button
             v-for="(month, index) in months"
             :key="month.key"
+            :data-month="month.key"
             type="button"
             class="timeline-item"
             :class="{
@@ -70,7 +71,12 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  ref,
+  watch
+} from 'vue'
 
 const props = defineProps({
   items: {
@@ -168,6 +174,56 @@ function isNearby(index) {
 
   return Math.abs(currentIndex - index) <= 1
 }
+
+const timelineItemsRef=ref(null)
+
+function centerActiveMonth(smooth=true){
+  const container=timelineItemsRef.value
+
+  if(!container || !props.activeMonth){
+    return
+  }
+
+  const target=container.querySelector(
+    `.timeline-item[data-month="${props.activeMonth}"]`
+  )
+
+  if(!target){
+    return
+  }
+
+  const targetCenter=
+    target.offsetTop + target.offsetHeight / 2
+
+  const nextScrollTop=Math.max(
+    0,
+    targetCenter - container.clientHeight / 2
+  )
+
+  container.scrollTo({
+    top:nextScrollTop,
+    behavior:smooth ? 'smooth' : 'auto'
+  })
+}
+
+watch(
+  ()=>props.activeMonth,
+  async()=>{
+    await nextTick()
+    centerActiveMonth(true)
+  },
+  {flush:'post'}
+)
+
+watch(
+  ()=>months.value.length,
+  async()=>{
+    await nextTick()
+    centerActiveMonth(false)
+  },
+  {flush:'post'}
+)
+
 
 function enterTimeline() {
   isHovering.value = true
@@ -460,6 +516,27 @@ function leaveTimeline() {
   transform: translateX(-6px);
 }
 
+.timeline-item.active {
+  animation: timeline-active-arrive .42s cubic-bezier(.16,1,.3,1);
+}
+
+@keyframes timeline-active-arrive {
+  0% {
+    opacity: .72;
+    transform: translateX(-1px) scale(.97);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateX(-8px) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-6px) scale(1);
+  }
+}
+
 
 /* =========================================================
    月份文字
@@ -713,6 +790,28 @@ function leaveTimeline() {
   box-shadow:
     0 0 0 3px rgba(30, 30, 30, 0.035);
 }
+
+.timeline-item.active .timeline-node-ring::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(35,35,35,.1);
+  border-radius: 50%;
+  animation: timeline-ring-wave 2.2s ease-out infinite;
+}
+
+@keyframes timeline-ring-wave {
+  0% {
+    opacity: .7;
+    transform: scale(.72);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
 
 .timeline-item.active .timeline-node-core {
   width: 6px;

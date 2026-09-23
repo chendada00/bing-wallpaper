@@ -214,4 +214,19 @@ function clear() {
 .preset button { border: 0; padding: 0; background: transparent; cursor: pointer; }
 .dot { display: block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 1px 5px rgba(0,0,0,.12); }
 .dot.active { border-color: #111; transform: scale(1.12); }
+@media (max-width: 640px) {
+  .search-box {
+    max-width: min(235px, calc(100vw - 125px));
+  }
+
+  .search-scope button {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .search-box input {
+    width: 72px;
+  }
+}
+
 </style>

@@ -45,14 +45,16 @@
             v-model:keyword="keyword"
 
             v-model:date="date"
-
             v-model:color="color"
             v-model:scope="scope"
             @clear="clear"
 
           />
 
-
+          <HistoryControls
+            :loading="loadingAllHistory"
+            @load-all="startLoadAllHistory"
+          />
 
           <div class="header-links">
 
@@ -184,6 +186,18 @@
 
       </section>
 
+      <div
+        v-if="scope==='all' && historyTotal>historyVisibleCount"
+        class="history-result-more"
+      >
+        <button
+          type="button"
+          @click="loadMoreHistoryResults(); nextTick(fillImageLoadQueue)"
+        >
+          加载更多搜索结果
+          <span>{{historyVisibleCount}} / {{historyTotal}}</span>
+        </button>
+      </div>
 
 
       <LoadingState
@@ -263,7 +277,7 @@ import {
   watch
 } from 'vue'
 
-
+import HistoryControls from './components/HistoryControls.vue'
 import WallpaperCard from './components/WallpaperCard.vue'
 import ImageViewer from './components/ImageViewer.vue'
 import LoadingState from './components/LoadingState.vue'
@@ -294,24 +308,28 @@ const {
   loadInitial,
   loadNextMonth,
   loadDates,
+  loadAllHistory,
   retry,
   dataBaseUrl
 }=useBingData()
 
-const historyIndex=useHistoryIndex(dataBaseUrl)
+
+const historySearchItems=ref([])
 
 const {
-
   keyword,
-
   date,
-
   color,
   scope,
   result,
   searching,
+  historyTotal,
+  historyVisibleCount,
+  loadMoreHistoryResults,
   clear
-}=useWallpaperSearch(items,historyIndex)
+}=useWallpaperSearch(items,historySearchItems)
+
+const historyIndex=useHistoryIndex(dataBaseUrl)
 
 
 
@@ -584,17 +602,27 @@ watch(
   {flush:'post'}
 )
 
+let historySearchRequestId=0
+
 watch(
   [scope,keyword,date],
-  async ()=>{
+  async()=>{
+    const requestId=++historySearchRequestId
+
     if(scope.value!=='all'){
+      historySearchItems.value=[]
       await nextTick()
       fillImageLoadQueue()
+      updateScrollState()
       return
     }
 
-    // 防止用户只是切换到“全历史”就把整个历史全部下载下来。
+    historySearchItems.value=[]
+
     if(!keyword.value && !date.value){
+      await nextTick()
+      fillImageLoadQueue()
+      updateScrollState()
       return
     }
 
@@ -606,19 +634,63 @@ watch(
         date.value
       )
 
-      // loadDates 会按 YYYY-MM 分组，同一个月只请求一次。
-      await loadDates(dates)
+      if(requestId!==historySearchRequestId){
+        return
+      }
+
+      // 为避免一个非常宽泛的关键词一次拉取几百个月 JSON，
+      // 单次最多加载最近 180 个命中日期。
+      // 索引本身仍然可以告诉用户总命中量。
+      const datesToLoad=dates.slice(0,180)
+
+      const loaded=await loadDates(datesToLoad)
+
+      if(requestId!==historySearchRequestId){
+        return
+      }
+
+      const dateSet=new Set(datesToLoad)
+
+      historySearchItems.value=loaded
+        .filter(item=>dateSet.has(item.date))
+        .sort((a,b)=>b.date.localeCompare(a.date))
 
       await nextTick()
       fillImageLoadQueue()
       updateScrollState()
     }catch(error){
-      console.error('全历史搜索失败:',error)
+      if(requestId===historySearchRequestId){
+        console.error('全历史搜索失败:',error)
+      }
     }
   },
   {flush:'post'}
 )
 
+
+const loadingAllHistory=ref(false)
+
+async function startLoadAllHistory(){
+  if(loadingAllHistory.value){
+    return
+  }
+
+  loadingAllHistory.value=true
+
+  try{
+    scope.value='loaded'
+    historySearchItems.value=[]
+    clear()
+
+    await loadAllHistory()
+
+    await nextTick()
+    fillImageLoadQueue()
+    updateScrollState()
+  }finally{
+    loadingAllHistory.value=false
+  }
+}
 
 
 function openViewer(item){

@@ -278,3 +278,59 @@ button {
 .wallpaper-card {
   scroll-margin-top: 88px;
 }
+
+/* V1 低风险渲染优化：只跳过离屏绘制，不做虚拟滚动。 */
+.wallpaper-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+
+/* V2 全历史搜索结果分页按钮 */
+.history-result-more {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 8px;
+}
+
+.history-result-more button {
+  min-width: 180px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 11px;
+  background: rgba(255,255,255,.72);
+  color: #555;
+  box-shadow: 0 5px 18px rgba(0,0,0,.05);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
+}
+
+.history-result-more button:hover {
+  background: rgba(255,255,255,.95);
+  transform: translateY(-2px);
+  box-shadow: 0 9px 25px rgba(0,0,0,.08);
+}
+
+.history-result-more button:active {
+  transform: translateY(0) scale(.98);
+}
+
+.history-result-more span {
+  margin-left: 7px;
+  color: #aaa;
+  font-size: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .history-result-more button {
+    border-color: rgba(255,255,255,.08);
+    background: rgba(255,255,255,.06);
+    color: #bbb;
+  }
+
+  .history-result-more button:hover {
+    background: rgba(255,255,255,.1);
+  }
+}
