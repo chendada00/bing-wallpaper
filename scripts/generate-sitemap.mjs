@@ -7,7 +7,7 @@ import {
   const SITE_URL =
     (
       process.env.VITE_SITE_URL ||
-      ''
+      'https://bing.伴随.cn'
     ).replace(/\/$/, '')
   
   
