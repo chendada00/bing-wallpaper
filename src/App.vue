@@ -1,267 +1,279 @@
 <template>
   <div class="app">
 
-    <header class="site-header">
+    <WallpaperPage
+      v-if="isWallpaperRoute"
+      :item="routeItem"
+      :loading="routeLoading"
+      :not-found="routeNotFound"
+      @back="goHome"
+    />
 
-      <div class="header-inner">
+    <template v-else>
+
+        <header class="site-header">
+
+        <div class="header-inner">
 
 
-        <div class="brand">
+          <div class="brand">
 
-          <div class="brand-icon">
-            B
-          </div>
-
-
-          <div class="brand-text">
-
-            <div class="brand-title">
-              Bing Wallpaper
+            <div class="brand-icon">
+              B
             </div>
 
 
-            <div class="brand-subtitle">
-              Every day, a new view
+            <div class="brand-text">
+
+              <div class="brand-title">
+                Bing Wallpaper
+              </div>
+
+
+              <div class="brand-subtitle">
+                Every day, a new view
+              </div>
+
             </div>
 
           </div>
 
-        </div>
+
+
+          <div class="header-right">
+
+
+            <div class="header-info">
+              {{ items.length }} wallpapers
+            </div>
+
+
+            <SearchPanel
+
+              v-if="items.length>0"
+
+              v-model:keyword="keyword"
+
+              v-model:date="date"
+              v-model:color="color"
+              v-model:scope="scope"
+              @clear="clear"
+
+            />
+
+            <HistoryControls
+              :loading="loadingAllHistory"
+              @load-all="startLoadAllHistory"
+            />
+
+            <div class="header-links">
+
+
+              <a
+                href="https://github.com/chendada00/bing-wallpaper"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="前端源码"
+              >
+
+                <svg
+                  viewBox="0 0 24 24"
+                >
+
+                  <path
+                    d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.88-1.54-3.88-1.54-.53-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.69.41.35.78 1.04.78 2.1v3.11c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"
+                  />
+
+                </svg>
+
+                <span>
+                  源码
+                </span>
+
+              </a>
 
 
 
-        <div class="header-right">
+              <a
+                href="https://github.com/chendada00/bing-data"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="壁纸数据"
+              >
+
+                <svg
+                  viewBox="0 0 24 24"
+                >
+
+                  <path
+                    d="M3.5 5.5A2.5 2.5 0 0 1 6 3h4.2c.66 0 1.3.26 1.77.73l1.07 1.07c.47.47 1.1.73 1.77.73H18A2.5 2.5 0 0 1 20.5 8v8.5A2.5 2.5 0 0 1 18 19H6a2.5 2.5 0 0 1-2.5-2.5v-11Z"
+                  />
+
+                </svg>
 
 
-          <div class="header-info">
-            {{ items.length }} wallpapers
+                <span>
+                  数据
+                </span>
+
+
+              </a>
+
+
+            </div>
+
+
           </div>
 
 
-          <SearchPanel
+        </div>
 
-            v-if="items.length>0"
 
-            v-model:keyword="keyword"
+      </header>
 
-            v-model:date="date"
-            v-model:color="color"
-            v-model:scope="scope"
-            @clear="clear"
+
+
+
+      <main class="main-content">
+
+
+        <section class="intro">
+
+          <div>
+
+            <div class="eyebrow">
+              A collection of beautiful moments.
+            </div>
+
+
+            <h1>
+              伴随·光影
+            </h1>
+
+
+            <p>
+              每日一景，长久珍藏。
+            </p>
+
+
+          </div>
+
+        </section>
+
+
+
+
+        <section
+          v-if="result.length > 0"
+          class="wallpaper-grid"
+        >
+
+
+          <WallpaperCard
+
+            v-for="item in result"
+
+            :key="item.date"
+
+            :item="item"
+
+            :should-load="imageLoadQueue.has(item.date)"
+
+            :load-state="imageStates[item.date]?.state || 'idle'"
+
+            :retry-key="imageStates[item.date]?.retryKey || 0"
+
+            @click="openViewer(item)"
+
+            @image-loaded="handleImageLoaded"
+
+            @image-error="handleImageError"
+
+            @retry-image="retryImage"
 
           />
 
-          <HistoryControls
-            :loading="loadingAllHistory"
-            @load-all="startLoadAllHistory"
-          />
 
-          <div class="header-links">
+        </section>
 
-
-            <a
-              href="https://github.com/chendada00/bing-wallpaper"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="前端源码"
-            >
-
-              <svg
-                viewBox="0 0 24 24"
-              >
-
-                <path
-                  d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.88-1.54-3.88-1.54-.53-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.69.41.35.78 1.04.78 2.1v3.11c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"
-                />
-
-              </svg>
-
-              <span>
-                源码
-              </span>
-
-            </a>
-
-
-
-            <a
-              href="https://github.com/chendada00/bing-data"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="壁纸数据"
-            >
-
-              <svg
-                viewBox="0 0 24 24"
-              >
-
-                <path
-                  d="M3.5 5.5A2.5 2.5 0 0 1 6 3h4.2c.66 0 1.3.26 1.77.73l1.07 1.07c.47.47 1.1.73 1.77.73H18A2.5 2.5 0 0 1 20.5 8v8.5A2.5 2.5 0 0 1 18 19H6a2.5 2.5 0 0 1-2.5-2.5v-11Z"
-                />
-
-              </svg>
-
-
-              <span>
-                数据
-              </span>
-
-
-            </a>
-
-
-          </div>
-
-
+        <div
+          v-if="scope==='all' && historyTotal>historyVisibleCount"
+          class="history-result-more"
+        >
+          <button
+            type="button"
+            @click="loadMoreHistoryResults(); nextTick(fillImageLoadQueue)"
+          >
+            加载更多搜索结果
+            <span>{{historyVisibleCount}} / {{historyTotal}}</span>
+          </button>
         </div>
 
 
-      </div>
-
-
-    </header>
-
-
-
-
-    <main class="main-content">
-
-
-      <section class="intro">
-
-        <div>
-
-          <div class="eyebrow">
-            A collection of beautiful moments.
-          </div>
-
-
-          <h1>
-            伴随·光影
-          </h1>
-
-
-          <p>
-            每日一景，长久珍藏。
-          </p>
-
-
-        </div>
-
-      </section>
-
-
-
-
-      <section
-        v-if="result.length > 0"
-        class="wallpaper-grid"
-      >
-
-
-        <WallpaperCard
-
-          v-for="item in result"
-
-          :key="item.date"
-
-          :item="item"
-
-          :should-load="imageLoadQueue.has(item.date)"
-
-          :load-state="imageStates[item.date]?.state || 'idle'"
-
-          :retry-key="imageStates[item.date]?.retryKey || 0"
-
-          @click="openViewer(item)"
-
-          @image-loaded="handleImageLoaded"
-
-          @image-error="handleImageError"
-
-          @retry-image="retryImage"
-
+        <LoadingState
+          v-if="initialLoading || loading"
         />
 
 
-      </section>
 
-      <div
-        v-if="scope==='all' && historyTotal>historyVisibleCount"
-        class="history-result-more"
-      >
-        <button
-          type="button"
-          @click="loadMoreHistoryResults(); nextTick(fillImageLoadQueue)"
+        <div
+          v-if="error"
+          class="error-state"
         >
-          加载更多搜索结果
-          <span>{{historyVisibleCount}} / {{historyTotal}}</span>
-        </button>
-      </div>
+
+          {{ error }}
 
 
-      <LoadingState
-        v-if="initialLoading || loading"
+          <button @click="retry">
+            重试
+          </button>
+
+
+        </div>
+
+
+
+        <EndState
+          v-if="!loading && !initialLoading && noMore"
+        />
+
+
+
+        <div
+          ref="loadMoreTrigger"
+          class="load-more-trigger"
+        />
+
+
+      </main>
+
+
+
+      <Timeline
+        v-if="!viewerVisible"
+        :items="items"
+        :active-month="activeMonth"
+        :visible="timelineVisible"
+        :progress="scrollProgress"
+        :at-top="atTop"
+        :at-bottom="atBottom"
+        @select="scrollToMonth"
+        @top="scrollToTop"
+        @bottom="scrollToBottom"
+        @mouseenter="keepTimelineVisible"
+        @mouseleave="allowTimelineFade"
       />
 
 
-
-      <div
-        v-if="error"
-        class="error-state"
-      >
-
-        {{ error }}
-
-
-        <button @click="retry">
-          重试
-        </button>
-
-
-      </div>
-
-
-
-      <EndState
-        v-if="!loading && !initialLoading && noMore"
+      <ImageViewer
+        :visible="viewerVisible"
+        :item="currentItem"
+        :items="result"
+        @close="closeViewer"
+        @change="changeViewer"
       />
 
-
-
-      <div
-        ref="loadMoreTrigger"
-        class="load-more-trigger"
-      />
-
-
-    </main>
-
-
-
-    <Timeline
-      v-if="!viewerVisible"
-      :items="items"
-      :active-month="activeMonth"
-      :visible="timelineVisible"
-      :progress="scrollProgress"
-      :at-top="atTop"
-      :at-bottom="atBottom"
-      @select="scrollToMonth"
-      @top="scrollToTop"
-      @bottom="scrollToBottom"
-      @mouseenter="keepTimelineVisible"
-      @mouseleave="allowTimelineFade"
-    />
-
-
-    <ImageViewer
-      :visible="viewerVisible"
-      :item="currentItem"
-      :items="result"
-      @close="closeViewer"
-      @change="changeViewer"
-    />
+    </template>
 
   </div>
 </template>
@@ -270,6 +282,7 @@
 <script setup>
 
 import {
+  computed,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -284,7 +297,13 @@ import LoadingState from './components/LoadingState.vue'
 import EndState from './components/EndState.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Timeline from './components/Timeline.vue'
+import WallpaperPage from './components/WallpaperPage.vue'
 
+import {
+  setHomeSeo,
+  setWallpaperSeo,
+  setNotFoundSeo
+} from './utils/seo'
 
 import {
   useBingData
@@ -357,6 +376,37 @@ let timelineScrolling=false
 
 let observer=null
 
+
+const currentPath =
+  ref(window.location.pathname)
+
+const routeItem =
+  ref(null)
+
+const routeLoading =
+  ref(false)
+
+const routeNotFound =
+  ref(false)
+
+const isWallpaperRoute =
+  computed(() => {
+    return /^\/wallpaper\/\d{4}-\d{2}-\d{2}\/?$/
+      .test(currentPath.value)
+  })
+
+
+const wallpaperRouteDate =
+  computed(() => {
+
+    const match =
+      currentPath.value.match(
+        /^\/wallpaper\/(\d{4}-\d{2}-\d{2})\/?$/
+      )
+
+    return match?.[1] || ''
+
+  })
 
 
 /**
@@ -692,6 +742,115 @@ async function startLoadAllHistory(){
   }
 }
 
+
+async function loadWallpaperRoute() {
+
+  const date =
+    wallpaperRouteDate.value
+
+  if (!date) {
+    return
+  }
+
+  routeLoading.value = true
+
+  routeNotFound.value = false
+
+  routeItem.value = null
+
+  try {
+
+    const loaded =
+      await loadDates([date])
+
+    const item =
+      loaded.find(
+        value => value.date === date
+      )
+
+    if (!item) {
+
+      routeNotFound.value = true
+
+      setNotFoundSeo()
+
+      return
+    }
+
+    routeItem.value = item
+
+    setWallpaperSeo(item)
+
+  } catch (error) {
+
+    console.error(
+      '加载壁纸详情失败:',
+      error
+    )
+
+    routeNotFound.value = true
+
+    setNotFoundSeo()
+
+  } finally {
+
+    routeLoading.value = false
+
+  }
+
+}
+
+function goHome() {
+
+  window.history.pushState(
+    {},
+    '',
+    '/'
+  )
+
+  currentPath.value = '/'
+
+  routeItem.value = null
+
+  routeNotFound.value = false
+
+  setHomeSeo()
+
+  if (items.value.length === 0) {
+    loadInitial()
+  }
+
+}
+
+async function handleRouteChange() {
+
+  currentPath.value =
+    window.location.pathname
+
+  if (isWallpaperRoute.value) {
+
+    await loadWallpaperRoute()
+
+    return
+  }
+
+  routeItem.value = null
+
+  routeNotFound.value = false
+
+  setHomeSeo()
+
+  if (items.value.length === 0) {
+    await loadInitial()
+
+    await nextTick()
+
+    fillImageLoadQueue()
+
+    updateScrollState()
+  }
+
+}
 
 function openViewer(item){
   currentItem.value=item
@@ -1094,24 +1253,62 @@ async function handleLoadMore(entries){
 
 
 
-onMounted(async()=>{
-  await loadInitial()
-  fillImageLoadQueue()
-  updateScrollState()
-  window.addEventListener('scroll',handleWindowScroll,{passive:true})
-  window.addEventListener('mousemove',handleMouseMove,{passive:true})
+onMounted(async () => {
 
-  if(!loadMoreTrigger.value){
+  window.addEventListener(
+    'popstate',
+    handleRouteChange
+  )
+
+  if (isWallpaperRoute.value) {
+
+    await loadWallpaperRoute()
+
+    return
+
+  }
+
+
+  setHomeSeo()
+
+  await loadInitial()
+
+  fillImageLoadQueue()
+
+  updateScrollState()
+
+  window.addEventListener(
+    'scroll',
+    handleWindowScroll,
+    { passive: true }
+  )
+
+  window.addEventListener(
+    'mousemove',
+    handleMouseMove,
+    { passive: true }
+  )
+
+
+  if (!loadMoreTrigger.value) {
     return
   }
 
-  observer=new IntersectionObserver(
-    handleLoadMore,
-    {rootMargin:'800px 0px'}
-  )
-  observer.observe(loadMoreTrigger.value)
-})
 
+  observer =
+    new IntersectionObserver(
+      handleLoadMore,
+      {
+        rootMargin: '800px 0px'
+      }
+    )
+
+
+  observer.observe(
+    loadMoreTrigger.value
+  )
+
+})
 
 
 
@@ -1122,6 +1319,10 @@ onBeforeUnmount(()=>{
   }
   window.removeEventListener('scroll',handleWindowScroll)
   window.removeEventListener('mousemove',handleMouseMove)
+    window.removeEventListener(
+    'popstate',
+    handleRouteChange
+  )
   if(timelineHideTimer){
     clearTimeout(timelineHideTimer)
   }

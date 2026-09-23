@@ -163,11 +163,20 @@
         </div>
 
         <div class="card-action">
-          <span>查看高清</span>
 
-          <span class="arrow">
-            ↗
-          </span>
+          <a
+            :href="`/wallpaper/${item.date}`"
+            @click.stop
+          >
+            <span>
+              查看高清
+            </span>
+
+            <span class="arrow">
+              ↗
+            </span>
+          </a>
+
         </div>
       </div>
 
@@ -1415,5 +1424,16 @@ watch(
       scaleY(2.2)
       scaleX(1.08);
   }
+}
+.card-action a {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  color: inherit;
+
+  text-decoration: none;
 }
 </style>
