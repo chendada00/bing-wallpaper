@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
-
-Sitemap: https://bing.伴随.cn/sitemap.xml
+  Allow: /
+  
+  Sitemap: https://bing.伴随.cn/sitemap.xml
+  
