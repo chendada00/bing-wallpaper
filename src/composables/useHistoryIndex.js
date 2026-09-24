@@ -13,9 +13,7 @@ export function useHistoryIndex(dataBaseUrl) {
     loading.value = true
     error.value = ''
 
-    pending = fetch(`${dataBaseUrl}/data/index.json`, {
-      cache: 'no-cache'
-    })
+    pending = fetch(`${dataBaseUrl}/data/index.json`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`)

@@ -1230,7 +1230,28 @@ async function handleLoadMore(entries){
 
 }
 
+function resetHomeImageLoadingState() {
+  loadingImages.clear()
 
+  imageLoadQueue.value = new Set()
+
+  for (const date of Object.keys(imageStates.value)) {
+    if (imageStates.value[date]?.state === 'loading') {
+      imageStates.value[date] = {
+        ...imageStates.value[date],
+        state: 'idle'
+      }
+    }
+  }
+
+  for (const date of Array.from(startedImages)) {
+    const state = imageStates.value[date]?.state
+
+    if (state !== 'loaded') {
+      startedImages.delete(date)
+    }
+  }
+}
 
 
 onMounted(async () => {
@@ -1262,6 +1283,8 @@ onMounted(async () => {
 
 async function initializeHome() {
   setHomeSeo()
+
+  resetHomeImageLoadingState()
 
   await loadInitial()
 
