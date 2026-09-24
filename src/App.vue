@@ -800,8 +800,7 @@ async function loadWallpaperRoute() {
 
 }
 
-function goHome() {
-
+async function goHome() {
   window.history.pushState(
     {},
     '',
@@ -814,23 +813,15 @@ function goHome() {
 
   routeNotFound.value = false
 
-  setHomeSeo()
-
-  if (items.value.length === 0) {
-    loadInitial()
-  }
-
+  await initializeHome()
 }
 
 async function handleRouteChange() {
-
   currentPath.value =
     window.location.pathname
 
   if (isWallpaperRoute.value) {
-
     await loadWallpaperRoute()
-
     return
   }
 
@@ -838,18 +829,7 @@ async function handleRouteChange() {
 
   routeNotFound.value = false
 
-  setHomeSeo()
-
-  if (items.value.length === 0) {
-    await loadInitial()
-
-    await nextTick()
-
-    fillImageLoadQueue()
-
-    updateScrollState()
-  }
-
+  await initializeHome()
 }
 
 function openViewer(item){
@@ -1254,28 +1234,17 @@ async function handleLoadMore(entries){
 
 
 onMounted(async () => {
-
   window.addEventListener(
     'popstate',
     handleRouteChange
   )
 
   if (isWallpaperRoute.value) {
-
     await loadWallpaperRoute()
-
     return
-
   }
 
-
-  setHomeSeo()
-
-  await loadInitial()
-
-  fillImageLoadQueue()
-
-  updateScrollState()
+  await initializeHome()
 
   window.addEventListener(
     'scroll',
@@ -1288,27 +1257,33 @@ onMounted(async () => {
     handleMouseMove,
     { passive: true }
   )
+})
 
 
-  if (!loadMoreTrigger.value) {
-    return
-  }
+async function initializeHome() {
+  setHomeSeo()
 
+  await loadInitial()
 
-  observer =
-    new IntersectionObserver(
+  await nextTick()
+
+  fillImageLoadQueue()
+
+  updateScrollState()
+
+  if (!observer && loadMoreTrigger.value) {
+    observer = new IntersectionObserver(
       handleLoadMore,
       {
         rootMargin: '800px 0px'
       }
     )
 
-
-  observer.observe(
-    loadMoreTrigger.value
-  )
-
-})
+    observer.observe(
+      loadMoreTrigger.value
+    )
+  }
+}
 
 
 
