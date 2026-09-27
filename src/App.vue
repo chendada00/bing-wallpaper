@@ -29,8 +29,8 @@
         }"
       />
 
+      <div class="ambient-background-sheen" />
       <div class="ambient-background-overlay" />
-
 
     </div>
 
@@ -1306,7 +1306,7 @@ function handleMouseMove(event){
       )
 
       mouseEnergyTimer = null
-    }, 180)
+    }, 260)
 
     mouseMoveFrame = null
   })

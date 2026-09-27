@@ -82,7 +82,7 @@ button {
         1.12 +
         var(--mouse-energy, 0) * 0.04
       )
-    );
+  );
 
   transform:
     translate3d(
@@ -127,41 +127,12 @@ button {
     ),
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.48) 0%,
-      rgba(255, 255, 255, 0.60) 42%,
-      rgba(255, 255, 255, 0.72) 100%
+      rgba(255, 255, 255, 0.30) 0%,
+      rgba(255, 255, 255, 0.40) 42%,
+      rgba(255, 255, 255, 0.52) 100%
     );
 }
-
-.ambient-background-glow {
-  position: absolute;
-
-  width: 45vw;
-  height: 45vw;
-
-  left: 50%;
-  top: 30%;
-
-  transform:
-    translate(
-      calc(-50% + var(--mouse-x, 0) * 10px),
-      calc(-50% + var(--mouse-y, 0) * 10px)
-    );
-
-  border-radius: 50%;
-
-  background:
-    var(--ambient-color);
-
-  filter: blur(90px);
-
-  opacity: 0.10;
-
-  transition:
-    background 0.8s ease,
-    transform 0.2s ease;
-}
-
+ 
 
 /* ================================
    Header
@@ -460,14 +431,11 @@ button {
     transform: scale(1.1);
   }
 
-  .ambient-background-glow {
-    display: none;
-  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ambient-background-layer,
-  .ambient-background-glow,
   .wallpaper-card {
     transition: none;
   }
