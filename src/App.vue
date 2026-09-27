@@ -31,27 +31,6 @@
 
       <div class="ambient-background-overlay" />
 
-      <div
-        class="cursor-aura"
-        :style="{
-          '--cursor-color':
-            backgroundLayers[backgroundIndex]
-              ?.color?.Vibrant || '#ffffff'
-        }"
-      />
-
-      <div
-        v-if="
-          backgroundLayers[backgroundIndex]
-            ?.color?.Vibrant
-        "
-        class="ambient-background-glow"
-        :style="{
-          '--ambient-color':
-            backgroundLayers[backgroundIndex]
-              .color.Vibrant
-        }"
-      />
 
     </div>
 
@@ -1275,55 +1254,62 @@ function handleWindowScroll(){
   })
 }
 
-let mouseMoveFrame=null
-
+let mouseMoveFrame = null
+let mouseEnergyTimer = null
 function handleMouseMove(event){
+
 
   showTimeline()
 
-  if(mouseMoveFrame!==null){
+  if (mouseMoveFrame !== null) {
     return
   }
 
-  mouseMoveFrame=
-    requestAnimationFrame(()=>{
+  mouseMoveFrame = requestAnimationFrame(() => {
+    const x =
+      (
+        event.clientX /
+        window.innerWidth -
+        0.5
+      ) * 2
 
-      const x=
-        (
-          event.clientX /
-          window.innerWidth -
-          0.5
-        ) * 2
+    const y =
+      (
+        event.clientY /
+        window.innerHeight -
+        0.5
+      ) * 2
 
-      const y=
-        (
-          event.clientY /
-          window.innerHeight -
-          0.5
-        ) * 2
+    document.documentElement.style.setProperty(
+      '--mouse-x',
+      x.toFixed(3)
+    )
 
+    document.documentElement.style.setProperty(
+      '--mouse-y',
+      y.toFixed(3)
+    )
+
+    document.documentElement.style.setProperty(
+      '--mouse-energy',
+      '1'
+    )
+
+    if (mouseEnergyTimer !== null) {
+      clearTimeout(mouseEnergyTimer)
+    }
+
+    mouseEnergyTimer = setTimeout(() => {
       document.documentElement.style.setProperty(
-        '--mouse-x',
-        x.toFixed(3)
+        '--mouse-energy',
+        '0'
       )
 
-      document.documentElement.style.setProperty(
-        '--mouse-y',
-        y.toFixed(3)
-      )
+      mouseEnergyTimer = null
+    }, 180)
 
-      document.documentElement.style.setProperty(
-        '--cursor-x',
-        `${event.clientX}px`
-      )
-
-      document.documentElement.style.setProperty(
-        '--cursor-y',
-        `${event.clientY}px`
-      )
-
-      mouseMoveFrame=null
-    })
+    mouseMoveFrame = null
+  })
 }
 
 
@@ -1480,6 +1466,9 @@ onBeforeUnmount(()=>{
   }
   if(mouseMoveFrame !== null){
     cancelAnimationFrame(mouseMoveFrame)
+  }
+  if (mouseEnergyTimer !== null) {
+    clearTimeout(mouseEnergyTimer)
   }
   document.body.style.overflow=''
 })
