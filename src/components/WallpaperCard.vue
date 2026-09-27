@@ -8,6 +8,7 @@
     :aria-label="`查看壁纸：${item.title || item.date}`"
     :aria-busy="loadState === 'loading'"
     @click="handleClick"
+    @mouseenter="handleMouseEnter"
     @keydown.enter.prevent="handleKeyboardClick"
     @keydown.space.prevent="handleKeyboardClick"
   >
@@ -217,7 +218,8 @@ const emit = defineEmits([
   'click',
   'image-loaded',
   'image-error',
-  'retry-image'
+  'retry-image',
+  'mouseenter'
 ])
 
 const imageLoaded = ref(false)
@@ -491,6 +493,10 @@ const statusText = computed(() => {
 
 function handleClick() {
   emit('click', props.item)
+}
+
+function handleMouseEnter() {
+  emit('mouseenter', props.item)
 }
 
 function handleKeyboardClick() {

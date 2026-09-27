@@ -1,6 +1,61 @@
 <template>
   <div class="app">
 
+    <div class="ambient-background">
+
+      <div
+        class="ambient-background-layer"
+        :class="{
+          active: backgroundIndex === 0
+        }"
+        :style="{
+          backgroundImage:
+            backgroundLayers[0]?.base64
+              ? 'url(' + backgroundLayers[0].base64 + ')'
+              : 'none'
+        }"
+      />
+
+      <div
+        class="ambient-background-layer"
+        :class="{
+          active: backgroundIndex === 1
+        }"
+        :style="{
+          backgroundImage:
+            backgroundLayers[1]?.base64
+              ? 'url(' + backgroundLayers[1].base64 + ')'
+              : 'none'
+        }"
+      />
+
+      <div class="ambient-background-overlay" />
+
+      <div
+        class="cursor-aura"
+        :style="{
+          '--cursor-color':
+            backgroundLayers[backgroundIndex]
+              ?.color?.Vibrant || '#ffffff'
+        }"
+      />
+
+      <div
+        v-if="
+          backgroundLayers[backgroundIndex]
+            ?.color?.Vibrant
+        "
+        class="ambient-background-glow"
+        :style="{
+          '--ambient-color':
+            backgroundLayers[backgroundIndex]
+              .color.Vibrant
+        }"
+      />
+
+    </div>
+
+
     <WallpaperPage
       v-if="isWallpaperRoute"
       :item="routeItem"
@@ -185,6 +240,8 @@
 
             @click="openViewer(item)"
 
+            @mouseenter="setBackground"
+
             @image-loaded="handleImageLoaded"
 
             @image-error="handleImageError"
@@ -355,6 +412,14 @@ const historyIndex=useHistoryIndex(dataBaseUrl)
 const viewerVisible=ref(false)
 
 const currentItem=ref(null)
+
+const backgroundLayers = ref([
+  null,
+  null
+])
+
+const backgroundIndex = ref(0)
+
 
 const loadMoreTrigger=ref(null)
 
@@ -843,6 +908,38 @@ function openViewer(item){
   document.body.style.overflow='hidden'
 }
 
+
+function setBackground(item) {
+  if (!item?.base64) {
+    return
+  }
+
+  const current =
+    backgroundLayers.value[
+      backgroundIndex.value
+    ]
+
+  if (
+    current?.date === item.date
+  ) {
+    return
+  }
+
+  const nextIndex =
+    backgroundIndex.value === 0
+      ? 1
+      : 0
+
+  backgroundLayers.value = [
+    ...backgroundLayers.value.slice(0, nextIndex),
+    item,
+    ...backgroundLayers.value.slice(nextIndex + 1)
+  ]
+
+  backgroundIndex.value = nextIndex
+}
+
+
 function closeViewer(){
   viewerVisible.value=false
   currentItem.value=null
@@ -1178,8 +1275,55 @@ function handleWindowScroll(){
   })
 }
 
-function handleMouseMove(){
+let mouseMoveFrame=null
+
+function handleMouseMove(event){
+
   showTimeline()
+
+  if(mouseMoveFrame!==null){
+    return
+  }
+
+  mouseMoveFrame=
+    requestAnimationFrame(()=>{
+
+      const x=
+        (
+          event.clientX /
+          window.innerWidth -
+          0.5
+        ) * 2
+
+      const y=
+        (
+          event.clientY /
+          window.innerHeight -
+          0.5
+        ) * 2
+
+      document.documentElement.style.setProperty(
+        '--mouse-x',
+        x.toFixed(3)
+      )
+
+      document.documentElement.style.setProperty(
+        '--mouse-y',
+        y.toFixed(3)
+      )
+
+      document.documentElement.style.setProperty(
+        '--cursor-x',
+        `${event.clientX}px`
+      )
+
+      document.documentElement.style.setProperty(
+        '--cursor-y',
+        `${event.clientY}px`
+      )
+
+      mouseMoveFrame=null
+    })
 }
 
 
@@ -1290,6 +1434,13 @@ async function initializeHome() {
 
   await nextTick()
 
+  if (
+    items.value.length > 0 &&
+    items.value[0]?.base64
+  ) {
+    setBackground(items.value[0])
+  }
+
   fillImageLoadQueue()
 
   updateScrollState()
@@ -1326,6 +1477,9 @@ onBeforeUnmount(()=>{
   }
   if(scrollUpdateFrame!==null){
     cancelAnimationFrame(scrollUpdateFrame)
+  }
+  if(mouseMoveFrame !== null){
+    cancelAnimationFrame(mouseMoveFrame)
   }
   document.body.style.overflow=''
 })
