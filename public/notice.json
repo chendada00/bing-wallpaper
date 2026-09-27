@@ -1,0 +1,9 @@
+{
+    "id": "notice-20260927-cf-02",
+    "enabled": true,
+    "title": "网络访问提示",
+    "content": "本站部署于 Cloudflare 海外节点，国内直连可能存在加载缓慢或图片加载失败的情况。建议开启网络加速以获得流畅体验。",
+    "link": "https://www.xn--xpqp35o.cn/",
+    "linkText": "欢迎来到我的主页",
+    "autoClose": 60
+  }

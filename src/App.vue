@@ -43,6 +43,7 @@
       @back="goHome"
     />
 
+
     <template v-else>
 
         <header class="site-header">
@@ -310,6 +311,9 @@
       />
 
     </template>
+        
+    
+    <NotificationToast />
 
   </div>
 </template>
@@ -334,6 +338,7 @@ import EndState from './components/EndState.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Timeline from './components/Timeline.vue'
 import WallpaperPage from './components/WallpaperPage.vue'
+import NotificationToast from './components/NotificationToast.vue'
 
 import {
   setHomeSeo,

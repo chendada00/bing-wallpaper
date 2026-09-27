@@ -448,3 +448,25 @@ button {
     transform: none;
   }
 }
+
+/* ==========================================
+   完全隐藏全局滚动条（保留页面正常滚动功能）
+   ========================================== */
+
+/* 1. WebKit 浏览器 (Chrome, Edge, Safari, Opera 等) */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* 2. Firefox 浏览器 */
+* {
+  scrollbar-width: none !important;
+}
+
+/* 3. IE / 旧版 Edge */
+body {
+  -ms-overflow-style: none !important;
+}
