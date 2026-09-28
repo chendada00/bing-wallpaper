@@ -1,7 +1,10 @@
 <template>
   <div class="app">
 
-    <div class="ambient-background">
+    <div
+      v-if="!isWallpaperRoute"
+      class="ambient-background"
+    >
 
       <div
         class="ambient-background-layer"

@@ -1,5 +1,8 @@
 <template>
-  <main class="wallpaper-page">
+  <main
+    class="wallpaper-page"
+    :style="pageStyle"
+  >
 
     <div class="wallpaper-page-inner">
 
@@ -145,8 +148,9 @@
 
 <script setup>
 
-defineProps({
+import { computed } from 'vue'
 
+const props = defineProps({
   item: {
     type: Object,
     default: null
@@ -161,7 +165,18 @@ defineProps({
     type: Boolean,
     default: false
   }
+})
 
+const pageStyle = computed(() => {
+  const base64 = props.item?.base64
+
+  if (!base64) {
+    return {}
+  }
+
+  return {
+    '--wallpaper-background': `url("${base64}")`
+  }
 })
 
 
@@ -194,13 +209,62 @@ function formatDate(date) {
 <style scoped>
 
 .wallpaper-page {
+  position: relative;
+
   min-height: 100vh;
 
-  padding:
-    32px 24px 80px;
+  padding: 32px 24px 80px;
+
+  overflow: hidden;
+
+  isolation: isolate;
+
+  background: #111;
+}
+
+.wallpaper-page::before {
+  content: '';
+
+  position: fixed;
+
+  inset: -8%;
+
+  z-index: -2;
+
+  background-image: var(--wallpaper-background);
+
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  filter:
+    blur(38px)
+    saturate(1.08);
+
+  transform: scale(1.08);
+
+  opacity: 0.72;
+
+  pointer-events: none;
+}
+
+.wallpaper-page::after {
+  content: '';
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: -1;
 
   background:
-    #f6f6f4;
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.12),
+      rgba(0, 0, 0, 0.24)
+    );
+
+  pointer-events: none;
 }
 
 
@@ -248,24 +312,30 @@ function formatDate(date) {
 
   border-radius: 20px;
 
-  background: #fff;
+  background: rgba(255, 255, 255, 0.88);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.55);
 
   box-shadow:
-    0 12px 40px
-    rgba(0, 0, 0, 0.08);
+    0 24px 80px
+    rgba(0, 0, 0, 0.22);
+
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
 }
 
 
 .wallpaper-detail-header {
-  padding:
-    34px 38px 26px;
+  padding: 34px 38px 26px;
 }
 
 
 .wallpaper-detail-eyebrow {
   margin: 0 0 10px;
 
-  color: #888;
+  color: rgba(30, 30, 30, 0.58);
 
   font-size: 11px;
 
@@ -280,7 +350,7 @@ function formatDate(date) {
 .wallpaper-detail-header h1 {
   margin: 0;
 
-  color: #181818;
+  color: #111;
 
   font-size: clamp(
     28px,
@@ -297,7 +367,7 @@ function formatDate(date) {
 
   margin-top: 12px;
 
-  color: #888;
+  color: rgba(30, 30, 30, 0.55);
 
   font-size: 13px;
 }
@@ -319,22 +389,25 @@ function formatDate(date) {
 
 
 .wallpaper-detail-figure figcaption {
-  padding:
-    14px 20px;
+  padding: 14px 20px;
 
-  color: #777;
+  color: rgba(30, 30, 30, 0.62);
 
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.58);
 
   font-size: 12px;
 
   line-height: 1.7;
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 
 .wallpaper-detail-content {
-  padding:
-    30px 38px 12px;
+  padding: 30px 38px 12px;
+
+  background: rgba(255, 255, 255, 0.34);
 }
 
 
@@ -396,7 +469,14 @@ function formatDate(date) {
 
   color: #222;
 
-  background: #f1f1ef;
+  background: rgba(255, 255, 255, 0.58);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.45);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
   text-decoration: none;
 
@@ -408,7 +488,7 @@ function formatDate(date) {
 
 .wallpaper-detail-actions a:hover,
 .wallpaper-not-found a:hover {
-  background: #e7e7e4;
+ background: rgba(255, 255, 255, 0.78);
 }
 
 
