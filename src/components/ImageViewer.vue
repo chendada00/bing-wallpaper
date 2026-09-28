@@ -54,41 +54,60 @@
         <div class="viewer-content">
 
           <!-- ==================== 图片 ==================== -->
-          <div class="viewer-image-wrapper">
-            <!-- Base64 模糊占位图：始终位于底层 -->
-            <img
-              v-if="placeholderImage"
-              :src="placeholderImage"
-              :alt="item?.title || item?.date"
-              class="viewer-image viewer-placeholder"
-            >
+          <div class="viewer-monitor">
+            <div class="viewer-monitor-bezel">
+              <div class="viewer-image-wrapper">
 
-            <!-- 高清图：仅在完整加载完成后显示 -->
-            <img
-              v-if="highResLoaded && item?.image"
-              :src="item.image"
-              :alt="item?.title || item?.date"
-              class="viewer-image viewer-high-res"
-            >
+                <!-- Base64 模糊占位图：始终位于底层 -->
+                <img
+                  v-if="placeholderImage"
+                  :src="placeholderImage"
+                  :alt="item?.title || item?.date"
+                  class="viewer-image viewer-placeholder"
+                >
 
-            <!-- 高清图加载动画 -->
-            <div
-              v-if="imageLoading"
-              class="viewer-loading"
-            >
-              <span class="viewer-spinner" />
+                <!-- 高清图：仅在完整加载完成后显示 -->
+                <img
+                  v-if="highResLoaded && item?.image"
+                  :src="item.image"
+                  :alt="item?.title || item?.date"
+                  class="viewer-image viewer-high-res"
+                >
 
-              <span class="viewer-loading-text">
-                正在加载高清壁纸...
-              </span>
-            </div>
+                <!-- 高清图加载动画 -->
+                <div
+                  v-if="imageLoading"
+                  class="viewer-loading"
+                >
+                  <span class="viewer-spinner" />
 
-            <!-- 高清图加载失败 -->
-            <div
-              v-if="imageError"
-              class="viewer-error"
-            >
-              高清图片加载失败
+                  <span class="viewer-loading-text">
+                    正在加载高清壁纸...
+                  </span>
+                </div>
+
+                <!-- 高清图加载失败 -->
+                <div
+                  v-if="imageError"
+                  class="viewer-error"
+                >
+                  高清图片加载失败
+                </div>
+
+              </div>
+
+              <!-- 顶部摄像头 -->
+              <span
+                class="viewer-monitor-camera"
+                aria-hidden="true"
+              />
+
+              <!-- 模拟显示器电源灯 -->
+              <span
+                class="viewer-monitor-power"
+                aria-hidden="true"
+              />
+
             </div>
           </div>
 
@@ -1410,70 +1429,265 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+/* =========================================================
+ * 显示器外壳
+ * ========================================================= */
+
+.viewer-monitor {
+  position: relative;
+  width: min(1200px, 100%);
+  margin: 0 auto 34px;
+  flex-shrink: 0;
+
+  /* 不再使用特别厚重的黑色阴影 */
+  filter: drop-shadow(
+    0 24px 45px
+    rgba(0, 0, 0, 0.28)
+  );
+}
 
 /* =========================================================
- * 图片
+ * 银白色显示器边框
+ * ========================================================= */
+
+.viewer-monitor-bezel {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+
+  /*
+   * 上左右略窄，
+   * 底部稍微厚一点，模拟真正显示器的下边框。
+   */
+  padding: 10px 10px 16px;
+
+  border-radius: 15px;
+
+  /*
+   * 白色 / 银灰色金属感
+   */
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f4f5f6 42%,
+      #e5e7e9 100%
+    );
+
+  border: 1px solid rgba(0, 0, 0, 0.12);
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0
+      rgba(0, 0, 0, 0.08),
+    0 12px 28px
+      rgba(0, 0, 0, 0.16);
+}
+
+/* =========================================================
+ * 真正的屏幕区域
+ * ========================================================= */
+
+.viewer-image-wrapper {
+  position: relative;
+
+  width: 100%;
+  aspect-ratio: 16 / 9;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  /*
+   * 屏幕本身保持黑色。
+   * 这样白色外框 + 黑色屏幕会明显更像显示器。
+   */
+  background: #050607;
+
+  border-radius: 6px;
+
+  flex-shrink: 0;
+
+  /*
+   * 屏幕内沿
+   */
+  box-shadow:
+    inset 0 0 0 1px
+      rgba(0, 0, 0, 0.55),
+    inset 0 0 18px
+      rgba(0, 0, 0, 0.32);
+}
+
+
+/* =========================================================
+ * 图片本身
  * ========================================================= */
 
 .viewer-image {
-  display: block;
-
   width: 100%;
   height: 100%;
 
   object-fit: contain;
 
-  border-radius: 14px;
+  border-radius: 4px;
 
   user-select: none;
-
   -webkit-user-drag: none;
 
   box-shadow:
-    0 30px 80px
-    rgba(0, 0, 0, 0.42);
+    0 20px 55px
+      rgba(0, 0, 0, 0.30);
 
   transition:
-    filter 0.35s ease,
     opacity 0.35s ease,
     transform 0.35s ease;
 }
 
-
 /* =========================================================
- * Base64 占位图
+ * 顶部摄像头
  * ========================================================= */
 
-.viewer-image.is-placeholder {
-  filter: blur(10px);
+.viewer-monitor-camera {
+  position: absolute;
 
-  transform: scale(1.02);
+  left: 50%;
+  top: 3px;
+
+  width: 18px;
+  height: 5px;
+
+  transform: translateX(-50%);
+
+  border-radius: 999px;
+
+  /*
+   * 摄像头外壳
+   */
+  background:
+    linear-gradient(
+      180deg,
+      #5d6166 0%,
+      #292d31 100%
+    );
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.35),
+    0 1px 2px
+      rgba(0, 0, 0, 0.20);
+
+  z-index: 5;
+}
+
+/*
+ * 摄像头镜头
+ */
+.viewer-monitor-camera::before {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 3px;
+  height: 3px;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #8fa8c5 0%,
+      #39495b 35%,
+      #11151a 75%,
+      #050607 100%
+    );
+
+  box-shadow:
+    0 0 0 1px
+      rgba(0, 0, 0, 0.45),
+    0 0 4px
+      rgba(90, 140, 200, 0.18);
+}
+
+/*
+ * 摄像头镜头的一点反光
+ */
+.viewer-monitor-camera::after {
+  content: "";
+
+  position: absolute;
+
+  left: calc(50% - 1px);
+  top: 1px;
+
+  width: 1px;
+  height: 1px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.75);
+
+  opacity: 0.7;
+}
+/* =========================================================
+ * 显示器电源灯
+ * ========================================================= */
+
+.viewer-monitor-power {
+  position: absolute;
+
+  right: 13px;
+  bottom: 5px;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  /*
+   * 默认基色（动画中会通过 animation 改变背景色与光晕）
+   */
+  background: rgba(110, 150, 185, 0.42);
+
+  animation: viewer-power-breath 3.2s ease-in-out infinite;
 }
 
 
 /* =========================================================
- * 高清图
+ * 电源灯呼吸
  * ========================================================= */
 
-.viewer-image.is-high-res {
-  filter: none;
+@keyframes viewer-power-breath {
+  0%,
+  100% {
+    /* 暗状态：降低透明度与暗沉背景色 */
+    opacity: 0.25;
+    background-color: rgba(90, 130, 165, 0.3);
 
-  transform: scale(1);
-
-  animation:
-    high-res-in 0.35s ease;
-}
-
-@keyframes high-res-in {
-  from {
-    opacity: 0.55;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.08),             /* 凹槽边缘 */
+      0 0 2px rgba(100, 150, 200, 0.2);
   }
 
-  to {
+  50% {
+    /* 亮状态：提升透明度、将中心点提亮为近白色，并叠加多重发光阴影 */
     opacity: 1;
+    background-color: rgba(220, 240, 255, 0.95);  /* LED 核心提亮 */
+
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.08),             /* 凹槽边缘 */
+      0 0 3px 1px rgba(255, 255, 255, 0.9),      /* 内层极亮白光点 */
+      0 0 8px 2px rgba(100, 150, 200, 0.75),     /* 中层冰蓝浓密光晕 */
+      0 0 16px 4px rgba(100, 150, 200, 0.35);    /* 外层广角发散光晕 */
   }
 }
-
 
 /* =========================================================
  * 高清图 Loading
@@ -2135,7 +2349,41 @@ onBeforeUnmount(() => {
 
     font-size: 9px;
   }
+  .viewer-monitor {
+    width: 100%;
+    margin-bottom: 22px;
+  }
+
+  .viewer-monitor-bezel {
+    padding: 7px 7px 11px;
+    border-radius: 11px;
+  }
+
+  .viewer-image-wrapper {
+    border-radius: 4px;
+  }
+
+  .viewer-monitor-camera {
+    top: 2px;
+
+    width: 14px;
+    height: 4px;
+  }
+
+  .viewer-monitor-camera::before {
+    width: 2.5px;
+    height: 2.5px;
+  }
+
+  .viewer-monitor-power {
+    right: 9px;
+    bottom: 4px;
+
+    width: 4px;
+    height: 4px;
+  }
 }
+
 
 
 .viewer-colors-title {
