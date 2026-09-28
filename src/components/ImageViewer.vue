@@ -1,4 +1,3 @@
-
 <template>
   <Teleport to="body">
     <div
@@ -7,16 +6,20 @@
       :style="viewerStyle"
       @click.self="close"
     >
-      <!-- 主色调氛围背景：固定，不随内容滚动 -->
+      <!-- =====================================================
+       * 主色调氛围背景
+       * ===================================================== -->
       <div
         class="viewer-color-bg"
         :style="colorBackgroundStyle"
       />
 
-      <!-- 深色遮罩：固定 -->
+      <!-- 深色遮罩 -->
       <div class="viewer-overlay" />
 
-      <!-- 关闭按钮：固定 -->
+      <!-- =====================================================
+       * 关闭按钮
+       * ===================================================== -->
       <button
         class="viewer-close"
         aria-label="关闭"
@@ -25,7 +28,9 @@
         ×
       </button>
 
-      <!-- 上一张：固定 -->
+      <!-- =====================================================
+       * 上一张
+       * ===================================================== -->
       <button
         v-if="hasPrevious"
         class="viewer-nav viewer-prev"
@@ -35,7 +40,9 @@
         ‹
       </button>
 
-      <!-- 下一张：固定 -->
+      <!-- =====================================================
+       * 下一张
+       * ===================================================== -->
       <button
         v-if="hasNext"
         class="viewer-nav viewer-next"
@@ -45,20 +52,26 @@
         ›
       </button>
 
-      <!--
+      <!-- =====================================================
        * 唯一滚动区域
-       *
-       * 背景、关闭按钮、左右按钮都不会跟着滚动。
-       -->
+       * ===================================================== -->
       <div class="viewer-scroll">
         <div class="viewer-content">
 
-          <!-- ==================== 图片 ==================== -->
+          <!-- ===================================================
+           * 显示器
+           * =================================================== -->
           <div class="viewer-monitor">
+
+            <!-- 显示器主体 -->
             <div class="viewer-monitor-bezel">
+
+              <!-- ================================
+               * 屏幕
+               * ================================ -->
               <div class="viewer-image-wrapper">
 
-                <!-- Base64 模糊占位图：始终位于底层 -->
+                <!-- Base64 模糊占位图 -->
                 <img
                   v-if="placeholderImage"
                   :src="placeholderImage"
@@ -66,7 +79,7 @@
                   class="viewer-image viewer-placeholder"
                 >
 
-                <!-- 高清图：仅在完整加载完成后显示 -->
+                <!-- 高清图片 -->
                 <img
                   v-if="highResLoaded && item?.image"
                   :src="item.image"
@@ -74,7 +87,7 @@
                   class="viewer-image viewer-high-res"
                 >
 
-                <!-- 高清图加载动画 -->
+                <!-- 高清图加载 -->
                 <div
                   v-if="imageLoading"
                   class="viewer-loading"
@@ -93,25 +106,42 @@
                 >
                   高清图片加载失败
                 </div>
-
               </div>
 
-              <!-- 顶部摄像头 -->
+              <!-- ================================
+               * 顶部摄像头
+               * ================================ -->
               <span
                 class="viewer-monitor-camera"
                 aria-hidden="true"
               />
 
-              <!-- 模拟显示器电源灯 -->
+              <!-- ================================
+               * 品牌装饰线
+               * ================================ -->
               <span
-                class="viewer-monitor-power"
+                class="viewer-monitor-brand"
                 aria-hidden="true"
               />
 
+
+            </div>
+
+            <!-- ================================
+             * 显示器支架
+             * ================================ -->
+            <div
+              class="viewer-monitor-stand"
+              aria-hidden="true"
+            >
+              <div class="viewer-monitor-neck" />
+              <div class="viewer-monitor-base" />
             </div>
           </div>
 
-          <!-- ==================== 图片信息 ==================== -->
+          <!-- ===================================================
+           * 图片信息
+           * =================================================== -->
           <div class="viewer-info">
 
             <!-- 日期 + 序号 -->
@@ -138,7 +168,9 @@
               {{ item?.description || item?.copyright || '' }}
             </p>
 
-            <!-- ==================== 主色调 ==================== -->
+            <!-- =================================================
+             * 主色调
+             * ================================================= -->
             <div
               v-if="colorPalette.length"
               class="viewer-colors"
@@ -180,18 +212,21 @@
               </div>
             </div>
 
-
-
-            <!-- ==================== 操作 ==================== -->
+            <!-- =================================================
+             * 操作
+             * ================================================= -->
             <div class="viewer-actions">
 
-              <!-- 下载 -->
+              <!-- 下载原图 -->
               <button
                 class="download-button"
                 :disabled="downloading"
                 @click="downloadImage"
               >
-                <span v-if="downloading" class="download-progress-content">
+                <span
+                  v-if="downloading"
+                  class="download-progress-content"
+                >
                   <span class="download-progress-track">
                     <span
                       class="download-progress-bar"
@@ -232,6 +267,7 @@
                 打开原图
               </a>
 
+              <!-- 查看详情 -->
               <button
                 v-if="item?.date"
                 class="detail-button"
@@ -241,10 +277,11 @@
                 <span aria-hidden="true">↗</span>
                 查看详情
               </button>
-
             </div>
 
-            <!-- ==================== 色彩分布 ==================== -->
+            <!-- =================================================
+             * 颜色分布
+             * ================================================= -->
             <div
               v-if="histogramCells.length"
               class="viewer-histogram"
@@ -262,6 +299,7 @@
               </div>
 
               <div class="histogram-wrapper">
+
                 <!-- Hue 横轴 -->
                 <div class="histogram-hue-axis">
                   <span
@@ -274,6 +312,7 @@
                 </div>
 
                 <div class="histogram-main">
+
                   <!-- 左侧 Saturation / Value 标签 -->
                   <div class="histogram-row-labels">
                     <span
@@ -293,29 +332,39 @@
                       type="button"
                       class="histogram-cell"
                       :class="{
-                        active: hoveredHistogramIndex === index
+                        active:
+                          hoveredHistogramIndex === index
                       }"
                       :style="{
                         backgroundColor: cell.color,
                         opacity: cell.opacity
                       }"
                       :aria-label="cell.description"
-                      @mouseenter="hoveredHistogramIndex = index"
-                      @mouseleave="hoveredHistogramIndex = -1"
-                      @focus="hoveredHistogramIndex = index"
-                      @blur="hoveredHistogramIndex = -1"
+                      @mouseenter="
+                        hoveredHistogramIndex = index
+                      "
+                      @mouseleave="
+                        hoveredHistogramIndex = -1
+                      "
+                      @focus="
+                        hoveredHistogramIndex = index
+                      "
+                      @blur="
+                        hoveredHistogramIndex = -1
+                      "
                     />
                   </div>
                 </div>
               </div>
 
-              <!-- 当前格子的详细说明 -->
+              <!-- 当前格子详细信息 -->
               <div class="histogram-hover-info">
                 <template v-if="hoveredHistogramCell">
                   <span
                     class="histogram-hover-color"
                     :style="{
-                      backgroundColor: hoveredHistogramCell.color
+                      backgroundColor:
+                        hoveredHistogramCell.color
                     }"
                   />
 
@@ -384,17 +433,6 @@ const emit = defineEmits([
 ])
 
 /*
- * 当前显示的图片
- *
- * 打开查看器：
- *
- * Base64
- *   ↓
- * 高清图
- */
-const displayImage = ref('')
-
-/*
  * 高清图是否已经加载完成
  */
 const highResLoaded = ref(false)
@@ -409,12 +447,12 @@ const imageLoading = ref(false)
  */
 const imageError = ref(false)
 
-/**
- * 当前高清图预加载对象
+/*
+ * 高清图预加载对象
  */
 let preloadImage = null
 
-/**
+/*
  * 防止快速切换图片时旧请求影响当前状态
  */
 let loadToken = 0
@@ -430,7 +468,11 @@ const downloadLoaded = ref(0)
 
 const downloadTotal = ref(0)
 
-
+/*
+ * =========================================================
+ * 直方图 Hue
+ * =========================================================
+ */
 const HISTOGRAM_HUES = [
   { name: '红', range: '0°–30°' },
   { name: '橙', range: '30°–60°' },
@@ -446,6 +488,11 @@ const HISTOGRAM_HUES = [
   { name: '玫红', range: '330°–360°' }
 ]
 
+/*
+ * =========================================================
+ * 直方图 Saturation / Value
+ * =========================================================
+ */
 const HISTOGRAM_ROWS = [
   {
     key: 'low-dark',
@@ -504,9 +551,14 @@ const HISTOGRAM_ROWS = [
 ]
 
 const SATURATION_VALUES = [25, 60, 90]
+
 const VALUE_VALUES = [35, 65, 92]
 
-
+/*
+ * =========================================================
+ * 查看详情
+ * =========================================================
+ */
 function openDetail() {
   if (!props.item?.date) {
     return
@@ -515,6 +567,11 @@ function openDetail() {
   emit('open-detail', props.item)
 }
 
+/*
+ * =========================================================
+ * 生成 108 个直方图色彩区域
+ * =========================================================
+ */
 const histogramCells = computed(() => {
   const histogram = props.item?.colorHistogram
 
@@ -560,45 +617,58 @@ const histogramCells = computed(() => {
       const weight = Number(bins[index]) || 0
 
       const hueDegrees = hue * 30
-      const saturation = SATURATION_VALUES[row.saturation]
-      const value = VALUE_VALUES[row.value]
+
+      const saturation =
+        SATURATION_VALUES[row.saturation]
+
+      const value =
+        VALUE_VALUES[row.value]
 
       const percentage = total > 0
         ? weight / total * 100
         : 0
 
+      const saturationName = [
+        '低饱和度',
+        '中饱和度',
+        '高饱和度'
+      ][row.saturation]
+
+      const valueName = [
+        '暗',
+        '中',
+        '亮'
+      ][row.value]
+
       cells.push({
-        color: `hsl(${hueDegrees} ${saturation}% ${value}%)`,
-        opacity: weight > 0
-          ? 0.22 + (weight / max) * 0.78
-          : 0.08,
+        color:
+          `hsl(${hueDegrees} ${saturation}% ${value}%)`,
+
+        opacity:
+          weight > 0
+            ? 0.22 + (weight / max) * 0.78
+            : 0.08,
+
         weight,
-        percentage: percentage.toFixed(1),
-        hueName: HISTOGRAM_HUES[hue].name,
-        hueRange: HISTOGRAM_HUES[hue].range,
-        saturationName: [
-          '低饱和度',
-          '中饱和度',
-          '高饱和度'
-        ][row.saturation],
-        valueName: [
-          '暗',
-          '中',
-          '亮'
-        ][row.value],
+
+        percentage:
+          percentage.toFixed(1),
+
+        hueName:
+          HISTOGRAM_HUES[hue].name,
+
+        hueRange:
+          HISTOGRAM_HUES[hue].range,
+
+        saturationName,
+
+        valueName,
+
         description:
           `${HISTOGRAM_HUES[hue].name} · ` +
           `${HISTOGRAM_HUES[hue].range} · ` +
-          `${[
-            '低饱和度',
-            '中饱和度',
-            '高饱和度'
-          ][row.saturation]} · ` +
-          `${[
-            '暗',
-            '中',
-            '亮'
-          ][row.value]} · ` +
+          `${saturationName} · ` +
+          `${valueName} · ` +
           `${percentage.toFixed(1)}%`
       })
     }
@@ -607,12 +677,13 @@ const histogramCells = computed(() => {
   return cells
 })
 
+/*
+ * 当前 hover 的直方图格子
+ */
 const hoveredHistogramIndex = ref(-1)
 
 const hoveredHistogramCell = computed(() => {
-  if (
-    hoveredHistogramIndex.value < 0
-  ) {
+  if (hoveredHistogramIndex.value < 0) {
     return null
   }
 
@@ -623,26 +694,17 @@ const hoveredHistogramCell = computed(() => {
   )
 })
 
-const HISTOGRAM_SATURATIONS = [
-  '低饱和度',
-  '中饱和度',
-  '高饱和度'
-]
-
-const HISTOGRAM_VALUES = [
-  '暗',
-  '中',
-  '亮'
-]
-
-
 /*
+ * =========================================================
  * 当前复制成功的颜色
+ * =========================================================
  */
 const copiedColor = ref('')
 
 /*
+ * =========================================================
  * 当前图片索引
+ * =========================================================
  */
 const currentIndex = computed(() => {
   if (!props.item) {
@@ -672,14 +734,18 @@ const hasNext = computed(() => {
 })
 
 /*
+ * =========================================================
  * Base64 占位图
+ * =========================================================
  */
 const placeholderImage = computed(() => {
   return props.item?.base64 || ''
 })
 
 /*
+ * =========================================================
  * 主色调优先级
+ * =========================================================
  */
 const colorPriority = [
   'Vibrant',
@@ -691,7 +757,9 @@ const colorPriority = [
 ]
 
 /*
+ * =========================================================
  * 获取多个主色调
+ * =========================================================
  */
 const colorPalette = computed(() => {
   const colors = props.item?.color || {}
@@ -719,14 +787,18 @@ const colorPalette = computed(() => {
 })
 
 /*
+ * =========================================================
  * 第一个主色调
+ * =========================================================
  */
 const primaryColor = computed(() => {
   return colorPalette.value[0] || ''
 })
 
 /*
- * HEX 转 RGBA
+ * =========================================================
+ * HEX → RGBA
+ * =========================================================
  */
 function hexToRgba(hex, alpha) {
   const value = hex.replace('#', '')
@@ -750,7 +822,9 @@ function hexToRgba(hex, alpha) {
 }
 
 /*
+ * =========================================================
  * Viewer CSS 变量
+ * =========================================================
  */
 const viewerStyle = computed(() => {
   return {
@@ -760,9 +834,9 @@ const viewerStyle = computed(() => {
 })
 
 /*
+ * =========================================================
  * 多主色调背景
- *
- * 背景固定在整个查看器后面。
+ * =========================================================
  */
 const colorBackgroundStyle = computed(() => {
   const colors = colorPalette.value
@@ -801,52 +875,76 @@ const colorBackgroundStyle = computed(() => {
   }
 })
 
-/**
+/*
+ * =========================================================
  * 初始化当前图片
  *
  * 加载流程：
  *
- * 1. 立即显示 Base64
- * 2. 后台预加载高清图
- * 3. 高清图完整加载后，再显示高清图
+ * Base64
+ *   ↓
+ * 高清图后台预加载
+ *   ↓
+ * 高清图完整加载
+ *   ↓
+ * 显示高清图
+ * =========================================================
  */
 function loadCurrentImage() {
-  // 使之前的预加载请求失效
   loadToken += 1
 
   const currentToken = loadToken
 
-  // 取消旧图片的事件回调
+  /*
+   * 取消旧图片事件
+   */
   if (preloadImage) {
     preloadImage.onload = null
     preloadImage.onerror = null
     preloadImage = null
   }
 
-  // 重置状态
+  /*
+   * 重置状态
+   */
   copiedColor.value = ''
+
   highResLoaded.value = false
+
   imageLoading.value = false
+
   imageError.value = false
 
-  // 没有图片数据
+  /*
+   * 没有高清图
+   */
   if (!props.item?.image) {
     return
   }
 
-  // 先显示 Base64 占位图
+  /*
+   * 开始加载
+   */
   imageLoading.value = true
 
   const imageUrl = props.item.image
+
   const imageDate = props.item.date
 
-  // 创建独立的高清图预加载对象
+  /*
+   * 创建独立高清图预加载对象
+   */
   const image = new Image()
 
   preloadImage = image
 
+  /*
+   * 高清图加载完成
+   */
   image.onload = () => {
-    // 防止旧图片请求影响当前图片
+    /*
+     * 防止旧图片请求影响当前图片
+     */
     if (
       currentToken !== loadToken ||
       props.item?.date !== imageDate ||
@@ -856,18 +954,24 @@ function loadCurrentImage() {
     }
 
     /*
-     * onload 触发时，高清图已经完整加载完成。
-     * 这时才让高清图进入页面显示。
+     * 此时高清图已经完整加载
      */
     highResLoaded.value = true
+
     imageLoading.value = false
+
     imageError.value = false
 
     preloadImage = null
   }
 
+  /*
+   * 高清图加载失败
+   */
   image.onerror = () => {
-    // 防止旧图片请求影响当前图片
+    /*
+     * 防止旧图片请求影响当前图片
+     */
     if (
       currentToken !== loadToken ||
       props.item?.date !== imageDate ||
@@ -877,26 +981,33 @@ function loadCurrentImage() {
     }
 
     highResLoaded.value = false
+
     imageLoading.value = false
+
     imageError.value = true
 
     preloadImage = null
   }
 
-  // 开始后台加载高清图
+  /*
+   * 开始加载
+   */
   image.src = imageUrl
 }
 
-
 /*
- * 关闭查看器
+ * =========================================================
+ * 关闭
+ * =========================================================
  */
 function close() {
   emit('close')
 }
 
 /*
+ * =========================================================
  * 上一张
+ * =========================================================
  */
 function previous() {
   if (!hasPrevious.value) {
@@ -912,7 +1023,9 @@ function previous() {
 }
 
 /*
+ * =========================================================
  * 下一张
+ * =========================================================
  */
 function next() {
   if (!hasNext.value) {
@@ -928,12 +1041,11 @@ function next() {
 }
 
 /*
+ * =========================================================
  * 键盘控制
+ * =========================================================
  */
 function handleKeydown(event) {
-  /*
-   * 查看器关闭时不处理。
-   */
   if (!props.visible) {
     return
   }
@@ -971,7 +1083,9 @@ function handleKeydown(event) {
 }
 
 /*
+ * =========================================================
  * 复制颜色
+ * =========================================================
  */
 async function copyColor(color) {
   if (!color) {
@@ -989,9 +1103,7 @@ async function copyColor(color) {
     copiedColor.value = value
 
     setTimeout(() => {
-      if (
-        copiedColor.value === value
-      ) {
+      if (copiedColor.value === value) {
         copiedColor.value = ''
       }
     }, 1800)
@@ -1009,47 +1121,35 @@ async function copyColor(color) {
    */
   try {
     const textarea =
-      document.createElement(
-        'textarea'
-      )
+      document.createElement('textarea')
 
     textarea.value = value
 
-    textarea.style.position =
-      'fixed'
+    textarea.style.position = 'fixed'
 
-    textarea.style.left =
-      '-9999px'
+    textarea.style.left = '-9999px'
 
     textarea.style.top = '0'
 
-    document.body.appendChild(
-      textarea
-    )
+    document.body.appendChild(textarea)
 
     textarea.focus()
 
     textarea.select()
 
     const success =
-      document.execCommand(
-        'copy'
-      )
+      document.execCommand('copy')
 
     textarea.remove()
 
     if (!success) {
-      throw new Error(
-        '复制操作失败'
-      )
+      throw new Error('复制操作失败')
     }
 
     copiedColor.value = value
 
     setTimeout(() => {
-      if (
-        copiedColor.value === value
-      ) {
+      if (copiedColor.value === value) {
         copiedColor.value = ''
       }
     }, 1800)
@@ -1062,52 +1162,73 @@ async function copyColor(color) {
 }
 
 /*
+ * =========================================================
  * 下载原图
+ * =========================================================
  */
 async function downloadImage() {
-  if (!props.item?.image || downloading.value) {
+  if (
+    !props.item?.image ||
+    downloading.value
+  ) {
     return
   }
 
   downloading.value = true
+
   downloadProgress.value = 0
+
   downloadLoaded.value = 0
+
   downloadTotal.value = 0
 
   try {
-    const response = await fetch(props.item.image)
+    const response =
+      await fetch(props.item.image)
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      throw new Error(
+        `HTTP ${response.status}`
+      )
     }
 
     /*
      * 某些浏览器 / CDN 环境可能没有 ReadableStream。
-     * 这种情况下退回普通 blob 下载。
      */
     if (!response.body) {
-      const blob = await response.blob()
+      const blob =
+        await response.blob()
 
       triggerDownload(blob)
 
       return
     }
 
-    const contentLength = response.headers.get('Content-Length')
-    const total = Number(contentLength)
+    const contentLength =
+      response.headers.get(
+        'Content-Length'
+      )
 
-    downloadTotal.value = Number.isFinite(total)
-      ? total
-      : 0
+    const total =
+      Number(contentLength)
 
-    const reader = response.body.getReader()
+    downloadTotal.value =
+      Number.isFinite(total)
+        ? total
+        : 0
+
+    const reader =
+      response.body.getReader()
 
     const chunks = []
 
     let received = 0
 
     while (true) {
-      const { done, value } = await reader.read()
+      const {
+        done,
+        value
+      } = await reader.read()
 
       if (done) {
         break
@@ -1117,22 +1238,26 @@ async function downloadImage() {
 
       received += value.length
 
-      downloadLoaded.value = received
+      downloadLoaded.value =
+        received
 
       if (total > 0) {
         downloadProgress.value =
           Math.min(
             100,
-            Math.round(received / total * 100)
+            Math.round(
+              received / total * 100
+            )
           )
       }
     }
 
-    const blob = new Blob(chunks)
+    const blob =
+      new Blob(chunks)
 
     /*
      * 没有 Content-Length 时，
-     * 下载完成之前无法计算百分比。
+     * 下载完成后才可以确定 100%。
      */
     if (total <= 0) {
       downloadProgress.value = 100
@@ -1140,7 +1265,10 @@ async function downloadImage() {
 
     triggerDownload(blob)
   } catch (error) {
-    console.error('下载失败:', error)
+    console.error(
+      '下载失败:',
+      error
+    )
 
     window.open(
       props.item.image,
@@ -1150,17 +1278,27 @@ async function downloadImage() {
   } finally {
     setTimeout(() => {
       downloading.value = false
+
       downloadProgress.value = 0
+
       downloadLoaded.value = 0
+
       downloadTotal.value = 0
     }, 500)
   }
 }
 
+/*
+ * =========================================================
+ * 触发浏览器下载
+ * =========================================================
+ */
 function triggerDownload(blob) {
-  const url = URL.createObjectURL(blob)
+  const url =
+    URL.createObjectURL(blob)
 
-  const link = document.createElement('a')
+  const link =
+    document.createElement('a')
 
   link.href = url
 
@@ -1178,6 +1316,11 @@ function triggerDownload(blob) {
   }, 1000)
 }
 
+/*
+ * =========================================================
+ * 格式化文件大小
+ * =========================================================
+ */
 function formatBytes(bytes) {
   if (!bytes) {
     return ''
@@ -1187,11 +1330,15 @@ function formatBytes(bytes) {
     return `${(bytes / 1024).toFixed(0)} KB`
   }
 
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(
+    bytes / 1024 / 1024
+  ).toFixed(1)} MB`
 }
 
 /*
+ * =========================================================
  * 当前图片发生变化
+ * =========================================================
  */
 watch(
   () => props.item,
@@ -1204,7 +1351,9 @@ watch(
 )
 
 /*
+ * =========================================================
  * 生命周期
+ * =========================================================
  */
 onMounted(() => {
   window.addEventListener(
@@ -1230,8 +1379,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+
 /* =========================================================
- * 查看器
+ * 查看器整体
  * ========================================================= */
 
 .viewer {
@@ -1271,7 +1421,7 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 主色调背景
+ * 主色调氛围背景
  * ========================================================= */
 
 .viewer-color-bg {
@@ -1320,10 +1470,7 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 内容滚动区域
- *
- * 只有这里滚动。
- * 背景不会跟着移动。
+ * 唯一滚动区域
  * ========================================================= */
 
 .viewer-scroll {
@@ -1406,66 +1553,43 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 图片区域
- * ========================================================= */
-
-.viewer-image-wrapper {
-  position: relative;
-
-  width: min(1200px, 100%);
-
-  aspect-ratio: 16 / 9;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  overflow: hidden;
-
-  border-radius: 14px;
-
-  flex-shrink: 0;
-}
-
-/* =========================================================
- * 显示器外壳
+ * 显示器整体
  * ========================================================= */
 
 .viewer-monitor {
   position: relative;
+
   width: min(1200px, 100%);
-  margin: 0 auto 34px;
+
+  margin:
+    0 auto 34px;
+
   flex-shrink: 0;
 
-  /* 不再使用特别厚重的黑色阴影 */
-  filter: drop-shadow(
-    0 24px 45px
-    rgba(0, 0, 0, 0.28)
-  );
+  filter:
+    drop-shadow(
+      0 24px 45px
+      rgba(0, 0, 0, 0.28)
+    );
 }
 
+
 /* =========================================================
- * 银白色显示器边框
+ * 显示器银白色外壳
  * ========================================================= */
 
 .viewer-monitor-bezel {
   position: relative;
+
   width: 100%;
+
   box-sizing: border-box;
 
-  /*
-   * 上左右略窄，
-   * 底部稍微厚一点，模拟真正显示器的下边框。
-   */
-  padding: 10px 10px 16px;
+  padding:
+    10px 10px 16px;
 
   border-radius: 15px;
 
-  /*
-   * 白色 / 银灰色金属感
-   */
   background:
     linear-gradient(
       145deg,
@@ -1474,7 +1598,9 @@ onBeforeUnmount(() => {
       #e5e7e9 100%
     );
 
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border:
+    1px solid
+    rgba(0, 0, 0, 0.12);
 
   box-shadow:
     inset 0 1px 0
@@ -1485,35 +1611,36 @@ onBeforeUnmount(() => {
       rgba(0, 0, 0, 0.16);
 }
 
+
 /* =========================================================
- * 真正的屏幕区域
+ * 屏幕区域
+ *
+ * 注意：
+ * 这里是整个文件中唯一的
+ * .viewer-image-wrapper 定义。
  * ========================================================= */
 
 .viewer-image-wrapper {
   position: relative;
 
   width: 100%;
+
   aspect-ratio: 16 / 9;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   overflow: hidden;
 
-  /*
-   * 屏幕本身保持黑色。
-   * 这样白色外框 + 黑色屏幕会明显更像显示器。
-   */
+  flex-shrink: 0;
+
   background: #050607;
 
   border-radius: 6px;
 
-  flex-shrink: 0;
-
-  /*
-   * 屏幕内沿
-   */
   box-shadow:
     inset 0 0 0 1px
       rgba(0, 0, 0, 0.55),
@@ -1523,7 +1650,7 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 图片本身
+ * 图片
  * ========================================================= */
 
 .viewer-image {
@@ -1535,6 +1662,7 @@ onBeforeUnmount(() => {
   border-radius: 4px;
 
   user-select: none;
+
   -webkit-user-drag: none;
 
   box-shadow:
@@ -1546,6 +1674,48 @@ onBeforeUnmount(() => {
     transform 0.35s ease;
 }
 
+
+/* =========================================================
+ * Base64 占位图
+ * ========================================================= */
+
+.viewer-placeholder {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 1;
+}
+
+
+/* =========================================================
+ * 高清图
+ * ========================================================= */
+
+.viewer-high-res {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 2;
+
+  animation:
+    high-res-fade-in
+    0.25s
+    ease-out;
+}
+
+@keyframes high-res-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
 /* =========================================================
  * 顶部摄像头
  * ========================================================= */
@@ -1554,37 +1724,42 @@ onBeforeUnmount(() => {
   position: absolute;
 
   left: 50%;
-  top: 3px;
 
-  width: 18px;
-  height: 5px;
+  top: 1px;
 
-  transform: translateX(-50%);
+  width: 30px;
+
+  height: 7px;
+
+  transform:
+    translateX(-50%);
 
   border-radius: 999px;
 
-  /*
-   * 摄像头外壳
-   */
   background:
     linear-gradient(
       180deg,
-      #5d6166 0%,
-      #292d31 100%
+      #5f6368 0%,
+      #30343a 45%,
+      #1c2024 100%
     );
+
+  border:
+    1px solid
+    rgba(0, 0, 0, 0.30);
 
   box-shadow:
     inset 0 1px 0
-      rgba(255, 255, 255, 0.35),
+      rgba(255, 255, 255, 0.28),
     0 1px 2px
       rgba(0, 0, 0, 0.20);
 
-  z-index: 5;
+  z-index: 6;
 }
 
-/*
- * 摄像头镜头
- */
+
+/* 摄像头镜头 */
+
 .viewer-monitor-camera::before {
   content: "";
 
@@ -1593,104 +1768,213 @@ onBeforeUnmount(() => {
   left: 50%;
   top: 50%;
 
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
 
-  transform: translate(-50%, -50%);
+  transform:
+    translate(-50%, -50%);
 
   border-radius: 50%;
 
   background:
     radial-gradient(
       circle at 35% 30%,
-      #8fa8c5 0%,
-      #39495b 35%,
-      #11151a 75%,
+      #c5d9eb 0%,
+      #52677c 30%,
+      #17202a 65%,
       #050607 100%
     );
 
   box-shadow:
     0 0 0 1px
-      rgba(0, 0, 0, 0.45),
-    0 0 4px
-      rgba(90, 140, 200, 0.18);
+      rgba(0, 0, 0, 0.65),
+    0 0 5px
+      rgba(100, 160, 210, 0.20);
 }
 
-/*
- * 摄像头镜头的一点反光
- */
+
+/* 摄像头状态灯 */
+
 .viewer-monitor-camera::after {
   content: "";
 
   position: absolute;
 
-  left: calc(50% - 1px);
-  top: 1px;
+  right: 7px;
 
-  width: 1px;
-  height: 1px;
+  top: 50%;
+
+  width: 2px;
+  height: 2px;
+
+  transform:
+    translateY(-50%);
 
   border-radius: 50%;
 
-  background: rgba(255, 255, 255, 0.75);
+  background:
+    rgba(120, 170, 205, 0.5);
 
-  opacity: 0.7;
+  box-shadow:
+    0 0 4px
+      rgba(100, 170, 220, 0.25);
 }
+
+
 /* =========================================================
- * 显示器电源灯
+ * 显示器品牌装饰线
  * ========================================================= */
 
-.viewer-monitor-power {
+.viewer-monitor-brand {
   position: absolute;
 
-  right: 13px;
+  left: 50%;
+
   bottom: 5px;
 
-  width: 5px;
-  height: 5px;
+  width: 26px;
 
-  border-radius: 50%;
+  height: 2px;
 
-  /*
-   * 默认基色（动画中会通过 animation 改变背景色与光晕）
-   */
-  background: rgba(110, 150, 185, 0.42);
+  transform:
+    translateX(-50%);
 
-  animation: viewer-power-breath 3.2s ease-in-out infinite;
+  border-radius: 999px;
+
+  background:
+    rgba(100, 105, 110, 0.35);
+
+  box-shadow:
+    0 1px 0
+      rgba(255, 255, 255, 0.75);
 }
 
 
+
+
 /* =========================================================
- * 电源灯呼吸
+ * Power 呼吸动画
  * ========================================================= */
 
-@keyframes viewer-power-breath {
+@keyframes viewer-power-button-breath {
   0%,
   100% {
-    /* 暗状态：降低透明度与暗沉背景色 */
-    opacity: 0.25;
-    background-color: rgba(90, 130, 165, 0.3);
-
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.08),             /* 凹槽边缘 */
-      0 0 2px rgba(100, 150, 200, 0.2);
+      inset 0 1px 1px
+        rgba(255, 255, 255, 0.95),
+      inset 0 -1px 1px
+        rgba(0, 0, 0, 0.12),
+      0 1px 2px
+        rgba(0, 0, 0, 0.10),
+      0 0 0
+        rgba(140, 190, 220, 0);
   }
 
   50% {
-    /* 亮状态：提升透明度、将中心点提亮为近白色，并叠加多重发光阴影 */
-    opacity: 1;
-    background-color: rgba(220, 240, 255, 0.95);  /* LED 核心提亮 */
-
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.08),             /* 凹槽边缘 */
-      0 0 3px 1px rgba(255, 255, 255, 0.9),      /* 内层极亮白光点 */
-      0 0 8px 2px rgba(100, 150, 200, 0.75),     /* 中层冰蓝浓密光晕 */
-      0 0 16px 4px rgba(100, 150, 200, 0.35);    /* 外层广角发散光晕 */
+      inset 0 1px 1px
+        rgba(255, 255, 255, 0.95),
+      inset 0 -1px 1px
+        rgba(0, 0, 0, 0.12),
+      0 1px 2px
+        rgba(0, 0, 0, 0.10),
+      0 0 8px
+        rgba(130, 190, 225, 0.38);
   }
 }
 
+
 /* =========================================================
- * 高清图 Loading
+ * 显示器支架
+ * ========================================================= */
+
+.viewer-monitor-stand {
+  position: relative;
+
+  width: 180px;
+
+  height: 34px;
+
+  margin:
+    -1px auto 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  z-index: 1;
+}
+
+
+/* =========================================================
+ * 支架连接杆
+ * ========================================================= */
+
+.viewer-monitor-neck {
+  width: 34px;
+
+  height: 24px;
+
+  border-left:
+    1px solid
+    rgba(0, 0, 0, 0.10);
+
+  border-right:
+    1px solid
+    rgba(0, 0, 0, 0.10);
+
+  background:
+    linear-gradient(
+      90deg,
+      #d9dcdf 0%,
+      #f7f8f9 45%,
+      #cfd2d5 100%
+    );
+
+  box-shadow:
+    inset 1px 0
+      rgba(255, 255, 255, 0.55),
+    inset -1px 0
+      rgba(0, 0, 0, 0.06);
+}
+
+
+/* =========================================================
+ * 显示器底座
+ * ========================================================= */
+
+.viewer-monitor-base {
+  width: 150px;
+
+  height: 7px;
+
+  margin-top: -1px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f5f6f7 0%,
+      #d6d9dc 100%
+    );
+
+  border:
+    1px solid
+    rgba(0, 0, 0, 0.10);
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.90),
+    0 3px 7px
+      rgba(0, 0, 0, 0.14);
+}
+
+
+/* =========================================================
+ * Loading
  * ========================================================= */
 
 .viewer-loading {
@@ -1727,12 +2011,16 @@ onBeforeUnmount(() => {
     2px solid
     rgba(255, 255, 255, 0.24);
 
-  border-top-color: #fff;
+  border-top-color:
+    #fff;
 
   border-radius: 50%;
 
   animation:
-    spin 0.8s linear infinite;
+    spin
+    0.8s
+    linear
+    infinite;
 }
 
 @keyframes spin {
@@ -1781,9 +2069,11 @@ onBeforeUnmount(() => {
 
   z-index: 6;
 
-  transform: translateX(-50%);
+  transform:
+    translateX(-50%);
 
-  padding: 7px 12px;
+  padding:
+    7px 12px;
 
   border-radius: 8px;
 
@@ -1793,9 +2083,11 @@ onBeforeUnmount(() => {
   background:
     rgba(0, 0, 0, 0.55);
 
-  backdrop-filter: blur(8px);
+  backdrop-filter:
+    blur(8px);
 
-  -webkit-backdrop-filter: blur(8px);
+  -webkit-backdrop-filter:
+    blur(8px);
 
   font-size: 12px;
 
@@ -1831,7 +2123,8 @@ onBeforeUnmount(() => {
   background:
     rgba(255, 255, 255, 0.09);
 
-  backdrop-filter: blur(12px);
+  backdrop-filter:
+    blur(12px);
 
   -webkit-backdrop-filter:
     blur(12px);
@@ -1855,7 +2148,8 @@ onBeforeUnmount(() => {
   border-color:
     rgba(255, 255, 255, 0.15);
 
-  transform: rotate(90deg);
+  transform:
+    rotate(90deg);
 }
 
 
@@ -1885,7 +2179,8 @@ onBeforeUnmount(() => {
   background:
     rgba(255, 255, 255, 0.07);
 
-  backdrop-filter: blur(12px);
+  backdrop-filter:
+    blur(12px);
 
   -webkit-backdrop-filter:
     blur(12px);
@@ -1963,7 +2258,8 @@ onBeforeUnmount(() => {
 }
 
 .viewer-counter {
-  padding: 3px 7px;
+  padding:
+    3px 7px;
 
   border-radius: 6px;
 
@@ -1982,7 +2278,8 @@ onBeforeUnmount(() => {
  * ========================================================= */
 
 .viewer-info h2 {
-  margin: 5px 0;
+  margin:
+    5px 0;
 
   font-size: 20px;
 
@@ -2022,370 +2319,6 @@ onBeforeUnmount(() => {
   margin-top: 18px;
 }
 
-
-/* =========================================================
- * 色彩分布
- * ========================================================= */
-
-.viewer-histogram {
-  width: 100%;
-
-  margin-top: 22px;
-}
-
-.viewer-section-title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-
-  margin-bottom: 6px;
-
-  color: rgba(255, 255, 255, 0.78);
-
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.viewer-section-meta {
-  color: rgba(255, 255, 255, 0.38);
-
-  font-size: 10px;
-  font-weight: 400;
-}
-
-.histogram-description {
-  margin-bottom: 12px;
-
-  color: rgba(255, 255, 255, 0.42);
-
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-
-/* =========================
-   Histogram wrapper
-========================= */
-
-.histogram-wrapper {
-  width: 100%;
-
-  padding: 12px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.08);
-
-  border-radius: 14px;
-
-  background:
-    rgba(255, 255, 255, 0.045);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-
-/* =========================
-   Hue 横轴
-========================= */
-
-.histogram-hue-axis {
-  display: grid;
-
-  grid-template-columns:
-    repeat(12, minmax(0, 1fr));
-
-  gap: 4px;
-
-  margin-left: 92px;
-
-  margin-bottom: 6px;
-}
-
-.histogram-hue-label {
-  min-width: 0;
-
-  color: rgba(255, 255, 255, 0.38);
-
-  font-size: 9px;
-
-  text-align: center;
-
-  white-space: nowrap;
-}
-
-
-/* =========================
-   主体
-========================= */
-
-.histogram-main {
-  display: grid;
-
-  grid-template-columns:
-    84px minmax(0, 1fr);
-
-  gap: 8px;
-}
-
-
-/* =========================
-   左侧标签
-========================= */
-
-.histogram-row-labels {
-  display: grid;
-
-  grid-template-rows:
-    repeat(9, minmax(0, 1fr));
-
-  gap: 4px;
-}
-
-.histogram-row-label {
-  display: flex;
-
-  align-items: center;
-
-  justify-content: flex-end;
-
-  padding-right: 4px;
-
-  color: rgba(255, 255, 255, 0.38);
-
-  font-size: 9px;
-
-  line-height: 1.2;
-
-  text-align: right;
-
-  white-space: nowrap;
-}
-
-
-/* =========================
-   108 色彩格
-========================= */
-
-.histogram-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(12, minmax(0, 1fr));
-
-  grid-template-rows:
-    repeat(9, minmax(24px, 1fr));
-
-  gap: 4px;
-}
-
-.histogram-cell {
-  width: 100%;
-  height: 100%;
-
-  min-width: 0;
-  min-height: 24px;
-
-  padding: 0;
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.08);
-
-  border-radius: 5px;
-
-  cursor: crosshair;
-
-  box-sizing: border-box;
-
-  transition:
-    transform 0.16s ease,
-    opacity 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.histogram-cell:hover,
-.histogram-cell.active {
-  opacity: 1 !important;
-
-  transform: scale(1.08);
-
-  border-color:
-    rgba(255, 255, 255, 0.8);
-
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.12),
-    0 5px 16px rgba(0, 0, 0, 0.28);
-
-  position: relative;
-
-  z-index: 2;
-}
-
-.histogram-cell:focus-visible {
-  outline:
-    2px solid
-    rgba(255, 255, 255, 0.9);
-
-  outline-offset: 2px;
-}
-
-
-/* =========================
-   Hover 信息
-========================= */
-
-.histogram-hover-info {
-  display: flex;
-
-  align-items: center;
-
-  flex-wrap: wrap;
-
-  gap: 8px;
-
-  min-height: 36px;
-
-  margin-top: 9px;
-
-  padding: 8px 10px;
-
-  box-sizing: border-box;
-
-  border-radius: 9px;
-
-  background:
-    rgba(255, 255, 255, 0.055);
-
-  color: rgba(255, 255, 255, 0.68);
-
-  font-size: 10px;
-}
-
-.histogram-hover-color {
-  width: 12px;
-  height: 12px;
-
-  flex-shrink: 0;
-
-  border-radius: 4px;
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.35);
-}
-
-.histogram-hover-main {
-  color: rgba(255, 255, 255, 0.9);
-
-  font-weight: 600;
-}
-
-.histogram-hover-range {
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.histogram-hover-info strong {
-  margin-left: auto;
-
-  color: rgba(255, 255, 255, 0.9);
-
-  font-size: 11px;
-}
-
-.histogram-hover-placeholder {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-
-/* =========================
-   移动端
-========================= */
-
-@media (max-width: 700px) {
-  .histogram-wrapper {
-    padding: 8px;
-  }
-
-  .histogram-hue-axis {
-    margin-left: 70px;
-
-    gap: 2px;
-  }
-
-  .histogram-hue-label {
-    font-size: 7px;
-  }
-
-  .histogram-main {
-    grid-template-columns: 64px minmax(0, 1fr);
-
-    gap: 5px;
-  }
-
-  .histogram-row-label {
-    font-size: 7px;
-  }
-
-  .histogram-grid {
-    gap: 2px;
-
-    grid-template-rows:
-      repeat(9, minmax(18px, 1fr));
-  }
-
-  .histogram-cell {
-    min-height: 18px;
-
-    border-radius: 3px;
-  }
-
-  .histogram-hover-info {
-    min-height: 34px;
-
-    font-size: 9px;
-  }
-  .viewer-monitor {
-    width: 100%;
-    margin-bottom: 22px;
-  }
-
-  .viewer-monitor-bezel {
-    padding: 7px 7px 11px;
-    border-radius: 11px;
-  }
-
-  .viewer-image-wrapper {
-    border-radius: 4px;
-  }
-
-  .viewer-monitor-camera {
-    top: 2px;
-
-    width: 14px;
-    height: 4px;
-  }
-
-  .viewer-monitor-camera::before {
-    width: 2.5px;
-    height: 2.5px;
-  }
-
-  .viewer-monitor-power {
-    right: 9px;
-    bottom: 4px;
-
-    width: 4px;
-    height: 4px;
-  }
-}
-
-
-
 .viewer-colors-title {
   margin-bottom: 10px;
 
@@ -2419,7 +2352,8 @@ onBeforeUnmount(() => {
 
   min-height: 36px;
 
-  padding: 7px 10px;
+  padding:
+    7px 10px;
 
   border:
     1px solid
@@ -2532,6 +2466,8 @@ onBeforeUnmount(() => {
 .viewer-actions {
   display: flex;
 
+  flex-wrap: wrap;
+
   gap: 10px;
 
   margin-top: 14px;
@@ -2546,7 +2482,8 @@ onBeforeUnmount(() => {
 .open-button {
   height: 38px;
 
-  padding: 0 16px;
+  padding:
+    0 16px;
 
   border-radius: 10px;
 
@@ -2624,7 +2561,8 @@ onBeforeUnmount(() => {
     1px solid
     rgba(255, 255, 255, 0.1);
 
-  backdrop-filter: blur(10px);
+  backdrop-filter:
+    blur(10px);
 
   -webkit-backdrop-filter:
     blur(10px);
@@ -2637,211 +2575,72 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 移动端
+ * 查看详情
  * ========================================================= */
 
-@media (max-width: 700px) {
+.detail-button {
+  height: 38px;
 
-  /*
-   * 滚动区域
-   */
-  .viewer-scroll {
-    padding:
-      20px 16px 40px;
-  }
+  padding:
+    0 14px;
 
-  /*
-   * 内容
-   */
-  .viewer-content {
-    min-height: 100%;
-  }
+  display: inline-flex;
 
-  /*
-   * 图片
-   */
-  .viewer-image-wrapper {
-    width: 100%;
-
-    border-radius: 9px;
-  }
-
-  .viewer-image {
-    border-radius: 9px;
-  }
-
-  /*
-   * 左右按钮
-   */
-  .viewer-nav {
-    width: 40px;
-
-    height: 52px;
-
-    border-radius: 13px;
-
-    font-size: 38px;
-  }
-
-  .viewer-prev {
-    left: 8px;
-  }
-
-  .viewer-next {
-    right: 8px;
-  }
-
-  /*
-   * 关闭
-   */
-  .viewer-close {
-    top: 10px;
-
-    right: 10px;
-
-    width: 40px;
-
-    height: 40px;
-
-    font-size: 27px;
-  }
-
-  /*
-   * 信息
-   */
-  .viewer-info {
-    margin-top: 12px;
-  }
-
-  .viewer-info h2 {
-    font-size: 18px;
-  }
-
-  .viewer-info p {
-    font-size: 12px;
-
-    display: -webkit-box;
-
-    -webkit-line-clamp: 2;
-
-    -webkit-box-orient: vertical;
-
-    overflow: hidden;
-  }
-
-  /*
-   * 主色调
-   */
-  .viewer-colors {
-    margin-top: 14px;
-  }
-
-  .viewer-color {
-    min-height: 34px;
-
-    padding:
-      6px 9px;
-  }
-
-  /*
-   * 操作
-   */
-  .viewer-actions {
-    margin-top: 10px;
-  }
-
-  .download-button,
-  .open-button {
-    height: 36px;
-
-    padding: 0 13px;
-
-    font-size: 12px;
-  }
-
-  /*
-   * Loading
-   */
-  .viewer-loading-text {
-    margin-top: 8px;
-
-    font-size: 11px;
-  }
-
-  .viewer-spinner {
-    width: 16px;
-
-    height: 16px;
-  }
-}
-/* =========================================================
- * 图片双层加载
- * ========================================================= */
-
-.viewer-image-wrapper {
-  position: relative;
-  width: min(1200px, 100%);
-  aspect-ratio: 16 / 9;
-
-  display: flex;
   align-items: center;
+
   justify-content: center;
 
-  overflow: hidden;
-  border-radius: 14px;
-  flex-shrink: 0;
+  gap: 6px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.18);
+
+  border-radius: 10px;
+
+  color:
+    rgba(255, 255, 255, 0.82);
+
+  background:
+    rgba(255, 255, 255, 0.04);
+
+  backdrop-filter:
+    blur(10px);
+
+  -webkit-backdrop-filter:
+    blur(10px);
+
+  font-family: inherit;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
-/*
- * 两张图片叠放在同一个容器中
- */
-.viewer-image {
-  position: absolute;
-  inset: 0;
+.detail-button:hover {
+  background:
+    rgba(255, 255, 255, 0.10);
 
-  display: block;
-  width: 100%;
-  height: 100%;
+  border-color:
+    rgba(255, 255, 255, 0.32);
 
-  object-fit: contain;
+  transform:
+    translateY(-1px);
 }
 
-/*
- * Base64 模糊图始终作为底层
- */
-.viewer-placeholder {
-  z-index: 1;
-}
 
-/*
- * 高清图在完整加载后显示
- */
-.viewer-high-res {
-  z-index: 2;
-
-  animation: high-res-fade-in 0.25s ease-out;
-}
-
-/*
- * 高清图完整加载后淡入
- */
-@keyframes high-res-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-/*
- * 加载动画位于图片上层
- */
-.viewer-loading {
-  z-index: 5;
-}
-
+/* =========================================================
+ * 下载进度
+ * ========================================================= */
 
 .download-progress-content {
   display: flex;
@@ -2864,19 +2663,23 @@ onBeforeUnmount(() => {
 
   border-radius: 99px;
 
-  background: rgba(255, 255, 255, 0.16);
+  background:
+    rgba(0, 0, 0, 0.12);
 }
 
 .download-progress-bar {
   position: absolute;
 
-  inset: 0 auto 0 0;
+  inset:
+    0 auto 0 0;
 
   border-radius: inherit;
 
-  background: currentColor;
+  background:
+    currentColor;
 
-  transition: width 0.15s ease;
+  transition:
+    width 0.15s ease;
 }
 
 .download-progress-text {
@@ -2889,48 +2692,529 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.detail-button {
-  height: 38px;
 
-  padding: 0 14px;
+/* =========================================================
+ * 颜色分布
+ * ========================================================= */
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+.viewer-histogram {
+  width: 100%;
+
+  margin-top: 22px;
+}
+
+.viewer-section-title {
+  display: flex;
+
+  align-items: baseline;
+
+  gap: 8px;
+
+  margin-bottom: 6px;
+
+  color:
+    rgba(255, 255, 255, 0.78);
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.viewer-section-meta {
+  color:
+    rgba(255, 255, 255, 0.38);
+
+  font-size: 10px;
+
+  font-weight: 400;
+}
+
+.histogram-description {
+  margin-bottom: 12px;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+
+  font-size: 11px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+ * Histogram wrapper
+ * ========================================================= */
+
+.histogram-wrapper {
+  width: 100%;
+
+  padding: 12px;
 
   box-sizing: border-box;
 
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 10px;
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
 
-  color: rgba(255,255,255,.82);
+  border-radius: 14px;
 
-  background: rgba(255,255,255,.04);
+  background:
+    rgba(255, 255, 255, 0.045);
 
-  backdrop-filter: blur(10px);
+  backdrop-filter:
+    blur(12px);
 
-  text-decoration: none;
-
-  font-size: 13px;
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition:
-    background .2s ease,
-    border-color .2s ease,
-    transform .2s ease;
+  -webkit-backdrop-filter:
+    blur(12px);
 }
 
-.detail-button:hover {
-  background: rgba(255,255,255,.10);
 
-  border-color:
-    rgba(255,255,255,.32);
+/* =========================================================
+ * Hue 横轴
+ * ========================================================= */
+
+.histogram-hue-axis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr));
+
+  gap: 4px;
+
+  margin-left: 92px;
+
+  margin-bottom: 6px;
+}
+
+.histogram-hue-label {
+  min-width: 0;
+
+  color:
+    rgba(255, 255, 255, 0.38);
+
+  font-size: 9px;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+ * Histogram 主体
+ * ========================================================= */
+
+.histogram-main {
+  display: grid;
+
+  grid-template-columns:
+    84px minmax(0, 1fr);
+
+  gap: 8px;
+}
+
+
+/* =========================================================
+ * 左侧标签
+ * ========================================================= */
+
+.histogram-row-labels {
+  display: grid;
+
+  grid-template-rows:
+    repeat(9, minmax(0, 1fr));
+
+  gap: 4px;
+}
+
+.histogram-row-label {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  padding-right: 4px;
+
+  color:
+    rgba(255, 255, 255, 0.38);
+
+  font-size: 9px;
+
+  line-height: 1.2;
+
+  text-align: right;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+ * 108 个颜色格
+ * ========================================================= */
+
+.histogram-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr));
+
+  grid-template-rows:
+    repeat(9, minmax(24px, 1fr));
+
+  gap: 4px;
+}
+
+.histogram-cell {
+  width: 100%;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 24px;
+
+  padding: 0;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 5px;
+
+  cursor: crosshair;
+
+  box-sizing: border-box;
+
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.histogram-cell:hover,
+.histogram-cell.active {
+  opacity: 1 !important;
 
   transform:
-    translateY(-1px);
+    scale(1.08);
+
+  border-color:
+    rgba(255, 255, 255, 0.8);
+
+  box-shadow:
+    0 0 0 2px
+      rgba(255, 255, 255, 0.12),
+    0 5px 16px
+      rgba(0, 0, 0, 0.28);
+
+  position: relative;
+
+  z-index: 2;
+}
+
+.histogram-cell:focus-visible {
+  outline:
+    2px solid
+    rgba(255, 255, 255, 0.9);
+
+  outline-offset: 2px;
+}
+
+
+/* =========================================================
+ * Histogram hover 信息
+ * ========================================================= */
+
+.histogram-hover-info {
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  min-height: 36px;
+
+  margin-top: 9px;
+
+  padding:
+    8px 10px;
+
+  box-sizing: border-box;
+
+  border-radius: 9px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  color:
+    rgba(255, 255, 255, 0.68);
+
+  font-size: 10px;
+}
+
+.histogram-hover-color {
+  width: 12px;
+
+  height: 12px;
+
+  flex-shrink: 0;
+
+  border-radius: 4px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.35);
+}
+
+.histogram-hover-main {
+  color:
+    rgba(255, 255, 255, 0.9);
+
+  font-weight: 600;
+}
+
+.histogram-hover-range {
+  color:
+    rgba(255, 255, 255, 0.45);
+}
+
+.histogram-hover-info strong {
+  margin-left: auto;
+
+  color:
+    rgba(255, 255, 255, 0.9);
+
+  font-size: 11px;
+}
+
+.histogram-hover-placeholder {
+  color:
+    rgba(255, 255, 255, 0.35);
+}
+
+
+/* =========================================================
+ * 移动端
+ * ========================================================= */
+
+@media (max-width: 700px) {
+
+  /* 滚动区域 */
+  .viewer-scroll {
+    padding:
+      20px 16px 40px;
+  }
+
+  /* 显示器 */
+  .viewer-monitor {
+    margin-bottom: 24px;
+  }
+
+  .viewer-monitor-bezel {
+    padding:
+      7px 7px 12px;
+
+    border-radius: 11px;
+  }
+
+  /* 屏幕 */
+  .viewer-image-wrapper {
+    border-radius: 6px;
+  }
+
+  .viewer-image {
+    border-radius: 4px;
+  }
+
+  /* 摄像头 */
+  .viewer-monitor-camera {
+    top: 2px;
+
+    width: 24px;
+
+    height: 6px;
+  }
+
+  .viewer-monitor-camera::before {
+    width: 3px;
+
+    height: 3px;
+  }
+
+  .viewer-monitor-camera::after {
+    right: 5px;
+  }
+
+ 
+
+  /* 支架 */
+  .viewer-monitor-stand {
+    width: 120px;
+
+    height: 26px;
+  }
+
+  .viewer-monitor-neck {
+    width: 25px;
+
+    height: 18px;
+  }
+
+  .viewer-monitor-base {
+    width: 105px;
+
+    height: 6px;
+  }
+
+  /* 左右按钮 */
+  .viewer-nav {
+    width: 40px;
+
+    height: 52px;
+
+    border-radius: 13px;
+
+    font-size: 38px;
+  }
+
+  .viewer-prev {
+    left: 8px;
+  }
+
+  .viewer-next {
+    right: 8px;
+  }
+
+  /* 关闭 */
+  .viewer-close {
+    top: 10px;
+
+    right: 10px;
+
+    width: 40px;
+
+    height: 40px;
+
+    font-size: 27px;
+  }
+
+  /* 信息 */
+  .viewer-info {
+    margin-top: 12px;
+  }
+
+  .viewer-info h2 {
+    font-size: 18px;
+  }
+
+  .viewer-info p {
+    font-size: 12px;
+
+    display: -webkit-box;
+
+    -webkit-line-clamp: 2;
+
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+  }
+
+  /* 主色调 */
+  .viewer-colors {
+    margin-top: 14px;
+  }
+
+  .viewer-color {
+    min-height: 34px;
+
+    padding:
+      6px 9px;
+  }
+
+  /* 操作 */
+  .viewer-actions {
+    margin-top: 10px;
+
+    gap: 8px;
+  }
+
+  .download-button,
+  .open-button,
+  .detail-button {
+    height: 36px;
+
+    padding:
+      0 12px;
+
+    font-size: 12px;
+  }
+
+  /* Loading */
+  .viewer-loading-text {
+    margin-top: 8px;
+
+    font-size: 11px;
+  }
+
+  .viewer-spinner {
+    width: 16px;
+
+    height: 16px;
+  }
+
+  /* 直方图 */
+  .histogram-wrapper {
+    padding: 8px;
+  }
+
+  .histogram-hue-axis {
+    margin-left: 70px;
+
+    gap: 2px;
+  }
+
+  .histogram-main {
+    grid-template-columns:
+      64px minmax(0, 1fr);
+
+    gap: 6px;
+  }
+
+  .histogram-row-label {
+    font-size: 8px;
+  }
+
+  .histogram-grid {
+    gap: 3px;
+
+    grid-template-rows:
+      repeat(9, minmax(20px, 1fr));
+  }
+
+  .histogram-cell {
+    min-height: 20px;
+
+    border-radius: 4px;
+  }
+
+  .histogram-hover-info {
+    min-height: 34px;
+
+    padding:
+      7px 8px;
+
+    gap: 6px;
+  }
+
+  .histogram-hover-main {
+    font-size: 9px;
+  }
+
+  .histogram-hover-range {
+    font-size: 9px;
+  }
 }
 
 </style>
