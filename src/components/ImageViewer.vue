@@ -3030,7 +3030,7 @@ onBeforeUnmount(() => {
 
   /* 摄像头 */
   .viewer-monitor-camera {
-    top: 2px;
+    top: 1px;
 
     width: 24px;
 
