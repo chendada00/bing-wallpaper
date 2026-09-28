@@ -102,7 +102,22 @@ const pauseAutoClose = () => {
 
 onMounted(async () => {
   try {
-    const res = await fetch('/notice.json?t=' + Date.now())
+    const NOTICE_API =
+      import.meta.env.VITE_JSONBIN_URL
+
+    const ACCESS_KEY =
+      import.meta.env.VITE_JSONBIN_ACCESS_KEY
+
+    const res = await fetch(
+      `${NOTICE_API}?t=${Date.now()}`,
+      {
+        headers: {
+          'X-Access-Key': ACCESS_KEY,
+          'X-Bin-Meta': 'false'
+        }
+      }
+    )
+
     if (!res.ok) return
     const data = await res.json()
 

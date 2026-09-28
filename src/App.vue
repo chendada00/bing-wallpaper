@@ -311,6 +311,7 @@
         :items="result"
         @close="closeViewer"
         @change="changeViewer"
+        @open-detail="openWallpaperDetail"
       />
 
     </template>
@@ -489,6 +490,29 @@ function getImageState(date){
     'idle'
   )
 
+}
+
+function openWallpaperDetail(item) {
+  if (!item?.date) {
+    return
+  }
+
+  const path =
+    `/wallpaper/${item.date}`
+
+  window.history.pushState(
+    {},
+    '',
+    path
+  )
+
+  viewerVisible.value = false
+  currentItem.value = null
+  document.body.style.overflow = ''
+
+  currentPath.value = path
+
+  loadWallpaperRoute()
 }
 
 

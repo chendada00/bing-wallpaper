@@ -213,6 +213,16 @@
                 打开原图
               </a>
 
+              <button
+                v-if="item?.date"
+                class="detail-button"
+                type="button"
+                @click="openDetail"
+              >
+                <span aria-hidden="true">↗</span>
+                查看详情
+              </button>
+
             </div>
 
             <!-- ==================== 色彩分布 ==================== -->
@@ -350,7 +360,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   'close',
-  'change'
+  'change',
+  'open-detail'
 ])
 
 /*
@@ -475,6 +486,15 @@ const HISTOGRAM_ROWS = [
 
 const SATURATION_VALUES = [25, 60, 90]
 const VALUE_VALUES = [35, 65, 92]
+
+
+function openDetail() {
+  if (!props.item?.date) {
+    return
+  }
+
+  emit('open-detail', props.item)
+}
 
 const histogramCells = computed(() => {
   const histogram = props.item?.colorHistogram
@@ -2619,6 +2639,50 @@ onBeforeUnmount(() => {
   text-align: right;
 
   white-space: nowrap;
+}
+
+.detail-button {
+  height: 38px;
+
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  box-sizing: border-box;
+
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+
+  color: rgba(255,255,255,.82);
+
+  background: rgba(255,255,255,.04);
+
+  backdrop-filter: blur(10px);
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background .2s ease,
+    border-color .2s ease,
+    transform .2s ease;
+}
+
+.detail-button:hover {
+  background: rgba(255,255,255,.10);
+
+  border-color:
+    rgba(255,255,255,.32);
+
+  transform:
+    translateY(-1px);
 }
 
 </style>
