@@ -106,54 +106,96 @@ export function useBingData() {
   }
 
   function appendUnique(newItems) {
-    const existingDates = new Set(items.value.map(item => item.date))
-
+    const existingDates = new Set(
+      items.value.map(item => item.date)
+    )
+  
     const unique = newItems
-      .filter(item => item.date && !existingDates.has(item.date))
-      .sort((a, b) => b.date.localeCompare(a.date))
-
+      .filter(item => {
+        return (
+          item.date &&
+          !existingDates.has(item.date)
+        )
+      })
+      .sort((a, b) => {
+        return b.date.localeCompare(a.date)
+      })
+  
     if (unique.length) {
       items.value.push(...unique)
-      items.value.sort((a, b) => b.date.localeCompare(a.date))
+  
+      items.value.sort((a, b) => {
+        return b.date.localeCompare(a.date)
+      })
     }
-
-    return unique.length
+  
+    return unique
   }
 
   async function loadNextMonth() {
-    if (loading.value || noMore.value || !cursor) return false
-
+    if (
+      loading.value ||
+      noMore.value ||
+      !cursor
+    ) {
+      return []
+    }
+  
     loading.value = true
     error.value = ''
-
+  
     try {
       let found = false
       let checked = 0
-
-      while (!found && checked < MAX_EMPTY_MONTHS) {
-        const result = await fetchMonth(cursor.year, cursor.month)
-
-        cursor = previousMonth(cursor.year, cursor.month)
+      let addedItems = []
+  
+      while (
+        !found &&
+        checked < MAX_EMPTY_MONTHS
+      ) {
+        const result = await fetchMonth(
+          cursor.year,
+          cursor.month
+        )
+  
+        cursor = previousMonth(
+          cursor.year,
+          cursor.month
+        )
+  
         checked += 1
-
+  
         if (result.items.length > 0) {
-          appendUnique(result.items)
+          addedItems =
+            appendUnique(result.items)
+  
           found = true
           emptyMonths = 0
         } else {
           emptyMonths += 1
         }
       }
-
-      if (!found && emptyMonths >= MAX_EMPTY_MONTHS) {
+  
+      if (
+        !found &&
+        emptyMonths >= MAX_EMPTY_MONTHS
+      ) {
         noMore.value = true
       }
-
-      return found
+  
+      return addedItems
+  
     } catch (err) {
-      console.error('加载历史壁纸失败:', err)
-      error.value = '历史壁纸加载失败，请稍后重试。'
-      return false
+      console.error(
+        '加载历史壁纸失败:',
+        err
+      )
+  
+      error.value =
+        '历史壁纸加载失败，请稍后重试。'
+  
+      return []
+  
     } finally {
       loading.value = false
     }
@@ -206,23 +248,46 @@ export function useBingData() {
     return loaded
   }
 
-  async function loadAllHistory() {
-    if (initialLoading.value) return false
-
-    noMore.value = false
-
-    let safety = 0
-
-    while (!noMore.value && safety < 600) {
-      const found = await loadNextMonth()
-      safety += 1
-
-      // 让浏览器有机会处理渲染/输入事件，避免长时间同步占用主线程。
-      await new Promise(resolve => setTimeout(resolve, 0))
-
-      if (!found && noMore.value) break
+  async function loadAllHistory(onMonthLoaded) {
+    if (initialLoading.value) {
+      return false
     }
-
+  
+    noMore.value = false
+  
+    let safety = 0
+  
+    while (
+      !noMore.value &&
+      safety < 600
+    ) {
+      const addedItems =
+        await loadNextMonth()
+  
+      safety += 1
+  
+      if (
+        addedItems.length > 0 &&
+        typeof onMonthLoaded === 'function'
+      ) {
+        await onMonthLoaded(
+          addedItems
+        )
+      }
+  
+      // 给浏览器机会处理渲染和用户输入
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+  
+      if (
+        addedItems.length === 0 &&
+        noMore.value
+      ) {
+        break
+      }
+    }
+  
     return noMore.value
   }
 

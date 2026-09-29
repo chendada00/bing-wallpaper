@@ -133,7 +133,7 @@
 
 
               <a
-                href="https://github.com/chendada00/bing-data"
+                href="https://bing-data.伴随.cn/"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="壁纸数据"
@@ -548,82 +548,47 @@ function getDisplayItems(){
 /**
  * 图片加载队列
  */
-function fillImageLoadQueue(){
+function fillImageLoadQueue() {
+  const source = getDisplayItems()
 
-
-  const source=getDisplayItems()
-
-
-
-  while(
+  while (
     loadingImages.size <
     IMAGE_CONCURRENCY
-  ){
-
-
-    const nextItem=source.find(item=>{
-
-
+  ) {
+    const nextItem = source.find(item => {
       return (
-
         item?.date &&
-
-        !startedImages.has(
-          item.date
-        )
-
-        &&
-
-        getImageState(
-          item.date
-        )!=='loaded'
-
-
+        !startedImages.has(item.date) &&
+        getImageState(item.date) !== 'loaded'
       )
-
-
     })
 
-
-
-    if(!nextItem){
-
+    if (!nextItem) {
       break
-
     }
 
+    const date = nextItem.date
 
-
-    const date=nextItem.date
-
-
-
+    // 标记：已经进入过加载流程
     startedImages.add(date)
 
-
+    // 标记：当前正在加载
     loadingImages.add(date)
 
-
-
+    // 更新状态
     setImageState(
       date,
       'loading'
     )
 
-
-
-    imageLoadQueue.value=new Set([
-
+    // 注意：
+    // 这里加入以后不要删除。
+    // 它同时代表“该图片已经获得加载资格”。
+    imageLoadQueue.value = new Set([
       ...imageLoadQueue.value,
-
       date
-
     ])
-
-
   }
-
-
 }
 
 
@@ -788,25 +753,32 @@ watch(
 
 const loadingAllHistory=ref(false)
 
-async function startLoadAllHistory(){
-  if(loadingAllHistory.value){
+async function startLoadAllHistory() {
+  if (loadingAllHistory.value) {
     return
   }
 
-  loadingAllHistory.value=true
+  loadingAllHistory.value = true
 
-  try{
-    scope.value='loaded'
-    historySearchItems.value=[]
+  try {
+    scope.value = 'loaded'
+
+    historySearchItems.value = []
+
     clear()
 
-    await loadAllHistory()
+    await loadAllHistory(
+      async () => {
+        await nextTick()
 
-    await nextTick()
-    fillImageLoadQueue()
-    updateScrollState()
-  }finally{
-    loadingAllHistory.value=false
+        fillImageLoadQueue()
+
+        updateScrollState()
+      }
+    )
+
+  } finally {
+    loadingAllHistory.value = false
   }
 }
 
@@ -1337,51 +1309,31 @@ function handleMouseMove(event){
 }
 
 
-async function handleLoadMore(entries){
-
-
-  if(
-    !entries[0]?.isIntersecting
-  ){
-
+async function handleLoadMore(entries) {
+  if (!entries[0]?.isIntersecting) {
     return
-
   }
 
-
-
-  // 搜索状态禁止继续加载月份
-  if(searching.value){
-
+  if (searching.value) {
     return
-
   }
 
-
-
-  if(
-
+  if (
     loading.value ||
-
     initialLoading.value ||
-
     noMore.value
-
-  ){
-
+  ) {
     return
-
   }
 
+  const addedItems =
+    await loadNextMonth()
 
+  if (addedItems.length > 0) {
+    await nextTick()
 
-  await loadNextMonth()
-
-
-
-  fillImageLoadQueue()
-
-
+    fillImageLoadQueue()
+  }
 }
 
 function resetHomeImageLoadState() {
