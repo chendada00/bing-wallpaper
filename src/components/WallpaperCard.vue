@@ -166,8 +166,8 @@
         <div class="card-action">
 
           <a
-            :href="`/wallpaper/${item.date}`"
-            @click.stop
+            href="#"
+            @click.stop.prevent="openDetail"
           >
             <span>
               查看高清
@@ -493,6 +493,18 @@ const statusText = computed(() => {
 
 function handleClick() {
   emit('click', props.item)
+}
+
+function openDetail() {
+  if (!props.item?.date) {
+    return
+  }
+
+  window.open(
+    `/wallpaper/${props.item.date}`,
+    '_blank',
+    'noopener,noreferrer'
+  )
 }
 
 function handleMouseEnter() {
