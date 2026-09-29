@@ -167,7 +167,7 @@
 
           <a
             href="#"
-            @click.stop.prevent="openDetail"
+            @click.stop.prevent="handleClick"
           >
             <span>
               查看高清
@@ -493,18 +493,6 @@ const statusText = computed(() => {
 
 function handleClick() {
   emit('click', props.item)
-}
-
-function openDetail() {
-  if (!props.item?.date) {
-    return
-  }
-
-  window.open(
-    `/wallpaper/${props.item.date}`,
-    '_blank',
-    'noopener,noreferrer'
-  )
 }
 
 function handleMouseEnter() {

@@ -500,19 +500,11 @@ function openWallpaperDetail(item) {
   const path =
     `/wallpaper/${item.date}`
 
-  window.history.pushState(
-    {},
-    '',
-    path
+  window.open(
+    path,
+    '_blank',
+    'noopener,noreferrer'
   )
-
-  viewerVisible.value = false
-  currentItem.value = null
-  document.body.style.overflow = ''
-
-  currentPath.value = path
-
-  loadWallpaperRoute()
 }
 
 
