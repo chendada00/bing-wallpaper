@@ -420,10 +420,12 @@ const atBottom=ref(false)
 let timelineHideTimer=null
 let scrollUpdateFrame=null
 let timelineMouseInside=false
+// 详情页路由请求编号
+// 防止用户返回首页后，旧的异步详情请求又把数据写回来
+let routeRequestId = 0
 
 // 时间轴主动跳转目标
-let timelineTargetMonth=null
-
+let timelineTargetMonth = null
 // 时间轴主动跳转期间，暂时不根据滚动位置修改月份
 let timelineScrolling=false
 
@@ -493,18 +495,56 @@ function getImageState(date){
 }
 
 function openWallpaperDetail(item) {
+
   if (!item?.date) {
     return
   }
 
+
   const path =
     `/wallpaper/${item.date}`
 
-  window.open(
-    path,
-    '_blank',
-    'noopener,noreferrer'
+
+  /*
+   * 从 Viewer 进入详情时，
+   * 先关闭 Viewer。
+   */
+  viewerVisible.value = false
+
+  currentItem.value = null
+
+  document.body.style.overflow = ''
+
+
+  /*
+   * 不再打开新标签页。
+   *
+   * 让详情页成为当前 SPA 的
+   * 一个历史记录。
+   */
+  window.history.pushState(
+    {
+      ...(window.history.state || {}),
+
+      bingWallpaperRoute:
+        'detail',
+
+      date:
+        item.date
+    },
+
+    '',
+
+    path
   )
+
+
+  currentPath.value =
+    path
+
+
+  loadWallpaperRoute()
+
 }
 
 
@@ -785,12 +825,17 @@ async function startLoadAllHistory() {
 
 async function loadWallpaperRoute() {
 
+  const requestId =
+    ++routeRequestId
+
   const date =
     wallpaperRouteDate.value
+
 
   if (!date) {
     return
   }
+
 
   routeLoading.value = true
 
@@ -798,15 +843,33 @@ async function loadWallpaperRoute() {
 
   routeItem.value = null
 
+
   try {
 
     const loaded =
       await loadDates([date])
 
+
+    /*
+     * 用户可能已经通过浏览器
+     * 返回手势回到首页。
+     *
+     * 此时旧请求不能再写回详情数据。
+     */
+    if (
+      requestId !== routeRequestId ||
+      !isWallpaperRoute.value
+    ) {
+      return
+    }
+
+
     const item =
       loaded.find(
-        value => value.date === date
+        value =>
+          value.date === date
       )
+
 
     if (!item) {
 
@@ -817,59 +880,140 @@ async function loadWallpaperRoute() {
       return
     }
 
+
     routeItem.value = item
 
     setWallpaperSeo(item)
 
+
   } catch (error) {
+
+    if (
+      requestId !== routeRequestId
+    ) {
+      return
+    }
+
 
     console.error(
       '加载壁纸详情失败:',
       error
     )
 
+
     routeNotFound.value = true
 
     setNotFoundSeo()
 
+
   } finally {
 
-    routeLoading.value = false
+    if (
+      requestId === routeRequestId
+    ) {
+
+      routeLoading.value = false
+
+    }
 
   }
 
 }
 
 async function goHome() {
-  window.history.pushState(
-    {},
-    '',
-    '/'
-  )
 
-  currentPath.value = '/'
+  /*
+   * 如果详情页是从首页进入的，
+   * 那么直接退回上一条历史。
+   */
+  if (
+    isWallpaperRoute.value &&
+    window.history.state?.bingWallpaperRoute === 'detail'
+  ) {
 
-  routeItem.value = null
+    window.history.back()
 
-  routeNotFound.value = false
-
-  await initializeHome()
-}
-
-async function handleRouteChange() {
-  currentPath.value =
-    window.location.pathname
-
-  if (isWallpaperRoute.value) {
-    await loadWallpaperRoute()
     return
   }
 
-  routeItem.value = null
 
-  routeNotFound.value = false
+  /*
+   * 如果用户是直接访问：
+   *
+   * /wallpaper/2026-09-01
+   *
+   * 此时没有本站首页历史，
+   * 就直接 replace 到首页。
+   */
+  routeRequestId++
+
+
+  window.history.replaceState(
+    {
+      ...(window.history.state || {}),
+
+      bingWallpaperRoute:
+        'home'
+    },
+
+    '',
+
+    '/'
+  )
+
+
+  currentPath.value =
+    '/'
+
+
+  routeItem.value =
+    null
+
+
+  routeNotFound.value =
+    false
+
+
+  routeLoading.value =
+    false
+
 
   await initializeHome()
+
+}
+
+async function handleRouteChange() {
+
+  currentPath.value =
+    window.location.pathname
+
+
+  if (isWallpaperRoute.value) {
+
+    await loadWallpaperRoute()
+
+    return
+  }
+
+
+  /*
+   * 返回首页时让正在进行的详情请求失效。
+   */
+  routeRequestId++
+
+
+  routeItem.value =
+    null
+
+  routeNotFound.value =
+    false
+
+  routeLoading.value =
+    false
+
+
+  await initializeHome()
+
 }
 
 function openViewer(item){
@@ -885,14 +1029,23 @@ function openViewer(item){
 
 
 function setBackground(item) {
+
   if (!item?.base64) {
     return
   }
+
+
+  /*
+   * 背景改变时同步更新首页品牌颜色。
+   */
+  updateIntroTheme(item)
+
 
   const current =
     backgroundLayers.value[
       backgroundIndex.value
     ]
+
 
   if (
     current?.date === item.date
@@ -900,18 +1053,31 @@ function setBackground(item) {
     return
   }
 
+
   const nextIndex =
     backgroundIndex.value === 0
       ? 1
       : 0
 
+
   backgroundLayers.value = [
-    ...backgroundLayers.value.slice(0, nextIndex),
+
+    ...backgroundLayers.value.slice(
+      0,
+      nextIndex
+    ),
+
     item,
-    ...backgroundLayers.value.slice(nextIndex + 1)
+
+    ...backgroundLayers.value.slice(
+      nextIndex + 1
+    )
+
   ]
 
-  backgroundIndex.value = nextIndex
+
+  backgroundIndex.value =
+    nextIndex
 }
 
 
@@ -1346,19 +1512,23 @@ function resetHomeImageLoadState() {
   imageStates.value = {}
 }
 
-
 onMounted(async () => {
+
+  if (!window.history.state?.bingWallpaperRoute) {
+    window.history.replaceState(
+      {
+        ...(window.history.state || {}),
+        bingWallpaperRoute: 'home'
+      },
+      '',
+      window.location.pathname
+    )
+  }
+
   window.addEventListener(
     'popstate',
     handleRouteChange
   )
-
-  if (isWallpaperRoute.value) {
-    await loadWallpaperRoute()
-    return
-  }
-
-  await initializeHome()
 
   window.addEventListener(
     'scroll',
@@ -1371,6 +1541,12 @@ onMounted(async () => {
     handleMouseMove,
     { passive: true }
   )
+
+  if (isWallpaperRoute.value) {
+    await loadWallpaperRoute()
+  } else {
+    await initializeHome()
+  }
 })
 
 
@@ -1402,12 +1578,9 @@ async function initializeHome() {
       }
     )
 
-    observer.observe(
-      loadMoreTrigger.value
-    )
+    observer.observe(loadMoreTrigger.value)
   }
 }
-
 
 
 
@@ -1435,6 +1608,167 @@ onBeforeUnmount(()=>{
   }
   document.body.style.overflow=''
 })
+
+
+function hexToRgb(value) {
+
+  if (
+    typeof value !== 'string'
+  ) {
+    return null
+  }
+
+
+  const hex =
+    value
+      .trim()
+      .replace('#', '')
+
+
+  if (
+    !/^[0-9a-fA-F]{6}$/.test(hex)
+  ) {
+    return null
+  }
+
+
+  return {
+
+    r:
+      parseInt(
+        hex.slice(0,2),
+        16
+      ),
+
+    g:
+      parseInt(
+        hex.slice(2,4),
+        16
+      ),
+
+    b:
+      parseInt(
+        hex.slice(4,6),
+        16
+      )
+
+  }
+
+}
+
+
+function mixHex(
+  a,
+  b,
+  weight = .5
+) {
+
+  const first =
+    hexToRgb(a)
+
+  const second =
+    hexToRgb(b)
+
+
+  if (
+    !first ||
+    !second
+  ) {
+    return b
+  }
+
+
+  const w =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        weight
+      )
+    )
+
+
+  const mix =
+    (x,y) =>
+      Math.round(
+        x + (y-x)*w
+      )
+
+
+  return `rgb(
+    ${mix(first.r,second.r)},
+    ${mix(first.g,second.g)},
+    ${mix(first.b,second.b)}
+  )`
+}
+
+
+function updateIntroTheme(item) {
+
+  const rgb =
+    hexToRgb(item?.color)
+
+
+  if (!rgb) {
+    return
+  }
+
+
+  const luminance =
+    (
+      0.2126 * rgb.r +
+      0.7152 * rgb.g +
+      0.0722 * rgb.b
+    ) / 255
+
+
+  const darkBackground =
+    luminance < 0.48
+
+
+  const titleColor =
+    darkBackground
+
+      ? mixHex(
+          item.color,
+          '#ffffff',
+          .72
+        )
+
+      : mixHex(
+          item.color,
+          '#111111',
+          .62
+        )
+
+
+  document.documentElement.style.setProperty(
+    '--intro-title-color',
+    titleColor
+  )
+
+
+  document.documentElement.style.setProperty(
+    '--intro-muted-color',
+
+    darkBackground
+
+      ? 'rgba(255,255,255,.62)'
+
+      : 'rgba(25,25,25,.52)'
+  )
+
+
+  document.documentElement.style.setProperty(
+    '--intro-shadow',
+
+    darkBackground
+
+      ? '0 3px 26px rgba(0,0,0,.34)'
+
+      : '0 2px 22px rgba(255,255,255,.42)'
+  )
+}
 
 
 </script>
@@ -1563,42 +1897,44 @@ onBeforeUnmount(()=>{
 @media(max-width:900px){
 
 
-.header-right{
+  .header-right{
 
- gap:8px;
+  gap:8px;
+
+  }
+
+
+  .header-info{
+
+  display:none;
+
+  }
+
+
+  }
+
+
+
+  @media(max-width:640px){
+
+
+  .header-right{
+
+  flex:1;
+
+  justify-content:flex-end;
+
+  }
+
+
+  .header-right :deep(.search-box input){
+
+  width:100px;
+
+  }
 
 }
 
 
-.header-info{
 
- display:none;
-
-}
-
-
-}
-
-
-
-@media(max-width:640px){
-
-
-.header-right{
-
- flex:1;
-
- justify-content:flex-end;
-
-}
-
-
-.header-right :deep(.search-box input){
-
- width:100px;
-
-}
-
-
-}
 </style>

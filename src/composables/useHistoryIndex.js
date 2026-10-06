@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 
+import {
+  normalizeSearchText
+} from '../utils/searchText'
+
 export function useHistoryIndex(dataBaseUrl) {
   const index = ref(null)
   const loading = ref(false)
@@ -18,6 +22,7 @@ export function useHistoryIndex(dataBaseUrl) {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`)
         }
+
         return response.json()
       })
       .then(data => {
@@ -30,10 +35,13 @@ export function useHistoryIndex(dataBaseUrl) {
         }
 
         index.value = data
+
         return data
       })
       .catch(err => {
-        error.value = '历史索引加载失败，请稍后重试。'
+        error.value =
+          '历史索引加载失败，请稍后重试。'
+
         throw err
       })
       .finally(() => {
@@ -45,22 +53,44 @@ export function useHistoryIndex(dataBaseUrl) {
   }
 
   function search(keyword = '', date = '') {
-    if (!index.value) return []
+    if (!index.value) {
+      return []
+    }
 
-    const query = String(keyword).trim().toLowerCase()
-    const dateQuery = String(date).trim()
+    const query =
+      normalizeSearchText(keyword)
+
+    const dateQuery =
+      String(date).trim()
 
     return index.value.items
+
       .filter(item => {
-        if (!Array.isArray(item) || item.length < 1) {
+
+        if (
+          !Array.isArray(item) ||
+          item.length < 1
+        ) {
           return false
         }
 
-        const itemDate = String(item[0] || '')
-        const title = String(item[1] || '').toLowerCase()
-        const description = String(item[2] || '').toLowerCase()
+        const itemDate =
+          String(item[0] || '')
 
-        if (dateQuery && !itemDate.includes(dateQuery)) {
+        const title =
+          normalizeSearchText(
+            item[1] || ''
+          )
+
+        const description =
+          normalizeSearchText(
+            item[2] || ''
+          )
+
+        if (
+          dateQuery &&
+          !itemDate.includes(dateQuery)
+        ) {
           return false
         }
 
@@ -74,7 +104,10 @@ export function useHistoryIndex(dataBaseUrl) {
 
         return true
       })
-      .map(item => String(item[0]))
+
+      .map(item =>
+        String(item[0])
+      )
   }
 
   return {

@@ -2,6 +2,7 @@
   <main
     class="wallpaper-page"
     :style="pageStyle"
+    @click.self="$emit('back')"
   >
 
     <div class="wallpaper-page-inner">
@@ -207,22 +208,25 @@ function formatDate(date) {
 
 
 <style scoped>
-
 .wallpaper-page {
+
   position: relative;
 
   min-height: 100vh;
 
-  padding: 32px 24px 80px;
+  padding:
+    28px 24px 80px;
 
   overflow: hidden;
 
   isolation: isolate;
 
-  background: #111;
+  background: #0b0c0f;
 }
 
+
 .wallpaper-page::before {
+
   content: '';
 
   position: fixed;
@@ -231,24 +235,30 @@ function formatDate(date) {
 
   z-index: -2;
 
-  background-image: var(--wallpaper-background);
+  background-image:
+    var(--wallpaper-background);
 
   background-position: center;
+
   background-repeat: no-repeat;
+
   background-size: cover;
 
   filter:
-    blur(38px)
+    blur(42px)
     saturate(1.08);
 
-  transform: scale(1.08);
+  transform:
+    scale(1.08);
 
-  opacity: 0.72;
+  opacity: .54;
 
   pointer-events: none;
 }
 
+
 .wallpaper-page::after {
+
   content: '';
 
   position: fixed;
@@ -260,8 +270,8 @@ function formatDate(date) {
   background:
     linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.12),
-      rgba(0, 0, 0, 0.24)
+      rgba(5,6,8,.36),
+      rgba(5,6,8,.56)
     );
 
   pointer-events: none;
@@ -269,32 +279,36 @@ function formatDate(date) {
 
 
 .wallpaper-page-inner {
-  width: min(
-    1100px,
-    100%
-  );
 
-  margin: 0 auto;
+  width:
+    min(1180px, 100%);
+
+  margin:
+    0 auto;
 }
 
 
 .wallpaper-breadcrumb {
+
   display: flex;
 
   align-items: center;
 
   gap: 8px;
 
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 
-  color: #8a8a8a;
+  color:
+    rgba(255,255,255,.48);
 
   font-size: 12px;
 }
 
 
 .wallpaper-breadcrumb a {
-  color: #555;
+
+  color:
+    rgba(255,255,255,.78);
 
   text-decoration: none;
 
@@ -303,129 +317,163 @@ function formatDate(date) {
 
 
 .wallpaper-breadcrumb a:hover {
-  color: #111;
+
+  color: #fff;
 }
 
 
 .wallpaper-detail {
+
   overflow: hidden;
-
-  border-radius: 20px;
-
-  background: rgba(255, 255, 255, 0.88);
 
   border:
     1px solid
-    rgba(255, 255, 255, 0.55);
+    rgba(255,255,255,.12);
+
+  border-radius: 20px;
+
+  background:
+    rgba(13,14,17,.78);
 
   box-shadow:
-    0 24px 80px
-    rgba(0, 0, 0, 0.22);
+    0 28px 90px
+    rgba(0,0,0,.34),
 
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+    inset 0 1px 0
+    rgba(255,255,255,.05);
+
+  backdrop-filter:
+    blur(20px)
+    saturate(120%);
+
+  -webkit-backdrop-filter:
+    blur(20px)
+    saturate(120%);
 }
 
 
 .wallpaper-detail-header {
-  padding: 34px 38px 26px;
+
+  padding:
+    34px 38px 28px;
 }
 
 
 .wallpaper-detail-eyebrow {
-  margin: 0 0 10px;
 
-  color: rgba(30, 30, 30, 0.58);
+  margin:
+    0 0 10px;
+
+  color:
+    rgba(255,255,255,.48);
 
   font-size: 11px;
 
   font-weight: 700;
 
-  letter-spacing: 0.08em;
+  letter-spacing:
+    .08em;
 
-  text-transform: uppercase;
+  text-transform:
+    uppercase;
 }
 
 
 .wallpaper-detail-header h1 {
+
   margin: 0;
 
-  color: #111;
+  color:
+    rgba(255,255,255,.94);
 
-  font-size: clamp(
-    28px,
-    5vw,
-    48px
-  );
+  font-size:
+    clamp(28px,5vw,48px);
 
   line-height: 1.15;
 }
 
 
 .wallpaper-detail-date {
+
   display: block;
 
   margin-top: 12px;
 
-  color: rgba(30, 30, 30, 0.55);
+  color:
+    rgba(255,255,255,.48);
 
   font-size: 13px;
+
+  letter-spacing:
+    .04em;
 }
 
 
 .wallpaper-detail-figure {
+
   margin: 0;
 }
 
 
 .wallpaper-detail-image {
+
   display: block;
 
   width: 100%;
+
   height: auto;
 
-  background: #111;
+  background: #050607;
 }
 
 
 .wallpaper-detail-figure figcaption {
-  padding: 14px 20px;
 
-  color: rgba(30, 30, 30, 0.62);
+  padding:
+    14px 20px;
 
-  background: rgba(255, 255, 255, 0.58);
+  color:
+    rgba(255,255,255,.58);
+
+  background:
+    rgba(0,0,0,.22);
 
   font-size: 12px;
 
   line-height: 1.7;
 
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border-top:
+    1px solid
+    rgba(255,255,255,.07);
 }
 
 
 .wallpaper-detail-content {
-  padding: 30px 38px 12px;
 
-  background: rgba(255, 255, 255, 0.34);
+  padding:
+    28px 38px 8px;
 }
 
 
 .wallpaper-detail-content h2 {
+
   margin:
     0 0 12px;
 
-  color: #222;
+  color:
+    rgba(255,255,255,.86);
 
   font-size: 18px;
 }
 
 
 .wallpaper-detail-content p {
+
   margin:
     0 0 14px;
 
-  color: #666;
+  color:
+    rgba(255,255,255,.62);
 
   font-size: 14px;
 
@@ -434,13 +482,17 @@ function formatDate(date) {
 
 
 .wallpaper-copyright {
-  color: #999 !important;
 
-  font-size: 12px !important;
+  color:
+    rgba(255,255,255,.38) !important;
+
+  font-size:
+    12px !important;
 }
 
 
 .wallpaper-detail-actions {
+
   display: flex;
 
   flex-wrap: wrap;
@@ -454,6 +506,7 @@ function formatDate(date) {
 
 .wallpaper-detail-actions a,
 .wallpaper-not-found a {
+
   display: inline-flex;
 
   align-items: center;
@@ -465,78 +518,129 @@ function formatDate(date) {
   padding:
     0 15px;
 
-  border-radius: 9px;
-
-  color: #222;
-
-  background: rgba(255, 255, 255, 0.58);
-
   border:
     1px solid
-    rgba(255, 255, 255, 0.45);
+    rgba(255,255,255,.12);
 
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border-radius: 9px;
+
+  color:
+    rgba(255,255,255,.86);
+
+  background:
+    rgba(255,255,255,.08);
 
   text-decoration: none;
 
   font-size: 12px;
 
   font-weight: 600;
+
+  transition:
+    background .2s ease,
+    transform .2s ease;
 }
 
 
 .wallpaper-detail-actions a:hover,
 .wallpaper-not-found a:hover {
- background: rgba(255, 255, 255, 0.78);
+
+  background:
+    rgba(255,255,255,.14);
+
+  transform:
+    translateY(-1px);
 }
 
 
 .wallpaper-loading,
 .wallpaper-not-found {
-  padding: 80px 20px;
+
+  padding:
+    80px 20px;
+
+  color:
+    rgba(255,255,255,.78);
 
   text-align: center;
 }
 
 
 .wallpaper-not-found h1 {
-  margin: 0 0 12px;
+
+  margin:
+    0 0 12px;
 
   font-size: 28px;
 }
 
 
 .wallpaper-not-found p {
-  margin: 0 0 24px;
 
-  color: #777;
+  margin:
+    0 0 24px;
+
+  color:
+    rgba(255,255,255,.5);
 }
 
 
-@media (max-width: 700px) {
+@media (max-width:700px) {
 
   .wallpaper-page {
+
     padding:
-      18px 12px 50px;
+      14px 12px 42px;
+  }
+
+
+  .wallpaper-breadcrumb {
+
+    margin-bottom: 12px;
+
+    font-size: 11px;
+  }
+
+
+  .wallpaper-detail {
+
+    border-radius: 14px;
   }
 
 
   .wallpaper-detail-header {
+
     padding:
-      24px 20px 20px;
+      22px 18px 18px;
+  }
+
+
+  .wallpaper-detail-header h1 {
+
+    font-size: 27px;
   }
 
 
   .wallpaper-detail-content {
+
     padding:
-      24px 20px 8px;
+      22px 18px 6px;
   }
 
 
   .wallpaper-detail-actions {
+
     padding:
-      16px 20px 24px;
+      16px 18px 22px;
+  }
+
+
+  .wallpaper-detail-actions a {
+
+    min-height: 40px;
+
+    flex:
+      1 1 auto;
   }
 
 }
