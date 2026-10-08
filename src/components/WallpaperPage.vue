@@ -51,11 +51,12 @@
         <figure class="wallpaper-detail-figure">
 
           <img
-            :src="highResImageUrl"
+            :src="activeImageUrl"
             :alt="item.title || `Bing Wallpaper ${item.date}`"
             class="wallpaper-detail-image"
             loading="eager"
             decoding="async"
+            @error="handleImageError"
           />
 
           <figcaption
@@ -190,11 +191,46 @@ const pageStyle = computed(() => {
   }
 })
 
+const activeImageUrl =
+  ref('')
+
 
 defineEmits([
   'back'
 ])
 
+watch(
+  () => props.item,
+  item => {
+    activeImageUrl.value =
+      getHighResImageUrl(item)
+  },
+  {
+    immediate: true
+  }
+)
+
+function handleImageError() {
+  if (
+    props.item?.image &&
+    activeImageUrl.value !==
+      props.item.image
+  ) {
+    activeImageUrl.value =
+      props.item.image
+
+    return
+  }
+
+  if (
+    props.item?.preview &&
+    activeImageUrl.value !==
+      props.item.preview
+  ) {
+    activeImageUrl.value =
+      props.item.preview
+  }
+}
 
 function formatDate(date) {
 

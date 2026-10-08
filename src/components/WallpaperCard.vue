@@ -25,7 +25,7 @@
         :key="`${item.date}-${retryKey}`"
         class="wallpaper-image"
         :class="{ loaded: imageLoaded }"
-        :src="item.preview || item.image"
+        :src="item.preview || item.base64"
         :alt="item.title || item.copyright || item.date"
         loading="eager"
         decoding="async"

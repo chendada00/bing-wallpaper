@@ -22,7 +22,7 @@ function normalizeItem(item) {
   const sourceImage = item.sourceImage || ''
   const preview =
     item.preview ||
-    item.image ||
+    item.base64 ||
     ''
 
   return {

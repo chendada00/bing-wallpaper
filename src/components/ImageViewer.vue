@@ -81,8 +81,8 @@
 
                 <!-- 高清图片 -->
                 <img
-                  v-if="highResLoaded && highResImageUrl"
-                  :src="highResImageUrl"
+                  v-if="highResLoaded && activeHighResUrl"
+                  :src="activeHighResUrl"
                   :alt="item?.title || item?.date"
                   class="viewer-image viewer-high-res"
                 >
@@ -453,6 +453,11 @@ const emit = defineEmits([
  * 高清图是否已经加载完成
  */
 const highResLoaded = ref(false)
+
+const activeHighResUrl =
+  ref('')
+
+let triedMirror = false
 
 /*
  * 高清图是否正在加载
@@ -910,20 +915,15 @@ const colorBackgroundStyle = computed(() => {
 function loadCurrentImage() {
   loadToken += 1
 
-  const currentToken = loadToken
+  const currentToken =
+    loadToken
 
-  /*
-   * 取消旧图片事件
-   */
   if (preloadImage) {
     preloadImage.onload = null
     preloadImage.onerror = null
     preloadImage = null
   }
 
-  /*
-   * 重置状态
-   */
   copiedColor.value = ''
 
   highResLoaded.value = false
@@ -932,135 +932,112 @@ function loadCurrentImage() {
 
   imageError.value = false
 
-  /*
-   * 没有高清图
-   */
+  activeHighResUrl.value = ''
+
+  triedMirror = false
+
   if (!highResImageUrl.value) {
     return
   }
 
-  /*
-   * 开始加载
-   */
   imageLoading.value = true
 
-  const imageUrl =
+  const imageDate =
+    props.item?.date
+
+  function loadUrl(
+    url,
+    isMirror = false
+  ) {
+    if (!url) {
+      imageLoading.value = false
+      imageError.value = true
+      return
+    }
+
+    const image =
+      new Image()
+
+    preloadImage = image
+
+    image.onload = () => {
+      if (
+        currentToken !== loadToken ||
+        props.item?.date !== imageDate
+      ) {
+        return
+      }
+
+      activeHighResUrl.value =
+        url
+
+      highResLoaded.value =
+        true
+
+      imageLoading.value =
+        false
+
+      imageError.value =
+        false
+
+      preloadImage = null
+    }
+
+    image.onerror = () => {
+      if (
+        currentToken !== loadToken ||
+        props.item?.date !== imageDate
+      ) {
+        return
+      }
+
+      /*
+       * 官方 UHD 失败：
+       *
+       * sourceImage
+       *      ↓
+       * image
+       *
+       * 只允许 fallback 一次。
+       */
+      if (
+        !isMirror &&
+        props.item?.image &&
+        props.item.image !== url &&
+        !triedMirror
+      ) {
+        triedMirror = true
+
+        loadUrl(
+          props.item.image,
+          true
+        )
+
+        return
+      }
+
+      highResLoaded.value =
+        false
+
+      imageLoading.value =
+        false
+
+      imageError.value =
+        true
+
+      activeHighResUrl.value =
+        ''
+
+      preloadImage = null
+    }
+
+    image.src = url
+  }
+
+  loadUrl(
     highResImageUrl.value
-
-  const imageDate = props.item.date
-
-  /*
-   * 创建独立高清图预加载对象
-   */
-  const image = new Image()
-
-  preloadImage = image
-
-  /*
-   * 高清图加载完成
-   */
-  image.onload = () => {
-    /*
-     * 防止旧图片请求影响当前图片
-     */
-    if (
-      currentToken !== loadToken ||
-      props.item?.date !== imageDate ||
-      props.item?.image !== imageUrl
-    ) {
-      return
-    }
-
-    /*
-     * 此时高清图已经完整加载
-     */
-    highResLoaded.value = true
-
-    imageLoading.value = false
-
-    imageError.value = false
-
-    preloadImage = null
-  }
-
-  /*
-   * 高清图加载失败
-   */
-  image.onerror = () => {
-    if (
-      currentToken !== loadToken ||
-      props.item?.date !== imageDate
-    ) {
-      return
-    }
-
-    /*
-    * 第一次失败：
-    * 如果当前是 sourceImage，
-    * 尝试自己的 UHD 镜像。
-    */
-    if (
-      imageUrl === props.item?.sourceImage &&
-      props.item?.image &&
-      !triedMirror
-    ) {
-      triedMirror = true
-
-      imageLoading.value = true
-      imageError.value = false
-
-      const fallbackImage =
-        new Image()
-
-      preloadImage =
-        fallbackImage
-
-      fallbackImage.onload = () => {
-        if (
-          currentToken !== loadToken ||
-          props.item?.date !== imageDate
-        ) {
-          return
-        }
-
-        highResLoaded.value = true
-        imageLoading.value = false
-        imageError.value = false
-        preloadImage = null
-      }
-
-      fallbackImage.onerror = () => {
-        if (
-          currentToken !== loadToken ||
-          props.item?.date !== imageDate
-        ) {
-          return
-        }
-
-        highResLoaded.value = false
-        imageLoading.value = false
-        imageError.value = true
-        preloadImage = null
-      }
-
-      fallbackImage.src =
-        props.item.image
-
-      return
-    }
-
-    highResLoaded.value = false
-    imageLoading.value = false
-    imageError.value = true
-    preloadImage = null
-  }
-
-  /*
-   * 开始加载
-   */
-  image.src = imageUrl
+  )
 }
-
 /*
  * =========================================================
  * 关闭
@@ -1344,7 +1321,7 @@ async function downloadImage() {
     )
 
     window.open(
-      props.item.image,
+      stableHighResImageUrl.value,
       '_blank',
       'noopener,noreferrer'
     )
