@@ -81,8 +81,8 @@
 
                 <!-- 高清图片 -->
                 <img
-                  v-if="highResLoaded && item?.image"
-                  :src="item.image"
+                  v-if="highResLoaded && highResImageUrl"
+                  :src="highResImageUrl"
                   :alt="item?.title || item?.date"
                   class="viewer-image viewer-high-res"
                 >
@@ -258,9 +258,9 @@
 
               <!-- 打开原图 -->
               <a
-                v-if="item?.image"
+                v-if="highResImageUrl"
                 class="open-button"
-                :href="item.image"
+                :href="highResImageUrl"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -408,6 +408,23 @@ import {
   ref,
   watch
 } from 'vue'
+
+import {
+  getHighResImageUrl,
+  getStableHighResImageUrl
+} from '../utils/image'
+
+const highResImageUrl = computed(() => {
+  return getHighResImageUrl(
+    props.item
+  )
+})
+
+const stableHighResImageUrl = computed(() => {
+  return getStableHighResImageUrl(
+    props.item
+  )
+})
 
 const props = defineProps({
   item: {
@@ -918,7 +935,7 @@ function loadCurrentImage() {
   /*
    * 没有高清图
    */
-  if (!props.item?.image) {
+  if (!highResImageUrl.value) {
     return
   }
 
@@ -927,7 +944,8 @@ function loadCurrentImage() {
    */
   imageLoading.value = true
 
-  const imageUrl = props.item.image
+  const imageUrl =
+    highResImageUrl.value
 
   const imageDate = props.item.date
 
@@ -969,23 +987,71 @@ function loadCurrentImage() {
    * 高清图加载失败
    */
   image.onerror = () => {
-    /*
-     * 防止旧图片请求影响当前图片
-     */
     if (
       currentToken !== loadToken ||
-      props.item?.date !== imageDate ||
-      props.item?.image !== imageUrl
+      props.item?.date !== imageDate
     ) {
       return
     }
 
+    /*
+    * 第一次失败：
+    * 如果当前是 sourceImage，
+    * 尝试自己的 UHD 镜像。
+    */
+    if (
+      imageUrl === props.item?.sourceImage &&
+      props.item?.image &&
+      !triedMirror
+    ) {
+      triedMirror = true
+
+      imageLoading.value = true
+      imageError.value = false
+
+      const fallbackImage =
+        new Image()
+
+      preloadImage =
+        fallbackImage
+
+      fallbackImage.onload = () => {
+        if (
+          currentToken !== loadToken ||
+          props.item?.date !== imageDate
+        ) {
+          return
+        }
+
+        highResLoaded.value = true
+        imageLoading.value = false
+        imageError.value = false
+        preloadImage = null
+      }
+
+      fallbackImage.onerror = () => {
+        if (
+          currentToken !== loadToken ||
+          props.item?.date !== imageDate
+        ) {
+          return
+        }
+
+        highResLoaded.value = false
+        imageLoading.value = false
+        imageError.value = true
+        preloadImage = null
+      }
+
+      fallbackImage.src =
+        props.item.image
+
+      return
+    }
+
     highResLoaded.value = false
-
     imageLoading.value = false
-
     imageError.value = true
-
     preloadImage = null
   }
 
@@ -1183,8 +1249,15 @@ async function downloadImage() {
   downloadTotal.value = 0
 
   try {
+    const downloadUrl =
+      stableHighResImageUrl.value
+
+    if (!downloadUrl) {
+      return
+    }
+
     const response =
-      await fetch(props.item.image)
+      await fetch(downloadUrl)
 
     if (!response.ok) {
       throw new Error(

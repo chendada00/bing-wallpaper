@@ -18,20 +18,49 @@ const DATA_BASE_URL = (
 const MAX_EMPTY_MONTHS = 3
 
 function normalizeItem(item) {
-  const image = item.image || item.sourceImage || ''
-  const preview = item.preview || item.image || ''
+  const image = item.image || ''
+  const sourceImage = item.sourceImage || ''
+  const preview =
+    item.preview ||
+    item.image ||
+    ''
 
   return {
     ...item,
+
     date: item.date || '',
-    title: item.title || 'Bing Wallpaper',
-    description: item.description || item.copyright || '',
-    copyright: item.copyright || '',
-    copyrightLink: item.copyrightLink || item.copyrightlink || '',
+
+    title:
+      item.title ||
+      'Bing Wallpaper',
+
+    description:
+      item.description ||
+      item.copyright ||
+      '',
+
+    copyright:
+      item.copyright ||
+      '',
+
+    copyrightLink:
+      item.copyrightLink ||
+      item.copyrightlink ||
+      '',
+
     image,
+
+    sourceImage,
+
     preview,
-    base64: item.base64 || '',
-    color: item.color || {}
+
+    base64:
+      item.base64 ||
+      '',
+
+    color:
+      item.color ||
+      {}
   }
 }
 

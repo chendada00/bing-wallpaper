@@ -51,7 +51,7 @@
         <figure class="wallpaper-detail-figure">
 
           <img
-            :src="item.image || item.preview"
+            :src="highResImageUrl"
             :alt="item.title || `Bing Wallpaper ${item.date}`"
             class="wallpaper-detail-image"
             loading="eager"
@@ -92,7 +92,7 @@
         <div class="wallpaper-detail-actions">
 
           <a
-            :href="item.image || item.preview"
+            :href="highResImageUrl"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -150,6 +150,16 @@
 <script setup>
 
 import { computed } from 'vue'
+
+import {
+  getHighResImageUrl
+} from '../utils/image'
+
+const highResImageUrl = computed(() => {
+  return getHighResImageUrl(
+    props.item
+  )
+})
 
 const props = defineProps({
   item: {
