@@ -86,17 +86,24 @@
       <!-- 图片遮罩 -->
       <div class="image-mask" />
 
+
+      <!-- 最新壁纸金标：独立定位在图片右上角 -->
+      <div
+        v-if="isLatest"
+        class="latest-badge"
+        aria-label="最新壁纸"
+      >
+        <span class="latest-badge-star">✦</span>
+        <span>最新</span>
+      </div>
+
+
       <!-- 顶部信息 -->
       <div class="card-top">
         <span class="date-badge">
           {{ formatDate(item.date) }}
         </span>
-        <span
-          v-if="isLatest"
-          class="latest-badge"
-        >
-          最新
-        </span>
+ 
 
         <span
           v-if="accentColor"
@@ -1454,25 +1461,48 @@ watch(
 }
 
 
+
 .latest-badge {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 6;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
 
-  margin-left: 7px;
-  padding: 4px 8px;
+  padding: 5px 9px;
 
-  border-radius: 6px;
+  color: #77551c;
+  background:
+    linear-gradient(
+      135deg,
+      #fff4c7 0%,
+      #efd38a 48%,
+      #d7b15b 100%
+    );
 
-  color: #fff;
-  background: rgba(32, 105, 79, 0.92);
+  border: 1px solid rgba(255, 246, 211, 0.95);
+  border-radius: 7px;
 
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 2px 7px rgba(70, 48, 8, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+
+  pointer-events: none;
 }
+
+.latest-badge-star {
+  font-size: 11px;
+  line-height: 1;
+}
+
 
 </style>

@@ -175,41 +175,35 @@
       <main class="main-content">
 
 
-        <section class="intro">
-
-          <div>
-
-            <div class="eyebrow">
-              A collection of beautiful moments.
-            </div>
-
-
-            <h1>
-              伴随·光影
-            </h1>
-
-
-            <p>
-              每日一景，长久珍藏。
-            </p>
-
-
-          </div>
-
-        </section>
-
-
-
         <section
           v-if="heroItem"
           class="hero-section"
         >
-          <div
-            class="hero-image"
-            :style="{
-              backgroundImage: `url('${heroItem.preview || heroItem.base64}')`
-            }"
-          >
+          <div class="hero-image">
+
+            <!-- 图片单独缩放，文字不受影响 -->
+            <img
+              class="hero-photo"
+              :src="heroItem.preview || heroItem.base64"
+              :alt="heroItem.title || '伴随·光影精选壁纸'"
+              loading="eager"
+              decoding="async"
+            />
+
+            <!-- 图片上的轻柔渐变 -->
+            <div class="hero-shade" />
+
+            <!-- 左上角：品牌名称与副标题 -->
+            <div class="hero-brand">
+             
+
+              <div class="hero-brand-text">
+                <h1>伴随·光影</h1>
+                <p>每日一景，长久珍藏。</p>
+              </div>
+            </div>
+
+            <!-- 右上角：操作与精选标签 -->
             <div class="hero-top">
               <span class="hero-label">随机精选</span>
 
@@ -222,6 +216,7 @@
               </button>
             </div>
 
+            <!-- 底部：壁纸信息 -->
             <div class="hero-content">
               <time :datetime="heroItem.date">
                 {{ heroItem.date }}
@@ -247,6 +242,7 @@
                 查看壁纸 ↗
               </button>
             </div>
+
           </div>
         </section>
 
