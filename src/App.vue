@@ -305,20 +305,43 @@
 
 
 
+
         <div
           v-if="error"
           class="error-state"
+          role="alert"
         >
+          <div class="error-state-icon" aria-hidden="true">
+            !
+          </div>
 
-          {{ error }}
+          <div class="error-state-content">
+            <strong class="error-state-title">
+              壁纸数据加载失败
+            </strong>
 
+            <p class="error-state-message">
+              {{ error }}
+            </p>
+          </div>
 
-          <button @click="retry">
-            重试
+          <button
+            type="button"
+            class="error-retry-button"
+            :disabled="loading"
+            @click="retryData"
+          >
+            <span
+              class="error-retry-icon"
+              :class="{ spinning: loading }"
+              aria-hidden="true"
+            >
+              ↻
+            </span>
+            {{ loading ? '正在重试…' : '重新加载' }}
           </button>
-
-
         </div>
+
 
 
 
@@ -518,7 +541,7 @@ const wallpaperRouteDate =
 /**
  * 同时加载图片数量
  */
-const IMAGE_CONCURRENCY=6
+const IMAGE_CONCURRENCY=9
 
 
 
@@ -801,6 +824,27 @@ function retryImage(date){
 
 
 }
+
+
+
+/**
+ * 重试壁纸 JSON 加载。
+ *
+ * 不能只依赖 watch([result, items])：
+ * items 可能是原地修改的数组，引用没有变化。
+ * 请求结束后主动补充图片队列，确保新卡片开始加载。
+ */
+async function retryData() {
+  try {
+    await retry()
+  } finally {
+    await nextTick()
+
+    fillImageLoadQueue()
+    updateScrollState()
+  }
+}
+
 
 // 搜索结果是 computed。原逻辑只在初次加载/图片完成后填队列，
 // 搜索条件变化时没有重新触发，因此新出现的结果可能永久停留在 idle。

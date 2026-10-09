@@ -587,8 +587,7 @@ watch(
 
   transform: translateY(0);
 
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 
   transition:
     transform 0.45s cubic-bezier(.2, .8, .2, 1),
@@ -621,15 +620,8 @@ watch(
 }
 
 .wallpaper-card:hover {
-  transform: translateY(-6px);
-
-  box-shadow:
-    0 22px 48px rgba(0, 0, 0, 0.18),
-    0 0 0 1px color-mix(
-      in srgb,
-      var(--accent-color) 35%,
-      transparent
-    );
+  transform: translateY(-4px);
+  box-shadow: none;
 }
 
 .wallpaper-card:hover::after {
