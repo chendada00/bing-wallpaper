@@ -1101,3 +1101,280 @@ body {
     animation: none;
   }
 }
+
+
+/* GitHub 图标入口 */
+.header-links {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.github-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  color: #333;
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(30, 30, 30, 0.08);
+  border-radius: 12px;
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    color 180ms ease;
+}
+
+.github-menu-trigger svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+}
+
+.github-menu-trigger:hover,
+.github-menu-trigger[aria-expanded="true"] {
+  color: #111;
+  background: rgba(255, 255, 255, 0.76);
+  border-color: rgba(30, 30, 30, 0.12);
+}
+
+.github-menu-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.github-menu-trigger:active {
+  transform: scale(0.96);
+}
+
+.github-menu-trigger:focus-visible,
+.github-menu-item:focus-visible {
+  outline: 2px solid rgba(100, 100, 100, 0.65);
+  outline-offset: 3px;
+}
+
+/* 浮层 */
+.github-menu-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 200;
+
+  width: 278px;
+  padding: 7px;
+
+  color: #262626;
+  background: rgba(250, 250, 250, 0.94);
+  border: 1px solid rgba(30, 30, 30, 0.09);
+  border-radius: 16px;
+
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.11),
+    0 2px 8px rgba(0, 0, 0, 0.035);
+
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+
+  transform-origin: top right;
+}
+
+.github-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 11px 11px;
+}
+
+.github-menu-heading-title {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.github-menu-heading-note {
+  color: #999;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+/* 仓库条目 */
+.github-menu-item {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+
+  min-height: 58px;
+  padding: 9px 10px;
+
+  color: inherit !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px;
+
+  box-shadow: none !important;
+  text-decoration: none !important;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.github-menu-item:hover {
+  color: inherit !important;
+  background: rgba(0, 0, 0, 0.045) !important;
+  border-color: rgba(0, 0, 0, 0.035) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.github-menu-item-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+
+  width: 34px;
+  height: 34px;
+
+  color: #555;
+  background: rgba(0, 0, 0, 0.045);
+  border: 1px solid rgba(0, 0, 0, 0.045);
+  border-radius: 10px;
+
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.github-menu-item-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.github-menu-item-copy strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.github-menu-item-copy small {
+  color: #888;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.github-menu-arrow {
+  padding-left: 4px;
+  color: #999;
+  font-size: 14px;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.github-menu-item:hover .github-menu-arrow {
+  color: #444;
+  transform: translate(1px, -1px);
+}
+
+/* 轻微展开动画 */
+.github-menu-enter-active,
+.github-menu-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.github-menu-enter-from,
+.github-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-5px) scale(0.985);
+}
+
+/* 深色系统主题 */
+@media (prefers-color-scheme: dark) {
+  .github-menu-trigger {
+    color: #eee;
+    background: rgba(35, 35, 35, 0.42);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .github-menu-trigger:hover,
+  .github-menu-trigger[aria-expanded="true"] {
+    color: #fff;
+    background: rgba(65, 65, 65, 0.72);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .github-menu-popover {
+    color: #eee;
+    background: rgba(29, 29, 31, 0.96);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.32);
+  }
+
+  .github-menu-heading-note {
+    color: #888;
+  }
+
+  .github-menu-item:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.045) !important;
+  }
+
+  .github-menu-item-mark {
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .github-menu-item-copy small {
+    color: #999;
+  }
+
+  .github-menu-item:hover .github-menu-arrow {
+    color: #eee;
+  }
+}
+
+@media (max-width: 640px) {
+  .github-menu-trigger {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .github-menu-popover {
+    position: fixed;
+    top: 66px;
+    right: 12px;
+    width: min(278px, calc(100vw - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github-menu-trigger,
+  .github-menu-item,
+  .github-menu-arrow,
+  .github-menu-enter-active,
+  .github-menu-leave-active {
+    transition: none;
+  }
+}

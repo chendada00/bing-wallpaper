@@ -104,60 +104,92 @@
               @load-all="startLoadAllHistory"
             />
 
-            <div class="header-links">
 
 
-              <a
-                href="https://github.com/chendada00/bing-wallpaper"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="前端源码"
+            <div
+              ref="sourceMenu"
+              class="header-links"
+            >
+              <button
+                type="button"
+                class="github-menu-trigger"
+                aria-label="打开 GitHub 项目菜单"
+                aria-haspopup="menu"
+                :aria-expanded="sourceMenuOpen"
+                title="GitHub 项目"
+                @click.stop="sourceMenuOpen = !sourceMenuOpen"
               >
-
                 <svg
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-
                   <path
                     d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.88-1.54-3.88-1.54-.53-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.34.96.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.69.41.35.78 1.04.78 2.1v3.11c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"
                   />
-
                 </svg>
+              </button>
 
-                <span>
-                  源码
-                </span>
-
-              </a>
-
-
-
-              <a
-                href="https://bing-data.伴随.cn/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="壁纸数据"
-              >
-
-                <svg
-                  viewBox="0 0 24 24"
+              <Transition name="github-menu">
+                <div
+                  v-if="sourceMenuOpen"
+                  class="github-menu-popover"
+                  role="menu"
+                  aria-label="GitHub 项目仓库"
                 >
+                  <div class="github-menu-heading">
+                    <span class="github-menu-heading-title">项目仓库</span>
+                    <span class="github-menu-heading-note">GITHUB</span>
+                  </div>
 
-                  <path
-                    d="M3.5 5.5A2.5 2.5 0 0 1 6 3h4.2c.66 0 1.3.26 1.77.73l1.07 1.07c.47.47 1.1.73 1.77.73H18A2.5 2.5 0 0 1 20.5 8v8.5A2.5 2.5 0 0 1 18 19H6a2.5 2.5 0 0 1-2.5-2.5v-11Z"
-                  />
+                  <a
+                    href="https://github.com/chendada00/bing-wallpaper"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="github-menu-item"
+                    role="menuitem"
+                    @click="sourceMenuOpen = false"
+                  >
+                    <span class="github-menu-item-mark">W</span>
+                    <span class="github-menu-item-copy">
+                      <strong>bing-wallpaper</strong>
+                      <small>网站前端与页面交互</small>
+                    </span>
+                    <span class="github-menu-arrow" aria-hidden="true">↗</span>
+                  </a>
 
-                </svg>
+                  <a
+                    href="https://github.com/chendada00/bing-data"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="github-menu-item"
+                    role="menuitem"
+                    @click="sourceMenuOpen = false"
+                  >
+                    <span class="github-menu-item-mark">D</span>
+                    <span class="github-menu-item-copy">
+                      <strong>bing-data</strong>
+                      <small>历史数据与处理脚本</small>
+                    </span>
+                    <span class="github-menu-arrow" aria-hidden="true">↗</span>
+                  </a>
 
-
-                <span>
-                  数据
-                </span>
-
-
-              </a>
-
-
+                  <a
+                    href="https://github.com/chendada00/bing-uhd"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="github-menu-item"
+                    role="menuitem"
+                    @click="sourceMenuOpen = false"
+                  >
+                    <span class="github-menu-item-mark">U</span>
+                    <span class="github-menu-item-copy">
+                      <strong>bing-uhd</strong>
+                      <small>高清壁纸原图</small>
+                    </span>
+                    <span class="github-menu-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </div>
+              </Transition>
             </div>
 
 
@@ -508,6 +540,25 @@ let observer=null
 
 const currentPath =
   ref(window.location.pathname)
+
+
+const sourceMenu = ref(null)
+const sourceMenuOpen = ref(false)
+
+function handleSourceMenuOutsideClick(event) {
+  const menu = sourceMenu.value
+
+  if (menu && !menu.contains(event.target)) {
+    sourceMenuOpen.value = false
+  }
+}
+
+function handleSourceMenuEscape(event) {
+  if (event.key === 'Escape') {
+    sourceMenuOpen.value = false
+  }
+}
+
 
 const routeItem =
   ref(null)
@@ -1646,6 +1697,18 @@ function resetHomeImageLoadState() {
 
 onMounted(async () => {
 
+
+  document.addEventListener(
+    'click',
+    handleSourceMenuOutsideClick
+  )
+
+  document.addEventListener(
+    'keydown',
+    handleSourceMenuEscape
+  )
+
+
   if (!window.history.state?.bingWallpaperRoute) {
     window.history.replaceState(
       {
@@ -1721,6 +1784,19 @@ async function initializeHome() {
 
 
 onBeforeUnmount(()=>{
+
+
+  document.removeEventListener(
+    'click',
+    handleSourceMenuOutsideClick
+  )
+
+  document.removeEventListener(
+    'keydown',
+    handleSourceMenuEscape
+  )
+
+
   if(observer){
     observer.disconnect()
   }
