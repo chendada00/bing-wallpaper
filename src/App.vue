@@ -200,6 +200,57 @@
 
 
 
+        <section
+          v-if="heroItem"
+          class="hero-section"
+        >
+          <div
+            class="hero-image"
+            :style="{
+              backgroundImage: `url('${heroItem.preview || heroItem.base64}')`
+            }"
+          >
+            <div class="hero-top">
+              <span class="hero-label">随机精选</span>
+
+              <button
+                type="button"
+                class="hero-refresh"
+                @click="pickRandomHero"
+              >
+                换一张 ↻
+              </button>
+            </div>
+
+            <div class="hero-content">
+              <time :datetime="heroItem.date">
+                {{ heroItem.date }}
+              </time>
+
+              <h2>
+                {{ heroItem.title || 'Bing Wallpaper' }}
+              </h2>
+
+              <p>
+                {{ heroItem.description || heroItem.copyright || '' }}
+              </p>
+
+              <small v-if="heroItem.copyright">
+                {{ heroItem.copyright }}
+              </small>
+
+              <button
+                type="button"
+                class="hero-view-button"
+                @click="openViewer(heroItem)"
+              >
+                查看壁纸 ↗
+              </button>
+            </div>
+          </div>
+        </section>
+
+
 
         <section
           v-if="result.length > 0"
@@ -220,6 +271,8 @@
             :load-state="imageStates[item.date]?.state || 'idle'"
 
             :retry-key="imageStates[item.date]?.retryKey || 0"
+
+            :is-latest="!searching && item.date === latestWallpaperDate"
 
             @click="openViewer(item)"
 
@@ -401,6 +454,8 @@ const viewerVisible=ref(false)
 
 const currentItem=ref(null)
 
+const heroItem = ref(null)
+
 const backgroundLayers = ref([
   null,
   null
@@ -482,6 +537,43 @@ const startedImages=new Set()
 
 
 const loadingImages=new Set()
+
+const latestWallpaperDate = computed(() => {
+  if (!items.value.length) {
+    return ''
+  }
+
+  return items.value.reduce((latest, item) => {
+    return item.date > latest ? item.date : latest
+  }, '')
+})
+
+
+
+function pickRandomHero() {
+  const candidates = items.value.filter(item =>
+    item?.date &&
+    (item.preview || item.base64)
+  )
+
+  if (!candidates.length) {
+    heroItem.value = null
+    return
+  }
+
+  // 尽量避免连续两次展示同一张图片
+  const alternatives = candidates.filter(
+    item => item.date !== heroItem.value?.date
+  )
+
+  const pool = alternatives.length
+    ? alternatives
+    : candidates
+
+  const index = Math.floor(Math.random() * pool.length)
+
+  heroItem.value = pool[index]
+}
 
 
 
@@ -1558,6 +1650,10 @@ async function initializeHome() {
   await loadInitial()
 
   await nextTick()
+
+  if (!heroItem.value && items.value.length > 0) {
+    pickRandomHero()
+  }
 
   if (
     items.value.length > 0 &&

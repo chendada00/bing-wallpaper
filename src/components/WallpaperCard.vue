@@ -91,6 +91,12 @@
         <span class="date-badge">
           {{ formatDate(item.date) }}
         </span>
+        <span
+          v-if="isLatest"
+          class="latest-badge"
+        >
+          最新
+        </span>
 
         <span
           v-if="accentColor"
@@ -193,6 +199,10 @@
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
+  isLatest: {
+    type: Boolean,
+    default: false
+  },
   item: {
     type: Object,
     required: true
@@ -1442,4 +1452,27 @@ watch(
 
   text-decoration: none;
 }
+
+
+.latest-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: 7px;
+  padding: 4px 8px;
+
+  border-radius: 6px;
+
+  color: #fff;
+  background: rgba(32, 105, 79, 0.92);
+
+  border: 1px solid rgba(255, 255, 255, 0.22);
+
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
 </style>
