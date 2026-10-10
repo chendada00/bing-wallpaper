@@ -1,21 +1,31 @@
+
 import {
-    mkdir,
-    writeFile
-  } from 'node:fs/promises'
-  
-  
-  const SITE_URL =
-    (
-      process.env.VITE_SITE_URL ||
-      'https://bing.伴随.cn'
-    ).replace(/\/$/, '')
-  
-  
-  const DATA_BASE_URL =
-    (
-      process.env.VITE_DATA_BASE_URL ||
-      'https://bing-data.伴随.cn'
-    ).replace(/\/$/, '')
+  mkdir,
+  writeFile
+} from 'node:fs/promises'
+
+import { loadEnv } from 'vite'
+
+// 加载 .env、.env.local、.env.production 等文件
+const fileEnv = loadEnv(
+  'production',
+  process.cwd(),
+  'VITE_'
+)
+
+// 优先级：平台环境变量 > .env 配置 > 默认值
+const SITE_URL = (
+  process.env.VITE_SITE_URL ||
+  fileEnv.VITE_SITE_URL ||
+  'https://bing.伴随.cn'
+).replace(/\/+$/, '')
+
+const DATA_BASE_URL = (
+  process.env.VITE_DATA_BASE_URL ||
+  fileEnv.VITE_DATA_BASE_URL ||
+  'https://bing-data.伴随.cn'
+).replace(/\/+$/, '')
+
   
   
   if (!SITE_URL) {
