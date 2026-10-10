@@ -1,5 +1,8 @@
 <template>
-  <div class="search-box">
+  <div
+    ref="searchBox"
+    class="search-box"
+  >
 
     <div
       class="search-scope"
@@ -192,7 +195,9 @@
 
 import {
   ref,
-  watch
+  watch,
+  onMounted,
+  onBeforeUnmount
 } from 'vue'
 
 import {
@@ -215,6 +220,37 @@ const scope =
 
 const showColors =
   ref(false)
+
+
+const searchBox = ref(null)
+
+function handleOutsideClick(event) {
+  const root = searchBox.value
+
+  if (!root || !showColors.value) {
+    return
+  }
+
+  if (!root.contains(event.target)) {
+    showColors.value = false
+  }
+}
+
+function handleEscape(event) {
+  if (event.key === 'Escape') {
+    showColors.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick)
+  document.addEventListener('keydown', handleEscape)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick)
+  document.removeEventListener('keydown', handleEscape)
+})
 
 
 /*
