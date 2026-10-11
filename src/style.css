@@ -1383,3 +1383,144 @@ body {
     transition: none;
   }
 }
+
+/* ================================
+   Month archive view
+================================ */
+
+.month-view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 22px;
+  padding: 20px 22px;
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .46);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .035);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.month-view-copy {
+  min-width: 0;
+}
+
+.month-view-eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: #92928b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.month-view-copy h2 {
+  margin: 0;
+  color: #292929;
+  font-size: clamp(21px, 2.4vw, 28px);
+  font-weight: 750;
+  letter-spacing: -.8px;
+  line-height: 1.3;
+}
+
+.month-view-copy p {
+  margin: 7px 0 0;
+  color: #888880;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.month-home-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 37px;
+  padding: 0 14px;
+  border: 1px solid rgba(0, 0, 0, .09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .8);
+  color: #333;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    transform .2s ease,
+    background .2s ease,
+    border-color .2s ease;
+}
+
+.month-home-button span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.month-home-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 0, 0, .17);
+  background: #fff;
+}
+
+.month-home-button:active {
+  transform: scale(.97);
+}
+
+@media (max-width: 700px) {
+  .month-view-heading {
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .month-view-copy h2 {
+    font-size: 22px;
+  }
+
+  .month-view-copy p {
+    font-size: 10px;
+  }
+
+  .month-home-button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .month-view-heading {
+    border-color: rgba(255, 255, 255, .08);
+    background: rgba(30, 30, 30, .58);
+  }
+
+  .month-view-copy h2 {
+    color: #eee;
+  }
+
+  .month-view-copy p,
+  .month-view-eyebrow {
+    color: #aaa;
+  }
+
+  .month-home-button {
+    border-color: rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .06);
+    color: #eee;
+  }
+
+  .month-home-button:hover {
+    background: rgba(255, 255, 255, .12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .month-home-button {
+    transition: none;
+  }
+}

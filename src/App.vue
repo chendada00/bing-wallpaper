@@ -82,24 +82,33 @@
 
 
             <div class="header-info">
-              {{ items.length }} wallpapers
+              {{ selectedMonth ? monthViewItems.length : items.length }}
+              wallpapers
             </div>
 
 
             <SearchPanel
-
-              v-if="items.length>0"
-
+              v-if="items.length > 0 && !selectedMonth"
               v-model:keyword="keyword"
-
               v-model:date="date"
               v-model:color="color"
               v-model:scope="scope"
               @clear="clear"
+            />
 
+            <MonthPicker
+              :months="availableMonths"
+              :loading="monthIndexLoading"
+              :error="monthIndexError"
+              :selected-month="selectedMonth"
+              :selecting="loadingMonthKey"
+              @open="openMonthPicker"
+              @select="selectMonth"
+              @retry="openMonthPicker"
             />
 
             <HistoryControls
+              v-if="!selectedMonth"
               :loading="loadingAllHistory"
               @load-all="startLoadAllHistory"
             />
@@ -202,13 +211,43 @@
       </header>
 
 
+      <!-- 月份筛选状态 -->
+      <section
+        v-if="selectedMonth"
+        class="month-view-heading"
+      >
+        <div class="month-view-copy">
+          <span class="month-view-eyebrow">
+            WALLPAPER ARCHIVE
+          </span>
+
+          <h2>
+            {{ Number(selectedMonth.slice(0, 4)) }}年
+            {{ Number(selectedMonth.slice(5, 7)) }}月
+          </h2>
+
+          <p>
+            本月共收录 {{ monthViewItems.length }} 张壁纸
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="month-home-button"
+          @click="returnToHome"
+        >
+          <span aria-hidden="true">↶</span>
+          返回主页
+        </button>
+      </section>
+
 
 
       <main class="main-content">
 
 
         <section
-          v-if="heroItem"
+          v-if="heroItem && !selectedMonth"
           class="hero-section"
         >
           <div class="hero-image">
@@ -281,14 +320,11 @@
 
 
         <section
-          v-if="result.length > 0"
+          v-if="displayResult.length > 0"
           class="wallpaper-grid"
         >
-
-
           <WallpaperCard
-
-            v-for="item in result"
+            v-for="item in displayResult"
 
             :key="item.date"
 
@@ -394,7 +430,7 @@
 
 
       <Timeline
-        v-if="!viewerVisible"
+        v-if="!viewerVisible && !selectedMonth"
         :items="items"
         :active-month="activeMonth"
         :visible="timelineVisible"
@@ -412,7 +448,7 @@
       <ImageViewer
         :visible="viewerVisible"
         :item="currentItem"
-        :items="result"
+        :items="displayResult"
         @close="closeViewer"
         @change="changeViewer"
         @open-detail="openWallpaperDetail"
@@ -447,6 +483,7 @@ import SearchPanel from './components/SearchPanel.vue'
 import Timeline from './components/Timeline.vue'
 import WallpaperPage from './components/WallpaperPage.vue'
 import NotificationToast from './components/NotificationToast.vue'
+import MonthPicker from './components/MonthPicker.vue'
 
 import {
   setHomeSeo,
@@ -498,6 +535,181 @@ const {
 }=useWallpaperSearch(items,historySearchItems)
 
 const historyIndex=useHistoryIndex(dataBaseUrl)
+
+
+// ================================
+// 按月份筛选
+// ================================
+
+// 当前选中的月份，格式 YYYY-MM。
+// 空字符串表示正常首页。
+const selectedMonth = ref('')
+
+// 当前月份对应的壁纸数据。
+const monthViewItems = ref([])
+
+// 正在读取历史索引。
+const monthIndexLoading = ref(false)
+
+// 正在读取所选月份的数据。
+const monthDataLoading = ref(false)
+
+// 历史索引读取错误。
+const monthIndexError = ref('')
+
+const loadingMonthKey = ref('')
+
+// 已经读取过的月份选项不需要重复生成。
+const availableMonths = computed(() => {
+  const rows = historyIndex.index.value?.items || []
+  const counts = new Map()
+
+  for (const row of rows) {
+    const date = String(row?.[0] || '')
+
+    // 只接受 YYYY-MM-DD 格式。
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      continue
+    }
+
+    const key = date.slice(0, 7)
+
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .map(([key, count]) => ({
+      key,
+      year: Number(key.slice(0, 4)),
+      month: Number(key.slice(5, 7)),
+      count
+    }))
+    .sort((a, b) => b.key.localeCompare(a.key))
+})
+
+// 月份模式下展示专属数据；正常首页仍然使用原来的搜索结果。
+const displayResult = computed(() => {
+  return selectedMonth.value
+    ? monthViewItems.value
+    : result.value
+})
+
+// 打开弹窗时，首次读取历史索引。
+async function openMonthPicker() {
+  if (
+    monthIndexLoading.value ||
+    historyIndex.index.value
+  ) {
+    return
+  }
+
+  monthIndexLoading.value = true
+  monthIndexError.value = ''
+
+  try {
+    await historyIndex.load()
+  } catch (err) {
+    console.error('读取月份索引失败:', err)
+
+    monthIndexError.value =
+      '历史月份读取失败，请检查网络后重试。'
+  } finally {
+    monthIndexLoading.value = false
+  }
+}
+
+// 用户点击某个月份。
+async function selectMonth(month) {
+  if (!month?.key || monthDataLoading.value) {
+    return
+  }
+
+  const key = month.key
+
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) {
+    return
+  }
+
+  // 必须使用完整索引里的日期，而不是自行推算该月的日期。
+  const rows = historyIndex.index.value?.items || []
+
+  const dates = rows
+    .filter(row => String(row?.[0] || '').startsWith(key))
+    .map(row => String(row[0]))
+
+  if (!dates.length) {
+    monthIndexError.value = '该月份没有可用的壁纸数据。'
+    return
+  }
+
+  monthDataLoading.value = true
+  loadingMonthKey.value = key
+  monthIndexError.value = ''
+
+  try {
+    // loadDates 会复用 useBingData 的月份缓存和请求去重机制。
+    const loaded = await loadDates(dates)
+
+    const filtered = loaded
+      .filter(item => item.date?.startsWith(key))
+      .sort((a, b) => b.date.localeCompare(a.date))
+
+    if (!filtered.length) {
+      monthIndexError.value =
+        '该月份暂时没有成功加载的壁纸，请稍后重试。'
+      return
+    }
+
+    // 清理旧搜索条件，避免月份视图与搜索条件产生冲突。
+    clear()
+    historySearchItems.value = []
+
+    // 切换到月份视图。
+    monthViewItems.value = filtered
+    selectedMonth.value = key
+
+    // 每次切换展示集合时重新分配图片加载任务。
+    resetHomeImageLoadState()
+
+    await nextTick()
+
+    fillImageLoadQueue()
+    updateScrollState()
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  } catch (err) {
+    console.error('加载月份壁纸失败:', err)
+
+    monthIndexError.value =
+      '月份壁纸加载失败，请检查网络后重试。'
+  } finally {
+    monthDataLoading.value = false
+    loadingMonthKey.value = ''
+  }
+}
+
+// 返回正常首页。
+async function returnToHome() {
+  selectedMonth.value = ''
+  monthViewItems.value = []
+  monthIndexError.value = ''
+
+  // 避免之前月份的数据继续占据图片加载队列。
+  resetHomeImageLoadState()
+
+  await nextTick()
+
+  fillImageLoadQueue()
+  updateScrollState()
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
 
 
 
@@ -737,12 +949,8 @@ function setImageState(
 /**
  * 根据当前搜索状态决定加载哪些图片
  */
-function getDisplayItems(){
-
-  return searching.value
-    ? result.value
-    : items.value
-
+function getDisplayItems() {
+  return displayResult.value
 }
 
 
@@ -900,7 +1108,7 @@ async function retryData() {
 // 搜索结果是 computed。原逻辑只在初次加载/图片完成后填队列，
 // 搜索条件变化时没有重新触发，因此新出现的结果可能永久停留在 idle。
 watch(
-  [result,items],
+  [result, items, monthViewItems],
   async ()=>{
     await nextTick()
     fillImageLoadQueue()
@@ -1659,6 +1867,10 @@ function handleMouseMove(event){
 
 
 async function handleLoadMore(entries) {
+  if (selectedMonth.value) {
+    return
+  }
+
   if (!entries[0]?.isIntersecting) {
     return
   }
