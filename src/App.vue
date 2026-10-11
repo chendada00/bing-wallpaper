@@ -2201,69 +2201,184 @@ function updateIntroTheme(item) {
 
 
 <style scoped>
-.header-right {
-  display:flex;
-  align-items:center;
-  gap:14px;
 
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
 }
 
 .header-info {
+  flex: 0 0 auto;
   color: #555 !important;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.header-right :deep(.search-box){
-
-  flex-shrink:0;
-
+.header-right :deep(.search-box) {
+  flex-shrink: 0;
 }
 
-
-
-@media(max-width:900px){
-
-
-  .header-right{
-
-  gap:8px;
-
+/* 中等屏幕：压缩间距，但仍保持单行 */
+@media (max-width: 1100px) {
+  .header-right {
+    gap: 8px;
   }
 
-
-  .header-info{
-
-  display:none;
-
+  .header-info {
+    display: none;
   }
-
-
-  }
-
-
-
-  @media(max-width:640px){
-
-
-  .header-right{
-
-  flex:1;
-
-  justify-content:flex-end;
-
-  }
-
-
-  .header-right :deep(.search-box input){
-
-  width:100px;
-
-  }
-
 }
 
+/* 手机端：品牌一行，操作一行 */
+@media (max-width: 700px) {
+  .header-inner {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: space-between;
+    gap: 8px 0;
+
+    width: calc(100% - 24px);
+    height: auto;
+    min-height: 58px;
+    padding: 9px 0 10px;
+  }
+
+  .brand {
+    flex: 0 0 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .brand-icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .brand-title {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .header-right {
+    display: flex;
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    gap: 7px;
+    justify-content: space-between;
+  }
+
+  .header-info {
+    display: none;
+  }
+
+  /* 搜索框占用剩余空间，不挤压其他按钮 */
+  .header-right :deep(.search-box) {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    max-width: none;
+    height: 35px;
+    padding: 0 6px;
+    border-radius: 10px;
+  }
+
+  .header-right :deep(.search-scope) {
+    gap: 1px;
+    margin-right: 4px;
+  }
+
+  .header-right :deep(.search-scope button) {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 9px;
+  }
+
+  .header-right :deep(.search-box input) {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .header-right :deep(.color-btn),
+  .header-right :deep(.clear) {
+    flex: 0 0 auto;
+    min-width: 22px;
+  }
+
+  /* 月份按钮保持完整，不允许被压缩 */
+  .header-right :deep(.month-picker) {
+    flex: 0 0 auto;
+  }
+
+  .header-right :deep(.month-trigger) {
+    height: 35px;
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  /* 历史菜单与源码入口保留可点击面积 */
+  .header-right :deep(.history-controls) {
+    flex: 0 0 30px;
+  }
+
+  .header-right :deep(.history-more-button) {
+    width: 30px;
+    height: 35px;
+  }
+
+  .header-right .header-links {
+    flex: 0 0 34px;
+  }
+
+  .header-right :deep(.github-menu-trigger) {
+    width: 34px;
+    height: 35px;
+  }
+}
+
+/* 超窄屏幕：优先保证按钮可见 */
+@media (max-width: 380px) {
+  .header-inner {
+    width: calc(100% - 20px);
+  }
+
+  .header-right {
+    gap: 5px;
+  }
+
+  .header-right :deep(.search-box) {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .header-right :deep(.search-scope button) {
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: 8px;
+  }
+
+  .header-right :deep(.month-trigger) {
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 9px;
+  }
+}
 
 
 </style>

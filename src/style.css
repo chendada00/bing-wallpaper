@@ -1162,6 +1162,7 @@ body {
 }
 
 /* 菜单容器 */
+
 .github-menu-popover {
   position: absolute;
   top: calc(100% + 10px);
@@ -1174,14 +1175,23 @@ body {
   padding: 8px;
 
   color: #292929;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+
+  /* 毛玻璃 */
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(255, 255, 255, .72);
   border-radius: 15px;
 
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, .16),
+    0 2px 8px rgba(0, 0, 0, .04);
 
   transform-origin: top right;
+  overflow: hidden;
 }
+
 
 /* 标题 */
 .github-menu-heading {
@@ -1236,8 +1246,8 @@ body {
 }
 
 .github-menu-item:hover {
-  background: #f5f5f5 !important;
-  border-color: #eeeeee !important;
+  background: rgba(255, 255, 255, .42) !important;
+  border-color: rgba(255, 255, 255, .55) !important;
   transform: none !important;
   box-shadow: none !important;
 }
@@ -1331,9 +1341,9 @@ body {
 
   .github-menu-popover {
     color: #ededed;
-    background: #242424;
-    border-color: #3b3b3b;
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+    background: rgba(35, 35, 35, .78);
+    border-color: rgba(255, 255, 255, .12);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .35);
   }
 
   .github-menu-heading-note,
@@ -1342,8 +1352,8 @@ body {
   }
 
   .github-menu-item:hover {
-    background: #303030 !important;
-    border-color: #3b3b3b !important;
+    background: rgba(255, 255, 255, .09) !important;
+    border-color: rgba(255, 255, 255, .10) !important;
   }
 
   .github-menu-item-mark {
