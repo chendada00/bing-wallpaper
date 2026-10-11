@@ -211,39 +211,41 @@
       </header>
 
 
-      <!-- 月份筛选状态 -->
-      <section
-        v-if="selectedMonth"
-        class="month-view-heading"
-      >
-        <div class="month-view-copy">
-          <span class="month-view-eyebrow">
-            WALLPAPER ARCHIVE
-          </span>
-
-          <h2>
-            {{ Number(selectedMonth.slice(0, 4)) }}年
-            {{ Number(selectedMonth.slice(5, 7)) }}月
-          </h2>
-
-          <p>
-            本月共收录 {{ monthViewItems.length }} 张壁纸
-          </p>
-        </div>
-
-        <button
-          type="button"
-          class="month-home-button"
-          @click="returnToHome"
-        >
-          <span aria-hidden="true">↶</span>
-          返回主页
-        </button>
-      </section>
 
 
 
       <main class="main-content">
+
+        <!-- 月份筛选状态 -->
+        <section
+          v-if="selectedMonth"
+          class="month-view-heading"
+        >
+          <div class="month-view-copy">
+            <span class="month-view-eyebrow">
+              WALLPAPER ARCHIVE
+            </span>
+
+            <h2>
+              {{ Number(selectedMonth.slice(0, 4)) }}年
+              {{ Number(selectedMonth.slice(5, 7)) }}月
+            </h2>
+
+            <p>
+              本月共收录 {{ monthViewItems.length }} 张壁纸
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="month-home-button"
+            @click="returnToHome"
+          >
+            <span aria-hidden="true">↶</span>
+            返回主页
+          </button>
+        </section>
+
 
 
         <section
