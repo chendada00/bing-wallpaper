@@ -106,13 +106,13 @@
               @select="selectMonth"
               @retry="openMonthPicker"
             />
-
+<!-- 加载全部历史
             <HistoryControls
               v-if="!selectedMonth"
               :loading="loadingAllHistory"
               @load-all="startLoadAllHistory"
             />
-
+-->
 
 
             <div
