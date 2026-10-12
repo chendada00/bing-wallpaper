@@ -14,12 +14,7 @@ dist-ssr/
 .vite/
 .cache/
 
-# ================================
-# Environment variables
-# ================================
-.env
-.env.local
-.env.*.local
+
 
 # 保留示例环境变量文件
 !.env.example
