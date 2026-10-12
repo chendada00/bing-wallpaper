@@ -108,6 +108,8 @@ onMounted(async () => {
     const ACCESS_KEY =
       import.meta.env.VITE_JSONBIN_ACCESS_KEY
 
+      console.log('配置项   '+NOTICE_API+'  '+ACCESS_KEY)
+
     const res = await fetch(
       `${NOTICE_API}?t=${Date.now()}`,
       {

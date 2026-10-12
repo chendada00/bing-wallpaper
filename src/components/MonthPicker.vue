@@ -37,141 +37,138 @@
       <span>{{ selectedMonth ? '切换月份' : '按月份' }}</span>
     </button>
     <Teleport to="body">
-        <Transition name="month-dialog">
-        <div
-            v-if="open"
-            class="month-backdrop"
-            @click="closePicker"
-        >
-            <section
-                class="month-dialog"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="month-dialog-title"
-                @click.stop
-                @keydown.esc="closePicker"
-            >
+      <Transition name="month-dialog">
+        <div v-if="open" class="month-backdrop" @click="closePicker">
+          <section
+            class="month-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="month-dialog-title"
+            @click.stop
+            @keydown.esc="closePicker"
+          >
             <header class="month-dialog-header">
-                <div class="month-heading">
+              <div class="month-heading">
                 <span class="month-eyebrow">WALLPAPER ARCHIVE</span>
 
-                <h2 id="month-dialog-title">
-                    探索时光
-                </h2>
+                <h2 id="month-dialog-title">探索时光</h2>
 
                 <p>选择一个月份，重温那段风景。</p>
-                </div>
+              </div>
 
-                <button
+              <button
                 type="button"
                 class="month-close"
                 aria-label="关闭月份选择"
                 @click="closePicker"
-                >
+              >
                 <svg viewBox="0 0 24 24" fill="none">
-                    <path
+                  <path
                     d="M6 6L18 18M18 6L6 18"
                     stroke="currentColor"
                     stroke-width="1.7"
                     stroke-linecap="round"
-                    />
+                  />
                 </svg>
-                </button>
+              </button>
             </header>
 
             <div class="month-summary">
-                <span class="summary-dot"></span>
-                <span>
+              <span class="summary-dot"></span>
+              <span>
                 共收录
                 <strong>{{ totalWallpapers.toLocaleString() }}</strong>
                 张壁纸
-                </span>
-                <span class="summary-divider"></span>
-                <span>{{ months.length }} 个有数据的月份</span>
+              </span>
+              <span class="summary-divider"></span>
+              <span>{{ months.length }} 个有数据的月份</span>
             </div>
 
             <div class="month-content">
-                <div v-if="loading" class="month-state">
+              <div v-if="loading" class="month-state">
                 <span class="month-spinner"></span>
                 <p>正在读取历史档案…</p>
-                </div>
+              </div>
 
-                <div v-else-if="error" class="month-state">
+              <div v-else-if="error" class="month-state">
                 <div class="month-state-icon">!</div>
                 <p>{{ error }}</p>
-                <button type="button" class="month-retry" @click="emit('retry')">
-                    重新加载
-                </button>
-                </div>
-
-                <div v-else-if="!months.length" class="month-state">
-                <p>暂时没有可用的历史月份。</p>
-                </div>
-
-                <div v-else class="year-list">
-                <section
-                    v-for="group in groupedMonths"
-                    :key="group.year"
-                    class="year-group"
+                <button
+                  type="button"
+                  class="month-retry"
+                  @click="emit('retry')"
                 >
-                    <div class="year-heading">
+                  重新加载
+                </button>
+              </div>
+
+              <div v-else-if="!months.length" class="month-state">
+                <p>暂时没有可用的历史月份。</p>
+              </div>
+
+              <div v-else class="year-list">
+                <section
+                  v-for="group in groupedMonths"
+                  :key="group.year"
+                  class="year-group"
+                >
+                  <div class="year-heading">
                     <h3>{{ group.year }}</h3>
                     <span>{{ group.months.length }} 个月份</span>
-                    </div>
+                  </div>
 
-                    <div class="month-grid">
+                  <div class="month-grid">
                     <button
-                        v-for="month in group.months"
-                        :key="month.key"
-                        type="button"
-                        class="month-option"
-                        :class="{
+                      v-for="month in group.months"
+                      :key="month.key"
+                      type="button"
+                      class="month-option"
+                      :class="{
                         selected: selectedMonth === month.key,
                         choosing: selecting === month.key
                         }"
-                        :disabled="!!selecting"
-                        @click="chooseMonth(month)"
+                      :disabled="!!selecting"
+                      @click="chooseMonth(month)"
                     >
-                        <span class="month-number">
-                        {{ String(month.month).padStart(2, '0') }}
-                        </span>
+                 
 
+
+                     
+                      <span class="month-option-main">
                         <span class="month-name">
-                        {{ month.month }}月
+                          {{ month.month }}月
                         </span>
 
                         <span class="month-count">
-                        {{ month.count }} 张
+                          {{ month.count }} 张
                         </span>
+                      </span>
 
-                        <span
+                      <span
                         v-if="selecting === month.key"
                         class="month-option-spinner"
-                        ></span>
+                      ></span>
+
+
                     </button>
-                    </div>
+                  </div>
                 </section>
-                </div>
+              </div>
             </div>
 
             <footer class="month-dialog-footer">
-                <div class="month-footer-note">
+              <div class="month-footer-note">
                 <span class="footer-sparkle">✳</span>
                 每一张壁纸，都是一段时光
-                </div>
+              </div>
 
-                <button
-                type="button"
-                class="month-cancel"
-                @click="closePicker"
-                >
+              <button type="button" class="month-cancel" @click="closePicker">
                 关闭
-                </button>
+              </button>
             </footer>
-            </section>
+          </section>
         </div>
-        </Transition>
-
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -307,7 +304,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-
 .month-picker {
   flex: 0 0 auto;
 }
@@ -319,16 +315,19 @@ onBeforeUnmount(() => {
   gap: 7px;
   height: 34px;
   padding: 0 11px;
-  border: 1px solid rgba(0, 0, 0, .09);
+  border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 10px;
-  background: rgba(255, 255, 255, .64);
+  background: rgba(255, 255, 255, 0.64);
   color: #393939;
   font: inherit;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .month-trigger svg {
@@ -339,16 +338,16 @@ onBeforeUnmount(() => {
 
 .month-trigger:hover,
 .month-trigger.active {
-  background: rgba(255, 255, 255, .96);
-  border-color: rgba(0, 0, 0, .17);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(0, 0, 0, 0.17);
 }
 
 .month-trigger:active {
-  transform: scale(.97);
+  transform: scale(0.97);
 }
 
 .month-trigger:disabled {
-  opacity: .6;
+  opacity: 0.6;
   cursor: wait;
 }
 
@@ -363,10 +362,8 @@ onBeforeUnmount(() => {
   justify-content: center;
 
   box-sizing: border-box;
-  padding:
-    max(12px, env(safe-area-inset-top))
-    max(12px, env(safe-area-inset-right))
-    max(12px, env(safe-area-inset-bottom))
+  padding: max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
 
   overflow-x: hidden;
@@ -374,7 +371,7 @@ onBeforeUnmount(() => {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 
-  background: rgba(19, 22, 26, .32);
+  background: rgba(19, 22, 26, 0.32);
   backdrop-filter: blur(9px) saturate(120%);
   -webkit-backdrop-filter: blur(9px) saturate(120%);
 }
@@ -388,27 +385,26 @@ onBeforeUnmount(() => {
   width: min(480px, 100%);
   max-height: calc(100vh - 24px);
   max-height: calc(
-    100dvh
-    - max(12px, env(safe-area-inset-top))
-    - max(12px, env(safe-area-inset-bottom))
+    100dvh - max(12px, env(safe-area-inset-top)) -
+      max(12px, env(safe-area-inset-bottom))
   );
   min-height: 0;
   flex-shrink: 0;
   margin: auto;
   overflow: hidden;
 
-  border: 1px solid rgba(255, 255, 255, .62);
+  border: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: 20px;
 
   color: #292a27;
-  background: rgba(250, 250, 247, .76);
+  background: rgba(250, 250, 247, 0.76);
 
   backdrop-filter: blur(28px) saturate(155%);
   -webkit-backdrop-filter: blur(28px) saturate(155%);
 
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, .20),
-    0 2px 10px rgba(0, 0, 0, .05);
+    0 24px 80px rgba(0, 0, 0, 0.2),
+    0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .month-dialog-header,
@@ -443,7 +439,7 @@ onBeforeUnmount(() => {
   color: #292a27;
   font-size: 24px;
   font-weight: 700;
-  letter-spacing: -.6px;
+  letter-spacing: -0.6px;
 }
 
 .month-heading p {
@@ -460,9 +456,9 @@ onBeforeUnmount(() => {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, .08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
-  background: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, 0.45);
   color: #55574f;
   cursor: pointer;
 }
@@ -473,7 +469,7 @@ onBeforeUnmount(() => {
 }
 
 .month-close:hover {
-  background: rgba(255, 255, 255, .8);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .month-summary {
@@ -483,9 +479,9 @@ onBeforeUnmount(() => {
   gap: 7px;
   margin: 0 22px;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, .65);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: 11px;
-  background: rgba(255, 255, 255, .34);
+  background: rgba(255, 255, 255, 0.34);
   color: #777970;
   font-size: 10px;
 }
@@ -507,7 +503,7 @@ onBeforeUnmount(() => {
   width: 1px;
   height: 12px;
   margin: 0 3px;
-  background: rgba(0, 0, 0, .12);
+  background: rgba(0, 0, 0, 0.12);
 }
 
 /* 只有月份列表滚动，标题和底部操作固定 */
@@ -537,7 +533,7 @@ onBeforeUnmount(() => {
   color: #343630;
   font-size: 16px;
   font-weight: 700;
-  letter-spacing: -.4px;
+  letter-spacing: -0.4px;
 }
 
 .year-heading span {
@@ -550,39 +546,9 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
+ 
 
-.month-option {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 72px;
-  padding: 9px 10px;
-
-  border: 1px solid rgba(70, 75, 60, .10);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, .43);
-  color: #393b34;
-
-  text-align: left;
-  cursor: pointer;
-  transition: background .18s ease, border-color .18s ease, transform .18s ease;
-}
-
-.month-option:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(70, 75, 60, .25);
-  background: rgba(255, 255, 255, .78);
-}
-
-.month-option.selected {
-  border-color: rgba(91, 107, 78, .72);
-  background: rgba(224, 232, 215, .82);
-}
+ 
 
 .month-number {
   color: #85877d;
@@ -591,46 +557,106 @@ onBeforeUnmount(() => {
   letter-spacing: 1px;
 }
 
-.month-name {
-  margin-top: 3px;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.month-count {
-  margin-top: 4px;
-  color: #85877d;
-  font-size: 9px;
-  line-height: 1.3;
-}
-
-.month-option.selected .month-name {
-  color: #30392a;
-}
-
-.month-option:disabled {
-  cursor: wait;
-}
 
 .month-option-spinner,
 .month-spinner {
   display: block;
   width: 14px;
   height: 14px;
-  border: 1.5px solid rgba(80, 80, 80, .18);
+  border: 1.5px solid rgba(80, 80, 80, 0.18);
   border-top-color: #555;
   border-radius: 50%;
-  animation: month-spin .7s linear infinite;
+  animation: month-spin 0.7s linear infinite;
+}
+
+
+.month-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 10px;
+
+  border: 1px solid rgba(70, 75, 60, .10);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .43);
+  color: #393b34;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease;
+}
+
+.month-option-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.month-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.month-count {
+  flex: 0 0 auto;
+  margin: 0;
+
+  color: #85877d;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.month-option.selected {
+  border-color: rgba(91, 107, 78, .72);
+  background: rgba(224, 232, 215, .82);
+}
+
+.month-option.selected .month-name {
+  color: #30392a;
+}
+
+.month-option:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(70, 75, 60, .25);
+  background: rgba(255, 255, 255, .78);
+}
+
+.month-option:disabled {
+  cursor: wait;
+}
+
+.month-option.choosing .month-option-main {
+  padding-right: 15px;
 }
 
 .month-option-spinner {
   position: absolute;
-  top: 9px;
+  top: 50%;
   right: 9px;
+
   width: 11px;
   height: 11px;
+
+  transform: translateY(-50%);
 }
+
 
 .month-state {
   display: flex;
@@ -656,16 +682,16 @@ onBeforeUnmount(() => {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: rgba(160, 95, 65, .1);
+  background: rgba(160, 95, 65, 0.1);
   color: #a05f41;
   font-weight: 700;
 }
 
 .month-retry {
   padding: 8px 12px;
-  border: 1px solid rgba(0, 0, 0, .1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 9px;
-  background: rgba(255, 255, 255, .65);
+  background: rgba(255, 255, 255, 0.65);
   color: #333;
   cursor: pointer;
 }
@@ -676,7 +702,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 22px 16px;
-  border-top: 1px solid rgba(0, 0, 0, .07);
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
 }
 
 .month-footer-note {
@@ -696,9 +722,9 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   height: 33px;
   padding: 0 15px;
-  border: 1px solid rgba(0, 0, 0, .09);
+  border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 9px;
-  background: rgba(255, 255, 255, .62);
+  background: rgba(255, 255, 255, 0.62);
   color: #4f504a;
   font: inherit;
   font-size: 11px;
@@ -706,17 +732,17 @@ onBeforeUnmount(() => {
 }
 
 .month-cancel:hover {
-  background: rgba(255, 255, 255, .9);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .month-dialog-enter-active,
 .month-dialog-leave-active {
-  transition: opacity .2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .month-dialog-enter-active .month-dialog,
 .month-dialog-leave-active .month-dialog {
-  transition: transform .22s ease;
+  transition: transform 0.22s ease;
 }
 
 .month-dialog-enter-from,
@@ -726,7 +752,7 @@ onBeforeUnmount(() => {
 
 .month-dialog-enter-from .month-dialog,
 .month-dialog-leave-to .month-dialog {
-  transform: translateY(8px) scale(.985);
+  transform: translateY(8px) scale(0.985);
 }
 
 @keyframes month-spin {
@@ -738,9 +764,7 @@ onBeforeUnmount(() => {
 /* 手机端 */
 @media (max-width: 700px) {
   .month-backdrop {
-    padding:
-      max(10px, env(safe-area-inset-top))
-      10px
+    padding: max(10px, env(safe-area-inset-top)) 10px
       max(10px, env(safe-area-inset-bottom));
   }
 
@@ -749,9 +773,8 @@ onBeforeUnmount(() => {
     max-width: 440px;
     max-height: calc(100vh - 20px);
     max-height: calc(
-      100dvh
-      - max(10px, env(safe-area-inset-top))
-      - max(10px, env(safe-area-inset-bottom))
+      100dvh - max(10px, env(safe-area-inset-top)) -
+        max(10px, env(safe-area-inset-bottom))
     );
     border-radius: 17px;
   }
@@ -788,24 +811,27 @@ onBeforeUnmount(() => {
     font-size: 15px;
   }
 
+
+ 
   .month-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 7px;
   }
 
   .month-option {
-    min-height: 65px;
-    padding: 8px;
+    min-height: 46px;
+    padding: 0 8px;
     border-radius: 9px;
   }
 
   .month-name {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .month-count {
-    margin-top: 3px;
+    font-size: 9px;
   }
+ 
 
   .month-dialog-footer {
     gap: 8px;
@@ -847,13 +873,25 @@ onBeforeUnmount(() => {
     padding-left: 13px;
   }
 
+  .month-option {
+    min-height: 44px;
+    padding: 0 6px;
+  }
+
   .month-grid {
     gap: 5px;
   }
 
-  .month-option {
-    min-height: 62px;
-    padding: 7px;
+  .month-option-main {
+    gap: 4px;
+  }
+
+  .month-name {
+    font-size: 10px;
+  }
+
+  .month-count {
+    font-size: 9px;
   }
 
   .month-dialog-footer {
@@ -865,24 +903,24 @@ onBeforeUnmount(() => {
 /* 深色系统主题 */
 @media (prefers-color-scheme: dark) {
   .month-trigger {
-    border-color: rgba(255, 255, 255, .1);
-    background: rgba(35, 35, 35, .7);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(35, 35, 35, 0.7);
     color: #eee;
   }
 
   .month-trigger:hover,
   .month-trigger.active {
-    background: rgba(55, 55, 55, .9);
-    border-color: rgba(255, 255, 255, .2);
+    background: rgba(55, 55, 55, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .month-backdrop {
-    background: rgba(0, 0, 0, .46);
+    background: rgba(0, 0, 0, 0.46);
   }
 
   .month-dialog {
-    border-color: rgba(255, 255, 255, .17);
-    background: rgba(35, 36, 34, .78);
+    border-color: rgba(255, 255, 255, 0.17);
+    background: rgba(35, 36, 34, 0.78);
     color: #eee;
   }
 
@@ -903,41 +941,41 @@ onBeforeUnmount(() => {
   }
 
   .month-summary {
-    border-color: rgba(255, 255, 255, .1);
-    background: rgba(255, 255, 255, .055);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.055);
   }
 
   .summary-divider {
-    background: rgba(255, 255, 255, .17);
+    background: rgba(255, 255, 255, 0.17);
   }
 
   .month-close,
   .month-cancel,
   .month-retry {
-    border-color: rgba(255, 255, 255, .12);
-    background: rgba(255, 255, 255, .07);
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
     color: #eee;
   }
 
   .month-close:hover,
   .month-cancel:hover {
-    background: rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, 0.14);
   }
 
   .month-option {
-    border-color: rgba(255, 255, 255, .1);
-    background: rgba(255, 255, 255, .045);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.045);
     color: #eee;
   }
 
   .month-option:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, .2);
-    background: rgba(255, 255, 255, .1);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .month-option.selected {
     border-color: #8a987d;
-    background: rgba(100, 119, 85, .35);
+    background: rgba(100, 119, 85, 0.35);
   }
 
   .month-option.selected .month-name {
@@ -945,7 +983,7 @@ onBeforeUnmount(() => {
   }
 
   .month-dialog-footer {
-    border-top-color: rgba(255, 255, 255, .1);
+    border-top-color: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -964,5 +1002,4 @@ onBeforeUnmount(() => {
     animation: none;
   }
 }
-
 </style>

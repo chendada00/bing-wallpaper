@@ -290,10 +290,14 @@ export function useBingData() {
       !noMore.value &&
       safety < 600
     ) {
-      const addedItems =
-        await loadNextMonth()
-  
+      const addedItems = await loadNextMonth()
+
       safety += 1
+      
+      // 网络请求失败时立即停止，避免重复请求同一个月份。
+      if (error.value) {
+        return false
+      }
   
       if (
         addedItems.length > 0 &&

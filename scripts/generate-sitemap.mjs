@@ -145,11 +145,13 @@ const DATA_BASE_URL = (
   )
   
   
-  const robots = `User-agent: *
-  Allow: /
-  
-  Sitemap: ${SITE_URL}/sitemap.xml
-  `
+  const robots = [
+    'User-agent: *',
+    'Allow: /',
+    '',
+    `Sitemap: ${SITE_URL}/sitemap.xml`,
+    ''
+  ].join('\n')
   
   
   await writeFile(
