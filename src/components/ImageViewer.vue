@@ -304,6 +304,33 @@
                 {{ shareFeedback === 'success' ? '链接已复制' : '复制失败，请重试' }}
               </span>
 
+              <!-- 沉浸式浏览 -->
+              <a
+                v-if="item?.date"
+                class="immersive-button"
+                :href="`/wallpaper/${item.date}`"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                  <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                </svg>
+                沉浸式浏览
+              </a>
+
             </div>
 
             <!-- =================================================
@@ -2683,7 +2710,8 @@ onBeforeUnmount(() => {
  * ========================================================= */
 
 .download-button,
-.open-button {
+.open-button,
+.immersive-button {
   height: 38px;
 
   padding:
@@ -2716,13 +2744,15 @@ onBeforeUnmount(() => {
 }
 
 .download-button:hover,
-.open-button:hover {
+.open-button:hover,
+.immersive-button:hover {
   transform:
     translateY(-1px);
 }
 
 .download-button:active,
-.open-button:active {
+.open-button:active,
+.immersive-button:active {
   transform:
     translateY(0);
 }
@@ -2775,6 +2805,30 @@ onBeforeUnmount(() => {
 .open-button:hover {
   background:
     rgba(255, 255, 255, 0.13);
+}
+
+.immersive-button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #fff;
+  background: rgba(129, 140, 248, 0.14);
+  border: 1px solid rgba(165, 180, 252, 0.28);
+  transition: transform .2s ease, background .2s ease;
+}
+
+.immersive-button:hover {
+  background: rgba(129, 140, 248, 0.24);
+  transform: translateY(-1px);
 }
 
 
@@ -3283,7 +3337,8 @@ onBeforeUnmount(() => {
 
   .download-button,
   .open-button,
-  .share-button {
+  .share-button,
+  .immersive-button {
     height: 36px;
 
     padding:
