@@ -1,10 +1,7 @@
 <template>
   <div class="app">
 
-    <div
-      v-if="!isWallpaperRoute"
-      class="ambient-background"
-    >
+    <div class="ambient-background">
 
       <div
         class="ambient-background-layer"
@@ -36,20 +33,7 @@
       <div class="ambient-background-overlay" />
 
     </div>
-
-
-    <WallpaperPage
-      v-if="isWallpaperRoute"
-      :item="routeItem"
-      :loading="routeLoading"
-      :not-found="routeNotFound"
-      @back="goHome"
-    />
-
-
-    <template v-else>
-
-        <header class="site-header">
+<header class="site-header">
 
         <div class="header-inner">
 
@@ -106,13 +90,6 @@
               @select="selectMonth"
               @retry="openMonthPicker"
             />
-<!-- 加载全部历史
-            <HistoryControls
-              v-if="!selectedMonth"
-              :loading="loadingAllHistory"
-              @load-all="startLoadAllHistory"
-            />
--->
 
 
             <div
@@ -310,7 +287,7 @@
               <button
                 type="button"
                 class="hero-view-button"
-                @click="openViewer(heroItem)"
+                @click="openWallpaperModal(heroItem)"
               >
                 查看壁纸 ↗
               </button>
@@ -340,7 +317,7 @@
 
             :is-latest="!searching && item.date === latestWallpaperDate"
 
-            @click="openViewer(item)"
+            @click="openWallpaperModal(item)"
 
             @mouseenter="setBackground"
 
@@ -451,12 +428,9 @@
         :visible="viewerVisible"
         :item="currentItem"
         :items="displayResult"
-        @close="closeViewer"
+        @close="closeWallpaperModal"
         @change="changeViewer"
-        @open-detail="openWallpaperDetail"
       />
-
-    </template>
         
     
     <NotificationToast />
@@ -476,22 +450,16 @@ import {
   watch
 } from 'vue'
 
-import HistoryControls from './components/HistoryControls.vue'
 import WallpaperCard from './components/WallpaperCard.vue'
 import ImageViewer from './components/ImageViewer.vue'
 import LoadingState from './components/LoadingState.vue'
 import EndState from './components/EndState.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Timeline from './components/Timeline.vue'
-import WallpaperPage from './components/WallpaperPage.vue'
 import NotificationToast from './components/NotificationToast.vue'
 import MonthPicker from './components/MonthPicker.vue'
 
-import {
-  setHomeSeo,
-  setWallpaperSeo,
-  setNotFoundSeo
-} from './utils/seo'
+import { setHomeSeo } from './utils/seo'
 
 import {
   useBingData
@@ -515,7 +483,6 @@ const {
   loadInitial,
   loadNextMonth,
   loadDates,
-  loadAllHistory,
   retry,
   dataBaseUrl
 }=useBingData()
@@ -714,6 +681,140 @@ async function returnToHome() {
 }
 
 
+const WALLPAPER_HASH_RE = /^#(\d{4}-\d{2}-\d{2})$/
+
+function getWallpaperDateFromHash() {
+  const match = window.location.hash.match(WALLPAPER_HASH_RE)
+  if (!match) return null
+
+  const date = match[1]
+  const parsed = new Date(`${date}T00:00:00Z`)
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  ) {
+    return null
+  }
+
+  return date
+}
+
+// 通过日期恢复壁纸：先查内存数据，再复用 useBingData 的历史日期加载能力。
+async function findWallpaperByDate(date) {
+  const inMemoryItems = [
+    ...items.value,
+    ...monthViewItems.value,
+    ...historySearchItems.value,
+  ]
+
+  const existing = inMemoryItems.find(item => item?.date === date)
+  if (existing) return existing
+
+  try {
+    const loaded = await loadDates([date])
+    return loaded.find(item => item?.date === date) || null
+  } catch (error) {
+    console.error(`加载 ${date} 的壁纸失败：`, error)
+    return null
+  }
+}
+
+// 首页卡片和 Hero 入口统一使用此函数打开弹窗并同步 URL。
+function openWallpaperModal(item) {
+  if (!item?.date) return
+
+  const nextHash = `#${item.date}`
+  const currentDate = getWallpaperDateFromHash()
+
+  if (currentDate === item.date) {
+    openViewer(item)
+    return
+  }
+
+  // 从首页打开时新增一条历史记录；如果已经处于另一张弹窗状态，则更新当前记录。
+  if (currentDate) {
+    window.history.replaceState(
+      {
+        ...(window.history.state || {}),
+        wallpaperModal: window.history.state?.wallpaperModal === true,
+        wallpaperDate: item.date,
+      },
+      '',
+      `${window.location.pathname}${window.location.search}${nextHash}`,
+    )
+  } else {
+    window.history.pushState(
+      {
+        ...(window.history.state || {}),
+        wallpaperModal: true,
+        wallpaperDate: item.date,
+      },
+      '',
+      `${window.location.pathname}${window.location.search}${nextHash}`,
+    )
+  }
+
+  openViewer(item)
+}
+
+let hashOpenRequestId = 0
+
+async function openWallpaperFromHash(date) {
+  const requestId = ++hashOpenRequestId
+  const item = await findWallpaperByDate(date)
+
+  // 如果异步加载期间 URL 已经改变，不要打开过期的图片。
+  if (
+    requestId !== hashOpenRequestId ||
+    getWallpaperDateFromHash() !== date
+  ) {
+    return
+  }
+
+  if (!item) {
+    closeViewer()
+    return
+  }
+
+  openViewer(item)
+}
+
+function handleWallpaperHistoryChange() {
+  const date = getWallpaperDateFromHash()
+
+  if (!date) {
+    hashOpenRequestId++
+    closeViewer()
+    return
+  }
+
+  // 避免相同日期在 浏览器历史变化 中被重复加载。
+  if (viewerVisible.value && currentItem.value?.date === date) {
+    return
+  }
+
+  void openWallpaperFromHash(date)
+}
+
+function closeWallpaperModal() {
+  if (getWallpaperDateFromHash()) {
+    if (window.history.state?.wallpaperModal === true) {
+      // 卡片打开的弹窗：回到之前的首页历史记录，由 popstate 负责关闭弹窗。
+      window.history.back()
+      return
+    }
+
+    // 直接访问分享链接：关闭弹窗但留在本站，不返回外部网站。
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${window.location.search}`,
+    )
+  }
+
+  closeViewer()
+}
 
 const viewerVisible=ref(false)
 
@@ -740,10 +841,6 @@ const atBottom=ref(false)
 let timelineHideTimer=null
 let scrollUpdateFrame=null
 let timelineMouseInside=false
-// 详情页路由请求编号
-// 防止用户返回首页后，旧的异步详情请求又把数据写回来
-let routeRequestId = 0
-
 // 时间轴主动跳转目标
 let timelineTargetMonth = null
 // 时间轴主动跳转期间，暂时不根据滚动位置修改月份
@@ -752,8 +849,6 @@ let timelineScrolling=false
 let observer=null
 
 
-const currentPath =
-  ref(window.location.pathname)
 
 
 const sourceMenu = ref(null)
@@ -773,34 +868,6 @@ function handleSourceMenuEscape(event) {
   }
 }
 
-
-const routeItem =
-  ref(null)
-
-const routeLoading =
-  ref(false)
-
-const routeNotFound =
-  ref(false)
-
-const isWallpaperRoute =
-  computed(() => {
-    return /^\/wallpaper\/\d{4}-\d{2}-\d{2}\/?$/
-      .test(currentPath.value)
-  })
-
-
-const wallpaperRouteDate =
-  computed(() => {
-
-    const match =
-      currentPath.value.match(
-        /^\/wallpaper\/(\d{4}-\d{2}-\d{2})\/?$/
-      )
-
-    return match?.[1] || ''
-
-  })
 
 
 /**
@@ -869,61 +936,6 @@ function getImageState(date){
   )
 
 }
-
-function openWallpaperDetail(item) {
-
-  if (!item?.date) {
-    return
-  }
-
-
-  const path =
-    `/wallpaper/${item.date}`
-
-
-  /*
-   * 从 Viewer 进入详情时，
-   * 先关闭 Viewer。
-   */
-  viewerVisible.value = false
-
-  currentItem.value = null
-
-  document.body.style.overflow = ''
-
-
-  /*
-   * 不再打开新标签页。
-   *
-   * 让详情页成为当前 SPA 的
-   * 一个历史记录。
-   */
-  window.history.pushState(
-    {
-      ...(window.history.state || {}),
-
-      bingWallpaperRoute:
-        'detail',
-
-      date:
-        item.date
-    },
-
-    '',
-
-    path
-  )
-
-
-  currentPath.value =
-    path
-
-
-  loadWallpaperRoute()
-
-}
-
-
 
 function setImageState(
   date,
@@ -1184,231 +1196,6 @@ watch(
 )
 
 
-const loadingAllHistory=ref(false)
-
-async function startLoadAllHistory() {
-  if (loadingAllHistory.value) {
-    return
-  }
-
-  loadingAllHistory.value = true
-
-  try {
-    scope.value = 'loaded'
-
-    historySearchItems.value = []
-
-    clear()
-
-    await loadAllHistory(
-      async () => {
-        await nextTick()
-
-        fillImageLoadQueue()
-
-        updateScrollState()
-      }
-    )
-
-  } finally {
-    loadingAllHistory.value = false
-  }
-}
-
-
-async function loadWallpaperRoute() {
-
-  const requestId =
-    ++routeRequestId
-
-  const date =
-    wallpaperRouteDate.value
-
-
-  if (!date) {
-    return
-  }
-
-
-  routeLoading.value = true
-
-  routeNotFound.value = false
-
-  routeItem.value = null
-
-
-  try {
-
-    const loaded =
-      await loadDates([date])
-
-
-    /*
-     * 用户可能已经通过浏览器
-     * 返回手势回到首页。
-     *
-     * 此时旧请求不能再写回详情数据。
-     */
-    if (
-      requestId !== routeRequestId ||
-      !isWallpaperRoute.value
-    ) {
-      return
-    }
-
-
-    const item =
-      loaded.find(
-        value =>
-          value.date === date
-      )
-
-
-    if (!item) {
-
-      routeNotFound.value = true
-
-      setNotFoundSeo()
-
-      return
-    }
-
-
-    routeItem.value = item
-
-    setWallpaperSeo(item)
-
-
-  } catch (error) {
-
-    if (
-      requestId !== routeRequestId
-    ) {
-      return
-    }
-
-
-    console.error(
-      '加载壁纸详情失败:',
-      error
-    )
-
-
-    routeNotFound.value = true
-
-    setNotFoundSeo()
-
-
-  } finally {
-
-    if (
-      requestId === routeRequestId
-    ) {
-
-      routeLoading.value = false
-
-    }
-
-  }
-
-}
-
-async function goHome() {
-
-  /*
-   * 如果详情页是从首页进入的，
-   * 那么直接退回上一条历史。
-   */
-  if (
-    isWallpaperRoute.value &&
-    window.history.state?.bingWallpaperRoute === 'detail'
-  ) {
-
-    window.history.back()
-
-    return
-  }
-
-
-  /*
-   * 如果用户是直接访问：
-   *
-   * /wallpaper/2026-09-01
-   *
-   * 此时没有本站首页历史，
-   * 就直接 replace 到首页。
-   */
-  routeRequestId++
-
-
-  window.history.replaceState(
-    {
-      ...(window.history.state || {}),
-
-      bingWallpaperRoute:
-        'home'
-    },
-
-    '',
-
-    '/'
-  )
-
-
-  currentPath.value =
-    '/'
-
-
-  routeItem.value =
-    null
-
-
-  routeNotFound.value =
-    false
-
-
-  routeLoading.value =
-    false
-
-
-  await initializeHome()
-
-}
-
-async function handleRouteChange() {
-
-  currentPath.value =
-    window.location.pathname
-
-
-  if (isWallpaperRoute.value) {
-
-    await loadWallpaperRoute()
-
-    return
-  }
-
-
-  /*
-   * 返回首页时让正在进行的详情请求失效。
-   */
-  routeRequestId++
-
-
-  routeItem.value =
-    null
-
-  routeNotFound.value =
-    false
-
-  routeLoading.value =
-    false
-
-
-  await initializeHome()
-
-}
-
 function openViewer(item){
   currentItem.value=item
   viewerVisible.value=true
@@ -1484,16 +1271,23 @@ function closeViewer(){
 
 
 
-function changeViewer(item){
+function changeViewer(item) {
+  if (!item?.date) return
 
+  currentItem.value = item
 
-  if(item){
+  const nextHash = `#${item.date}`
+  if (window.location.hash === nextHash) return
 
-    currentItem.value=item
-
-  }
-
-
+  // 左右切换只更新当前历史记录：地址随图片变化，但后退仍可关闭整个弹窗。
+  window.history.replaceState(
+    {
+      ...(window.history.state || {}),
+      wallpaperDate: item.date,
+    },
+    '',
+    `${window.location.pathname}${window.location.search}${nextHash}`,
+  )
 }
 
 
@@ -1910,54 +1704,21 @@ function resetHomeImageLoadState() {
 }
 
 onMounted(async () => {
+  window.addEventListener('popstate', handleWallpaperHistoryChange)
+  window.addEventListener('scroll', handleWindowScroll, { passive: true })
+  window.addEventListener('mousemove', handleMouseMove, { passive: true })
 
+  document.addEventListener('click', handleSourceMenuOutsideClick)
+  document.addEventListener('keydown', handleSourceMenuEscape)
 
-  document.addEventListener(
-    'click',
-    handleSourceMenuOutsideClick
-  )
+  // 首页只初始化一次；带日期的分享链接在首页数据准备好后恢复弹窗。
+  await initializeHome()
 
-  document.addEventListener(
-    'keydown',
-    handleSourceMenuEscape
-  )
-
-
-  if (!window.history.state?.bingWallpaperRoute) {
-    window.history.replaceState(
-      {
-        ...(window.history.state || {}),
-        bingWallpaperRoute: 'home'
-      },
-      '',
-      window.location.pathname
-    )
-  }
-
-  window.addEventListener(
-    'popstate',
-    handleRouteChange
-  )
-
-  window.addEventListener(
-    'scroll',
-    handleWindowScroll,
-    { passive: true }
-  )
-
-  window.addEventListener(
-    'mousemove',
-    handleMouseMove,
-    { passive: true }
-  )
-
-  if (isWallpaperRoute.value) {
-    await loadWallpaperRoute()
-  } else {
-    await initializeHome()
+  const date = getWallpaperDateFromHash()
+  if (date) {
+    await openWallpaperFromHash(date)
   }
 })
-
 
 async function initializeHome() {
   setHomeSeo()
@@ -1998,6 +1759,7 @@ async function initializeHome() {
 
 
 onBeforeUnmount(()=>{
+  window.removeEventListener('popstate', handleWallpaperHistoryChange)
 
 
   document.removeEventListener(
@@ -2016,10 +1778,6 @@ onBeforeUnmount(()=>{
   }
   window.removeEventListener('scroll',handleWindowScroll)
   window.removeEventListener('mousemove',handleMouseMove)
-    window.removeEventListener(
-    'popstate',
-    handleRouteChange
-  )
   if(timelineHideTimer){
     clearTimeout(timelineHideTimer)
   }

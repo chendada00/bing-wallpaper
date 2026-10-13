@@ -267,16 +267,7 @@
                 打开原图
               </a>
 
-              <!-- 查看详情 -->
-              <button
-                v-if="item?.date"
-                class="detail-button"
-                type="button"
-                @click="openDetail"
-              >
-                <span aria-hidden="true">↗</span>
-                查看详情
-              </button>
+
             </div>
 
             <!-- =================================================
@@ -445,8 +436,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'close',
-  'change',
-  'open-detail'
+  'change'
 ])
 
 /*
@@ -576,18 +566,7 @@ const SATURATION_VALUES = [25, 60, 90]
 
 const VALUE_VALUES = [35, 65, 92]
 
-/*
- * =========================================================
- * 查看详情
- * =========================================================
- */
-function openDetail() {
-  if (!props.item?.date) {
-    return
-  }
 
-  emit('open-detail', props.item)
-}
 
 /*
  * =========================================================
@@ -2624,69 +2603,6 @@ onBeforeUnmount(() => {
 }
 
 
-/* =========================================================
- * 查看详情
- * ========================================================= */
-
-.detail-button {
-  height: 38px;
-
-  padding:
-    0 14px;
-
-  display: inline-flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  gap: 6px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.18);
-
-  border-radius: 10px;
-
-  color:
-    rgba(255, 255, 255, 0.82);
-
-  background:
-    rgba(255, 255, 255, 0.04);
-
-  backdrop-filter:
-    blur(10px);
-
-  -webkit-backdrop-filter:
-    blur(10px);
-
-  font-family: inherit;
-
-  font-size: 13px;
-
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.detail-button:hover {
-  background:
-    rgba(255, 255, 255, 0.10);
-
-  border-color:
-    rgba(255, 255, 255, 0.32);
-
-  transform:
-    translateY(-1px);
-}
-
 
 /* =========================================================
  * 下载进度
@@ -3191,8 +3107,7 @@ onBeforeUnmount(() => {
   }
 
   .download-button,
-  .open-button,
-  .detail-button {
+  .open-button {
     height: 36px;
 
     padding:
