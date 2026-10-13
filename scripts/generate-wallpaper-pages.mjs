@@ -405,6 +405,7 @@ function createWallpaperHtml(
     rel="canonical"
     href="${escapeHtml(pageUrl)}"
   >
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Bing Wallpaper">
@@ -774,7 +775,7 @@ function createWallpaperHtml(
       width: auto;
       height: auto;
       object-fit: contain;
-      border-radius: 3px;
+      border-radius: 15px;
       opacity: 0;
       transform: translateY(10px) scale(.99);
       filter:
