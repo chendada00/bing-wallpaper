@@ -267,6 +267,42 @@
                 打开原图
               </a>
 
+              <!-- 分享链接 -->
+              <button
+                type="button"
+                class="share-button"
+                :disabled="!item?.date"
+                @click="copyShareLink"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4" />
+                </svg>
+
+                分享链接
+              </button>
+
+              <span
+                v-if="shareFeedback"
+                class="share-feedback"
+                :class="shareFeedback"
+                role="status"
+                aria-live="polite"
+              >
+                {{ shareFeedback === 'success' ? '链接已复制' : '复制失败，请重试' }}
+              </span>
 
             </div>
 
@@ -1317,6 +1353,73 @@ async function downloadImage() {
   }
 }
 
+
+// 分享链接复制提示
+const shareFeedback = ref('')
+let shareFeedbackTimer = null
+
+function showShareFeedback(status) {
+  shareFeedback.value = status
+
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer)
+  }
+
+  shareFeedbackTimer = setTimeout(() => {
+    shareFeedback.value = ''
+    shareFeedbackTimer = null
+  }, 1800)
+}
+
+// 复制当前壁纸的分享链接
+async function copyShareLink() {
+  if (!props.item?.date) return
+
+  // 当前项目使用日期哈希打开详情弹窗。
+  // 复制完整地址，其他人打开后也能定位到这张壁纸。
+  const shareUrl =
+    `${window.location.origin}${window.location.pathname}` +
+    `${window.location.search}#${props.item.date}`
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl)
+    } else {
+      throw new Error('Clipboard API unavailable')
+    }
+
+    showShareFeedback('success')
+  } catch (error) {
+    // 兼容不支持 Clipboard API 的环境
+    let textarea
+
+    try {
+      textarea = document.createElement('textarea')
+      textarea.value = shareUrl
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      textarea.style.top = '0'
+
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+
+      const copied = document.execCommand('copy')
+
+      if (!copied) {
+        throw new Error('Copy command failed')
+      }
+
+      showShareFeedback('success')
+    } catch (fallbackError) {
+      console.error('复制分享链接失败：', fallbackError)
+      showShareFeedback('error')
+    } finally {
+      textarea?.remove()
+    }
+  }
+}
+
 /*
  * =========================================================
  * 触发浏览器下载
@@ -1403,6 +1506,11 @@ onBeforeUnmount(() => {
     preloadImage.onload = null
     preloadImage.onerror = null
     preloadImage = null
+  }
+
+  if (shareFeedbackTimer) {
+    clearTimeout(shareFeedbackTimer)
+    shareFeedbackTimer = null
   }
 })
 </script>
@@ -2503,6 +2611,73 @@ onBeforeUnmount(() => {
 }
 
 
+/* 分享按钮 */
+.share-button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.share-button:hover {
+  background: rgba(255, 255, 255, 0.13);
+  transform: translateY(-1px);
+}
+
+.share-button:active {
+  transform: translateY(0);
+}
+
+.share-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 复制结果小提示 */
+.share-feedback {
+  align-self: center;
+  font-size: 12px;
+  animation: share-feedback-in 0.18s ease-out;
+}
+
+.share-feedback.success {
+  color: #86efac;
+}
+
+.share-feedback.error {
+  color: #fca5a5;
+}
+
+@keyframes share-feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 /* =========================================================
  * 下载 / 打开按钮
  * ========================================================= */
@@ -3107,7 +3282,8 @@ onBeforeUnmount(() => {
   }
 
   .download-button,
-  .open-button {
+  .open-button,
+  .share-button {
     height: 36px;
 
     padding:
