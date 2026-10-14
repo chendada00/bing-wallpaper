@@ -436,6 +436,14 @@ function createWallpaperHtml(
   <script type="application/ld+json">${JSON.stringify(jsonLd).replaceAll('<', '\\u003c')}</script>
 
   <style>
+    @import url('https://fastly.jsdelivr.net/npm/cn-fontsource-ding-talk-jin-bu-ti-regular/font.css');
+    html,
+    body {
+      font-family:
+        "DingTalk JinBuTi",
+        Roboto,
+        sans-serif !important;
+    }
     :root {
       color-scheme: dark;
 
@@ -474,14 +482,9 @@ function createWallpaperHtml(
       background: var(--bg);
       color: var(--text);
       font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        "PingFang SC",
-        "Hiragino Sans GB",
-        "Microsoft YaHei",
-        sans-serif;
+        "DingTalk JinBuTi",
+        Roboto,
+        sans-serif !important;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }

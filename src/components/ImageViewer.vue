@@ -163,10 +163,36 @@
               {{ item?.title || 'Bing Wallpaper' }}
             </h2>
 
-            <!-- 描述 -->
-            <p>
-              {{ item?.description || item?.copyright || '' }}
+            <!-- 版权 -->
+            <p
+              v-if="item?.copyright"
+              class="viewer-copyright"
+            >
+              {{ item.copyright }}
             </p>
+
+            <!-- 图片描述 -->
+            <div
+              v-if="item?.description"
+              class="viewer-description"
+            >
+              <p
+                class="viewer-description-text"
+                :class="{ expanded: descriptionExpanded }"
+              >
+                {{ item.description }}
+              </p>
+
+              <button
+                v-if="item.description.length > 80"
+                type="button"
+                class="viewer-description-toggle"
+                @click="descriptionExpanded = !descriptionExpanded"
+              >
+                {{ descriptionExpanded ? '收起' : '展开描述' }}
+                <span>{{ descriptionExpanded ? '⌃' : '⌄' }}</span>
+              </button>
+            </div>
 
             <!-- =================================================
              * 主色调
@@ -542,6 +568,8 @@ const downloadProgress = ref(0)
 const downloadLoaded = ref(0)
 
 const downloadTotal = ref(0)
+
+const descriptionExpanded = ref(false)
 
 /*
  * =========================================================
@@ -1503,6 +1531,7 @@ watch(
   () => props.item,
   () => {
     loadCurrentImage()
+    descriptionExpanded.value = false
   },
   {
     immediate: true
@@ -3411,6 +3440,55 @@ onBeforeUnmount(() => {
   .histogram-hover-range {
     font-size: 9px;
   }
+}
+
+.viewer-copyright {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.viewer-description {
+  margin-top: 10px;
+  max-width: 760px;
+}
+
+.viewer-description-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.viewer-description-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.viewer-description-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.viewer-description-toggle:hover {
+  color: #fff;
 }
 
 </style>

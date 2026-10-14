@@ -173,7 +173,7 @@
           </span>
         </div>
         <div class="card-description">
-          {{ item.description || item.copyright || '' }}
+          {{ item.copyright || '' }}
         </div>
 
         <div class="card-action">
