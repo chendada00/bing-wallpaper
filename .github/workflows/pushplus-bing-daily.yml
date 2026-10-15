@@ -1,0 +1,65 @@
+
+name: PushPlus Bing Daily Wallpaper
+
+on:
+  # 每天北京时间 16:15 自动推送（UTC 08:15）
+  schedule:
+    - cron: '2 16 * * *'
+
+  # 支持手动运行
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pushplus-bing-daily
+  cancel-in-progress: false
+
+jobs:
+  push:
+    name: Fetch Bing Wallpaper and Push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      TZ: Asia/Shanghai
+      PUSHPLUS_TARGETS: ${{ secrets.PUSHPLUS_TARGETS }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PUSHPLUS_TARGETS:-}" ]; then
+            echo "::error::请配置 GitHub Secret PUSHPLUS_TARGETS"
+            exit 1
+          fi
+
+          node -e '
+            const targets = JSON.parse(process.env.PUSHPLUS_TARGETS);
+            if (!Array.isArray(targets) || targets.length === 0) {
+              throw new Error("PUSHPLUS_TARGETS 必须是非空数组");
+            }
+            for (const target of targets) {
+              if (!target || typeof target.token !== "string" || !target.token.trim()) {
+                throw new Error("每个目标都必须配置非空 token");
+              }
+              if (target.topic != null && typeof target.topic !== "string") {
+                throw new Error("topic 必须是字符串");
+              }
+            }
+            console.log(`配置校验通过，目标数量：${targets.length}`);
+          '
+
+      - name: Push today's Bing wallpaper
+        run: node scripts/pushplus-bing-daily.js
