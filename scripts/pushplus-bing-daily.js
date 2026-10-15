@@ -223,6 +223,8 @@ h1{margin:0;color:#fff;font-size:clamp(27px,4vw,43px);line-height:1.3;font-weigh
         <div class="actions">
           <a class="btn primary" href="${imageUrl}" target="_blank" rel="noopener noreferrer">查看高清原图 ↗</a>
           <a class="btn secondary" href="${copyrightLink}" target="_blank" rel="noopener noreferrer">了解图片来源</a>
+          <a class="btn secondary" href="https://bing.xn--xpqp35o.cn/" target="_blank" rel="noopener noreferrer" style="border-color:rgba(160,195,255,.55);background:rgba(105,150,220,.16);color:#e4edff;">探索更多每日壁纸 ↗</a>
+
         </div>
       </div>
     </article>
