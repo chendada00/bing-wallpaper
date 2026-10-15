@@ -1,7 +1,7 @@
 
 'use strict';
 
-const https = require('https');
+import https from 'node:https';
 
 const BING_API =
   'https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN';
