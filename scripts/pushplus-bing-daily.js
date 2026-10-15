@@ -323,4 +323,3 @@ main().catch(error => {
   console.error('Bing 每日壁纸推送任务失败：', error.message);
   process.exitCode = 1;
 });
-```
