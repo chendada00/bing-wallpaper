@@ -1,0 +1,54 @@
+
+name: Redeploy Bing Wallpaper
+
+on:
+  repository_dispatch:
+    types:
+      - data_updated
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bing-wallpaper-redeploy
+  cancel-in-progress: false
+
+jobs:
+  redeploy:
+    name: Trigger hosting platform rebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout bing-wallpaper
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.DEPLOY_TRIGGER_TOKEN }}
+          fetch-depth: 1
+
+      - name: Create deployment commit
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
+          SOURCE_ACTOR: ${{ github.event.client_payload.source_actor }}
+          SOURCE_FILES: ${{ github.event.client_payload.changed_files }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          SHORT_SHA="${SOURCE_SHA:0:7}"
+
+          git commit --allow-empty \
+            -m "chore: redeploy after bing-data update" \
+            -m "Source commit: $SOURCE_SHA" \
+            -m "Source actor: $SOURCE_ACTOR" \
+            -m "Changed data files: $SOURCE_FILES"
+
+          git push origin HEAD:main
+
+          echo "Deployment commit pushed."
+          echo "Source data commit: $SHORT_SHA"
