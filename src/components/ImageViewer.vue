@@ -3021,6 +3021,7 @@ onBeforeUnmount(() => {
   text-align: center;
 
   white-space: nowrap;
+  font-size: 11px;
 }
 
 
@@ -3049,6 +3050,7 @@ onBeforeUnmount(() => {
     repeat(9, minmax(0, 1fr));
 
   gap: 4px;
+  justify-content: space-around;
 }
 
 .histogram-row-label {
@@ -3063,7 +3065,7 @@ onBeforeUnmount(() => {
   color:
     rgba(255, 255, 255, 0.38);
 
-  font-size: 9px;
+  font-size: 11px;
 
   line-height: 1.2;
 
