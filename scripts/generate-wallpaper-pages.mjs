@@ -1334,6 +1334,182 @@ function createWallpaperHtml(
         transform: translateY(0) scale(1);
       }
     }
+
+
+
+    /* ================================================
+    视口高度优化：桌面端沉浸式详情页
+    追加在生成 HTML 的内嵌 style 最末尾
+    ================================================ */
+    
+    @media (min-width: 641px) {
+      html {
+        height: 100%;
+        overflow-x: clip;
+      }
+    
+      body {
+        height: 100%;
+        min-height: 0;
+        overflow-x: clip;
+      }
+    
+      .page {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+    
+        min-height: 0;
+    
+        padding:
+          calc(18px + var(--safe-top))
+          38px
+          calc(16px + var(--safe-bottom));
+    
+        box-sizing: border-box;
+        overflow: clip;
+      }
+    
+      /* 顶部品牌与操作栏悬浮在图片上方 */
+    
+      .topbar {
+        position: absolute;
+    
+        top: calc(18px + var(--safe-top));
+        left: 38px;
+        right: 38px;
+    
+        z-index: 20;
+    
+        min-height: 42px;
+    
+        pointer-events: none;
+      }
+    
+      .topbar > * {
+        pointer-events: auto;
+      }
+    
+      /* 图片舞台占据剩余空间 */
+    
+      .stage {
+        flex: 1 1 0;
+    
+        min-height: 0;
+    
+        padding: 52px 76px 12px;
+    
+        box-sizing: border-box;
+      }
+    
+      /* 不再使用固定的 300px 最小高度 */
+    
+      .wallpaper-frame {
+        width: 100%;
+    
+        height: 100%;
+        max-height: calc(100dvh - 240px);
+    
+        min-height: 0;
+    
+        box-sizing: border-box;
+      }
+    
+      .wallpaper-image {
+        display: block;
+    
+        max-width: 100%;
+        max-height: 100%;
+    
+        width: auto;
+        height: auto;
+    
+        object-fit: contain;
+      }
+    
+      /* 底部内容不被图片舞台挤压 */
+    
+      .bottom {
+        flex: 0 0 auto;
+    
+        gap: 24px;
+        margin-top: 0;
+      }
+    
+      .footer {
+        flex: 0 0 auto;
+    
+        margin-top: 12px;
+      }
+    }
+    
+    /* 中等宽度：缩小左右边距 */
+    
+    @media (min-width: 641px) and (max-width: 1050px) {
+      .page {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+    
+      .topbar {
+        left: 24px;
+        right: 24px;
+      }
+    
+      .stage {
+        padding-right: 60px;
+        padding-left: 60px;
+      }
+    
+      .wallpaper-frame {
+        max-height: calc(100dvh - 260px);
+      }
+    
+      .bottom {
+        gap: 16px;
+      }
+    }
+    
+    /* 手机端恢复自然文档流，避免内容被裁切 */
+    
+    @media (max-width: 640px) {
+      html,
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+      }
+    
+      .page {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+    
+        overflow: visible;
+      }
+    
+      .topbar {
+        position: relative;
+        inset: auto;
+    
+        pointer-events: auto;
+      }
+    
+      .topbar > * {
+        pointer-events: auto;
+      }
+    
+      .stage {
+        flex: 1 0 auto;
+        min-height: 300px;
+      }
+    
+      .wallpaper-frame {
+        height: min(57dvh, 600px);
+        min-height: 260px;
+      }
+    }
+ 
   </style>
 </head>
 

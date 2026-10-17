@@ -1145,12 +1145,18 @@ watch(
 .color-fingerprint {
   position: relative;
 
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: stretch;
 
   width: 100%;
   height: 9px;
 
-  margin-top: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  gap: 0;
+
+  box-sizing: border-box;
 
   overflow: visible;
 
@@ -1164,30 +1170,32 @@ watch(
 
   isolation: isolate;
 
-  transition:
-    height 0.22s ease;
+  transition: height 0.22s ease;
 }
 
 .color-fingerprint-cell {
   position: relative;
 
-  flex: 1 1 0;
+  display: block;
 
-  width: 0;
+  width: 100%;
   height: 100%;
-
   min-width: 0;
   min-height: 0;
 
+  margin: 0;
   padding: 0;
 
+  box-sizing: border-box;
+
   border: 0;
+  border-radius: 0;
 
-  background:
-    var(--fingerprint-color);
+  appearance: none;
+  -webkit-appearance: none;
 
-  opacity:
-    var(--fingerprint-opacity);
+  background: var(--fingerprint-color);
+  opacity: var(--fingerprint-opacity);
 
   cursor: crosshair;
 
