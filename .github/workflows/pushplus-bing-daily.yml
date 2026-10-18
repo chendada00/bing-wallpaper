@@ -2,9 +2,8 @@
 name: PushPlus Bing Daily Wallpaper
 
 on:
-  # 每天北京时间 16:15 自动推送（UTC 08:15）
   schedule:
-    - cron: '2 16 * * *'
+    - cron: '1 16 * * *'
 
   # 支持手动运行
   workflow_dispatch:
