@@ -144,7 +144,7 @@
                   </a>
 
                   <a
-                    href="https://github.com/chendada00/bing-data"
+                    href="https://bing-data.xn--xpqp35o.cn/"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="github-menu-item"
@@ -160,7 +160,7 @@
                   </a>
 
                   <a
-                    href="https://github.com/chendada00/bing-uhd"
+                    href="https://bing-uhd.xn--xpqp35o.cn/"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="github-menu-item"
