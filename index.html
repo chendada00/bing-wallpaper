@@ -61,21 +61,26 @@
 
     <title>Bing Wallpaper · 每日高清壁纸</title>
     
-    <!-- Matomo -->
     <script>
-      var _paq = window._paq = window._paq || [];
-      /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-      _paq.push(['trackPageView']);
-      _paq.push(['enableLinkTracking']);
-      (function() {
-        var u="https://xnxpqp35o.matomo.cloud/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', '1']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.async=true; g.src='https://cdn.matomo.cloud/xnxpqp35o.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
+      (function () {
+        var host = window.location.hostname;
+        var websiteId;
+    
+        if (host === 'bing.xn--xpqp35o.cn') {
+          websiteId = 'fc409761-4268-4b11-ae42-eba986e1a591';
+        } else if (host === 'wall.xn--xpqp35o.cn') {
+          websiteId = '1b448c73-1850-43d4-982b-04bdab90510f';
+        } else {
+          return;
+        }
+    
+        var script = document.createElement('script');
+        script.defer = true;
+        script.src = 'https://cloud.umami.is/script.js';
+        script.setAttribute('data-website-id', websiteId);
+        document.head.appendChild(script);
       })();
     </script>
-    <!-- End Matomo Code -->
     
   </head>
 
