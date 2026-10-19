@@ -433,6 +433,26 @@ function createWallpaperHtml(
     fetchpriority="high"
   >
 
+  <script>
+    (function () {
+      var host = window.location.hostname;
+      var websiteId;
+  
+      if (host === 'bing.xn--xpqp35o.cn') {
+        websiteId = 'fc409761-4268-4b11-ae42-eba986e1a591';
+      } else if (host === 'wall.xn--xpqp35o.cn') {
+        websiteId = '1b448c73-1850-43d4-982b-04bdab90510f';
+      } else {
+        return;
+      }
+  
+      var script = document.createElement('script');
+      script.defer = true;
+      script.src = 'https://cloud.umami.is/script.js';
+      script.setAttribute('data-website-id', websiteId);
+      document.head.appendChild(script);
+    })();
+  </script>
   <script type="application/ld+json">${JSON.stringify(jsonLd).replaceAll('<', '\\u003c')}</script>
 
   <style>
