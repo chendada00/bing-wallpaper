@@ -50,6 +50,19 @@ button {
   isolation: isolate;
 }
 
+#app, body {
+  box-sizing: border-box;
+  min-height: 100vh;
+  
+  padding-bottom: 35px; 
+}
+
+@media (max-width: 768px) {
+  #app, body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  }
+}
+
 
 /* ================================
    Ambient Wallpaper Background

@@ -406,6 +406,7 @@
 
       </main>
 
+      <SiteFooter/>
 
 
       <Timeline
@@ -460,6 +461,8 @@ import NotificationToast from './components/NotificationToast.vue'
 import MonthPicker from './components/MonthPicker.vue'
 
 import { setHomeSeo } from './utils/seo'
+
+import SiteFooter from './components/SiteFooter.vue'
 
 import {
   useBingData
