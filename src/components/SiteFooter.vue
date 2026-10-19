@@ -43,25 +43,28 @@ const currentYear = new Date().getFullYear()
 
 <style scoped>
 /* 底部置底，融入页面 */
+
 .site-footer {
   position: fixed;
   z-index: 1000;
   left: 0;
   right: 0;
   bottom: 0;
-  
+
   box-sizing: border-box;
   width: 100%;
   padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom, 0); /* 适配 iPhone 底部安全区 */
+  padding-bottom: env(safe-area-inset-bottom, 0);
 
-  /* 半透明毛玻璃效果 */
-  background: var(--bg-color, rgba(255, 255, 255, 0.65));
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  
-  border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.15));
+  /* 与 src/style.css 的 .site-header 保持一致 */
+  background: rgba(247, 247, 247, 0.72);
+
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+
+  border-top: 1px solid rgba(0, 0, 0, 0.055);
 }
+
 
 .footer-inner {
   display: flex;

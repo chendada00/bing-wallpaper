@@ -710,6 +710,9 @@ button {
   gap: 16px;
 }
 
+.month-view-heading + .wallpaper-grid {
+  margin-top: 24px;
+}
 
 /* ================================
    Infinite Scroll Trigger
@@ -1407,66 +1410,74 @@ body {
   }
 }
 
-/* ================================
-   Month archive toolbar
-================================ */
+
+/* =========================================
+   月份筛选悬浮面板
+========================================= */
 
 .month-view-heading {
-  box-sizing: border-box;
+  position: fixed;
+  top: 78px;
+  right: 22px;
+  z-index: 90;
 
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
 
-  width: 100%;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 32px);
   min-width: 0;
-  margin: 0 0 18px;
-  padding: 17px 19px;
+  margin: 0;
+  padding: 10px 12px 10px 15px;
 
-  border: 1px solid rgba(0, 0, 0, .055);
-  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 16px;
 
-  background: rgba(255, 255, 255, .66);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, .025);
+  /* 和顶部、底部采用相同的玻璃效果 */
+  background: rgba(247, 247, 247, 0.72);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
 
-  overflow: hidden;
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .month-view-copy {
-  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  column-gap: 9px;
+  row-gap: 2px;
   min-width: 0;
 }
 
 .month-view-eyebrow {
-  display: block;
-  margin-bottom: 5px;
-
-  color: #999990;
-  font-size: 9px;
+  grid-column: 1 / -1;
+  color: #85857d;
+  font-size: 8px;
   font-weight: 650;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.3px;
 }
 
 .month-view-copy h2 {
   margin: 0;
-
   color: #292929;
-  font-size: 23px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
-  letter-spacing: -.6px;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .month-view-copy p {
-  margin: 5px 0 0;
-
-  color: #888880;
-  font-size: 11px;
-  line-height: 1.5;
+  margin: 0;
+  color: #777970;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .month-home-button {
@@ -1474,118 +1485,253 @@ body {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 5px;
 
-  min-height: 35px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 10px;
 
-  border: 1px solid rgba(0, 0, 0, .075);
-  border-radius: 9px;
+  border: 1px solid rgba(0, 0, 0, 0.075);
+  border-radius: 10px;
 
-  background: rgba(255, 255, 255, .86);
+  background: rgba(255, 255, 255, 0.55);
   color: #444;
 
   font: inherit;
   font-size: 11px;
-  font-weight: 600;
   white-space: nowrap;
-
   cursor: pointer;
 
   transition:
-    background .18s ease,
-    border-color .18s ease,
-    transform .18s ease;
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 }
 
 .month-home-button span {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
 }
 
 .month-home-button:hover {
-  border-color: rgba(0, 0, 0, .14);
-  background: #fff;
+  border-color: rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
 }
 
 .month-home-button:active {
-  transform: scale(.98);
+  transform: scale(0.97);
 }
 
-@media (max-width: 700px) {
-  .month-view-heading {
-    gap: 10px;
-    margin-bottom: 14px;
-    padding: 14px;
-    border-radius: 13px;
-  }
+/* 悬浮进入和离开 */
+.month-float-enter-active,
+.month-float-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease;
+}
 
-  .month-view-eyebrow {
-    font-size: 8px;
-    letter-spacing: 1.2px;
+.month-float-enter-from,
+.month-float-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
+
+/* 深色系统主题 */
+@media (prefers-color-scheme: dark) {
+  .month-view-heading {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(35, 35, 35, 0.74);
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .month-view-copy h2 {
-    font-size: 20px;
+    color: #f2f2f2;
+  }
+
+  .month-view-copy p,
+  .month-view-eyebrow {
+    color: #b0b0b0;
+  }
+
+  .month-home-button {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+    color: #eee;
+  }
+
+  .month-home-button:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+/* ==========================================
+   移动端月份筛选：悬浮毛玻璃优化
+   追加在 style.css 最末尾
+========================================== */
+
+@media (max-width: 700px) {
+  /* 筛选状态增加顶部呼吸空间 */
+  .main-content.month-filter-active {
+    padding-top: 20px;
+  }
+
+  /* 保留毛玻璃风格，但不再遮挡壁纸 */
+  .month-view-heading {
+    position: sticky;
+    top: 100px;
+    right: auto;
+    z-index: 90;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+
+    margin: 0 0 18px auto;
+    padding: 10px 12px;
+
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    border-radius: 15px;
+
+    background: rgba(247, 247, 247, 0.78);
+    backdrop-filter: blur(22px) saturate(145%);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+
+    box-shadow:
+      0 8px 26px rgba(0, 0, 0, 0.075),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* 隐藏占空间的英文眉题 */
+  .month-view-eyebrow {
+    display: none;
+  }
+
+  /* 左侧两行：月份 + 壁纸数量 */
+  .month-view-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .month-view-copy h2 {
+    margin: 0;
+    color: #292929;
+
+    font-size: 17px;
+    font-weight: 750;
+    line-height: 1.35;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
   }
 
   .month-view-copy p {
+    margin: 0;
+    color: #777;
+
     font-size: 10px;
+    line-height: 1.4;
+    white-space: nowrap;
   }
 
+  /* 右侧返回按钮保持紧凑 */
   .month-home-button {
-    min-height: 33px;
-    gap: 5px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+
+    min-height: 32px;
     padding: 0 9px;
-    border-radius: 8px;
+
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 9px;
+
+    background: rgba(255, 255, 255, 0.74);
+    color: #444;
+
     font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .month-home-button span {
+    font-size: 14px;
+  }
+
+  /* 筛选结果和月份栏之间留出清晰间距 */
+  .main-content.month-filter-active .wallpaper-grid {
+    margin-top: 0;
   }
 }
 
-@media (max-width: 360px) {
+/* 更窄的手机屏幕 */
+@media (max-width: 380px) {
+  .main-content.month-filter-active {
+    padding-top: 10px;
+  }
+
   .month-view-heading {
-    gap: 7px;
-    padding: 11px;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 13px;
   }
 
   .month-view-copy h2 {
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  .month-view-copy p {
+    font-size: 9px;
   }
 
   .month-home-button {
+    gap: 3px;
+    min-height: 30px;
     padding: 0 7px;
     font-size: 9px;
   }
 }
 
-@media (prefers-color-scheme: dark) {
+/* 移动端深色模式 */
+@media (max-width: 700px) and (prefers-color-scheme: dark) {
   .month-view-heading {
-    border-color: rgba(255, 255, 255, .075);
-    background: rgba(28, 28, 28, .72);
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(30, 30, 30, 0.82);
+
+    box-shadow:
+      0 8px 26px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .month-view-copy h2 {
-    color: #eee;
+    color: #f2f2f2;
   }
 
-  .month-view-copy p,
-  .month-view-eyebrow {
+  .month-view-copy p {
     color: #aaa;
   }
 
   .month-home-button {
-    border-color: rgba(255, 255, 255, .1);
-    background: rgba(255, 255, 255, .055);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: #eee;
-  }
-
-  .month-home-button:hover {
-    background: rgba(255, 255, 255, .12);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .month-float-enter-active,
+  .month-float-leave-active,
   .month-home-button {
     transition: none;
   }

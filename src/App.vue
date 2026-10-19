@@ -191,37 +191,44 @@
 
 
 
-      <main class="main-content">
+      <main
+        class="main-content"
+        :class="{ 'month-filter-active': selectedMonth }"
+      >
 
-        <!-- 月份筛选状态 -->
-        <section
-          v-if="selectedMonth"
-          class="month-view-heading"
-        >
-          <div class="month-view-copy">
-            <span class="month-view-eyebrow">
-              WALLPAPER ARCHIVE
-            </span>
-
-            <h2>
-              {{ Number(selectedMonth.slice(0, 4)) }}年
-              {{ Number(selectedMonth.slice(5, 7)) }}月
-            </h2>
-
-            <p>
-              本月共收录 {{ monthViewItems.length }} 张壁纸
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="month-home-button"
-            @click="returnToHome"
+        <!-- 当前月份悬浮面板 -->
+        <Transition name="month-float">
+          <section
+            v-if="selectedMonth"
+            class="month-view-heading"
+            aria-label="当前月份筛选状态"
           >
-            <span aria-hidden="true">↶</span>
-            返回主页
-          </button>
-        </section>
+            <div class="month-view-copy">
+              <span class="month-view-eyebrow">
+                WALLPAPER ARCHIVE
+              </span>
+
+              <h2>
+                {{ Number(selectedMonth.slice(0, 4)) }}年
+                {{ Number(selectedMonth.slice(5, 7)) }}月
+              </h2>
+
+              <p>
+                {{ monthViewItems.length }} 张壁纸
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="month-home-button"
+              @click="returnToHome"
+            >
+              <span aria-hidden="true">↶</span>
+              返回主页
+            </button>
+          </section>
+        </Transition>
+
 
 
 
