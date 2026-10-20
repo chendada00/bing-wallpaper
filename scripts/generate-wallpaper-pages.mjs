@@ -375,15 +375,21 @@ function createWallpaperHtml(
     name: title,
     description,
     contentUrl: image,
-    thumbnailUrl: preview, // 增加缩略图，方便 AI 索引预览
+    thumbnailUrl: preview,
     url: pageUrl,
-    datePublished: date, // 日期，利于 AI 理解每日更新属性
+    datePublished: date,
     ...(width > 0 ? { width } : {}),
     ...(height > 0 ? { height } : {}),
-    ...(copyright
-      ? { creditText: copyright }
-      : {}),
-    // 补充 AI 识别所需属性
+    
+    // 将版权信息放入更标准的 copyrightNotice 字段
+    ...(copyright ? { copyrightNotice: copyright } : {}),
+    
+    // 明确提供一个创作者实体（对于壁纸站，写 Bing 或你的站点名都很合理）
+    creator: {
+      "@type": "Organization",
+      "name": "Bing Wallpaper"
+    },
+    
     isPartOf: {
       "@type": "WebSite",
       "name": "Bing Wallpaper",
@@ -393,9 +399,7 @@ function createWallpaperHtml(
       "@type": "Organization",
       "name": "Bing Wallpaper",
       "url": SITE_URL
-    },
-    // 如果版权信息里包含摄影师，可以置为 author。如果没有，可以忽略
-    ...(copyright ? { author: { "@type": "Person", "name": copyright } } : {})
+    }
   }
 
   return `<!doctype html>
