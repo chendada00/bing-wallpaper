@@ -368,19 +368,34 @@ function createWallpaperHtml(
       </button>
     `
 
+  // ===== 修改点开始：丰富了 JSON-LD 结构化数据 =====
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ImageObject',
     name: title,
     description,
     contentUrl: image,
+    thumbnailUrl: preview, // 增加缩略图，方便 AI 索引预览
     url: pageUrl,
-    datePublished: date,
+    datePublished: date, // 日期，利于 AI 理解每日更新属性
     ...(width > 0 ? { width } : {}),
     ...(height > 0 ? { height } : {}),
     ...(copyright
       ? { creditText: copyright }
-      : {})
+      : {}),
+    // 补充 AI 识别所需属性
+    isPartOf: {
+      "@type": "WebSite",
+      "name": "Bing Wallpaper",
+      "url": SITE_URL
+    },
+    publisher: {
+      "@type": "Organization",
+      "name": "Bing Wallpaper",
+      "url": SITE_URL
+    },
+    // 如果版权信息里包含摄影师，可以置为 author。如果没有，可以忽略
+    ...(copyright ? { author: { "@type": "Person", "name": copyright } } : {})
   }
 
   return `<!doctype html>
