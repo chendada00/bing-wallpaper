@@ -24,7 +24,7 @@
       <!-- 中间：备案信息 -->
       <div class="footer-center">
         <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="link-item">
-          京ICP备2022017849号-2
+          京ICP备2022017849号-4
         </a>
       </div>
 
