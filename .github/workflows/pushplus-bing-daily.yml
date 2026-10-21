@@ -2,9 +2,6 @@
 name: PushPlus Bing Daily Wallpaper
 
 on:
-  schedule:
-    - cron: '1 16 * * *'
-
   # 支持手动运行
   workflow_dispatch:
 
