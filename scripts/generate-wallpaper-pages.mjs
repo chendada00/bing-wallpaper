@@ -6,7 +6,7 @@ import {
 } from 'node:fs/promises'
 
 import path from 'node:path'
-
+import { loadEnv } from 'vite'
 import {
   loadSourceDataset,
   normalizeSourceImageUrl,
@@ -27,20 +27,14 @@ const fileEnv = loadEnv(
 
 const SITE_URL = (
   process.env.VITE_SITE_URL ||
+  fileEnv.VITE_SITE_URL ||
   'https://bing.伴随.cn'
-).replace(/\/+$/, '')
-
-const DATA_BASE_URL = (
-  process.env.VITE_DATA_BASE_URL ||
-  fileEnv.VITE_DATA_BASE_URL ||
-  'https://bing-data.伴随.cn'
 ).replace(/\/+$/, '')
 
 const OUTPUT_DIR = path.resolve(
   process.cwd(),
   'public/wallpaper'
 )
-
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 console.log('开始生成沉浸式壁纸页面...')
@@ -84,30 +78,7 @@ function isValidDate(value) {
  */
 
 function normalizeImageUrl(value) {
-  if (!value || typeof value !== 'string') {
-    return ''
-  }
-
-  const source = value.trim()
-
-  if (
-    !source ||
-    source.startsWith('data:') ||
-    source.startsWith('blob:')
-  ) {
-    return source.startsWith('data:image/')
-      ? source
-      : ''
-  }
-
-  try {
-    return new URL(
-      source,
-      `${DATA_BASE_URL}/`
-    ).href
-  } catch {
-    return ''
-  }
+  return normalizeSourceImageUrl(value)
 }
 
 /**
