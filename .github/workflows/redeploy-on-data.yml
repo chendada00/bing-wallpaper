@@ -15,9 +15,9 @@ concurrency:
 
 jobs:
   redeploy:
-    name: Trigger hosting platform rebuild
+    name: Pin data source and trigger rebuild
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout bing-wallpaper
@@ -25,30 +25,115 @@ jobs:
         with:
           ref: main
           token: ${{ secrets.DEPLOY_TRIGGER_TOKEN }}
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Create deployment commit
+      - name: Validate source SHA and prevent rollback
+        id: source
         shell: bash
         env:
           SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::source_sha must be a full 40-character commit SHA"
+            exit 1
+          fi
+
+          SOURCE_SHA="$(printf '%s' "$SOURCE_SHA" | tr '[:upper:]' '[:lower:]')"
+
+          # 拉取 bing-data main 的历史，以校验 SHA 是否真实存在，
+          # 并避免旧事件覆盖已经记录的更新版本。
+          git fetch --no-tags --unshallow \
+            https://github.com/chendada00/bing-data.git \
+            main:refs/remotes/bing-data/main 2>/dev/null || \
+          git fetch --no-tags \
+            https://github.com/chendada00/bing-data.git \
+            main:refs/remotes/bing-data/main
+
+          if ! git cat-file -e "${SOURCE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags \
+              https://github.com/chendada00/bing-data.git \
+              "$SOURCE_SHA"
+          fi
+
+          if ! git cat-file -e "${SOURCE_SHA}^{commit}"; then
+            echo "::error::Source commit not found: $SOURCE_SHA"
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor \
+            "$SOURCE_SHA" refs/remotes/bing-data/main; then
+            echo "::error::Source SHA is not an ancestor of bing-data/main"
+            exit 1
+          fi
+
+          CURRENT_SHA="$(
+            node -e "const c=require('./data-source.json'); console.log(c.ref)"
+          )"
+
+          if [[ "$CURRENT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            CURRENT_SHA="$(printf '%s' "$CURRENT_SHA" | tr '[:upper:]' '[:lower:]')"
+
+            if git cat-file -e "${CURRENT_SHA}^{commit}" 2>/dev/null &&
+               git merge-base --is-ancestor "$SOURCE_SHA" "$CURRENT_SHA"; then
+              echo "Incoming data commit is older than or equal to the pinned version."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update data-source.json
+        if: steps.source.outputs.skip != 'true'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
           SOURCE_ACTOR: ${{ github.event.client_payload.source_actor }}
           SOURCE_FILES: ${{ github.event.client_payload.changed_files }}
         run: |
           set -euo pipefail
 
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises'
+
+          const sha = process.env.SOURCE_SHA
+          const path = 'data-source.json'
+          const config = JSON.parse(await readFile(path, 'utf8'))
+
+          config.repository = 'chendada00/bing-data'
+          config.ref = sha
+
+          await writeFile(
+            path,
+            JSON.stringify(config, null, 2) + '\n',
+            'utf8'
+          )
+          NODE
+
           git config user.name "github-actions[bot]"
           git config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
-          SHORT_SHA="${SOURCE_SHA:0:7}"
+          git add data-source.json
 
-          git commit --allow-empty \
-            -m "chore: redeploy after bing-data update" \
+          if git diff --cached --quiet; then
+            echo "Pinned source SHA is unchanged; no commit needed."
+            exit 0
+          fi
+
+          git commit \
+            -m "chore: update pinned bing-data source" \
             -m "Source commit: $SOURCE_SHA" \
-            -m "Source actor: $SOURCE_ACTOR" \
-            -m "Changed data files: $SOURCE_FILES"
+            -m "Source actor: ${SOURCE_ACTOR:-unknown}" \
+            -m "Changed data files: ${SOURCE_FILES:-unknown}"
 
           git push origin HEAD:main
 
-          echo "Deployment commit pushed."
-          echo "Source data commit: $SHORT_SHA"
+          echo "Updated data-source.json to $SOURCE_SHA"
+
+      - name: Skip stale event
+        if: steps.source.outputs.skip == 'true'
+        run: echo "Skipped an older or duplicate data update event."

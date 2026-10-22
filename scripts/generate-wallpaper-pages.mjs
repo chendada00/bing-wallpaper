@@ -5,8 +5,13 @@ import {
   writeFile
 } from 'node:fs/promises'
 
-import { loadEnv } from 'vite'
 import path from 'node:path'
+
+import {
+  loadSourceDataset,
+  normalizeSourceImageUrl,
+  SOURCE_SHA
+} from './data-source.mjs'
 
 /**
  * =========================================================
@@ -22,7 +27,6 @@ const fileEnv = loadEnv(
 
 const SITE_URL = (
   process.env.VITE_SITE_URL ||
-  fileEnv.VITE_SITE_URL ||
   'https://bing.伴随.cn'
 ).replace(/\/+$/, '')
 
@@ -41,7 +45,7 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 console.log('开始生成沉浸式壁纸页面...')
 console.log(`网站地址：${SITE_URL}`)
-console.log(`数据地址：${DATA_BASE_URL}`)
+console.log(`数据版本：${SOURCE_SHA}`)
 
 /**
  * =========================================================
@@ -104,129 +108,6 @@ function normalizeImageUrl(value) {
   } catch {
     return ''
   }
-}
-
-/**
- * =========================================================
- * 4. 数据加载
- * =========================================================
- */
-
-async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json'
-    },
-    signal: AbortSignal.timeout(30000)
-  })
-
-  if (!response.ok) {
-    throw new Error(
-      `请求数据失败：HTTP ${response.status} ${url}`
-    )
-  }
-
-  return response.json()
-}
-
-async function loadWallpaperIndex() {
-  const url = `${DATA_BASE_URL}/data/index.json`
-
-  console.log(`读取壁纸索引：${url}`)
-
-  const data = await fetchJson(url)
-
-  const indexItems = Array.isArray(data.items)
-    ? data.items
-    : []
-
-  const dates = [
-    ...new Set(
-      indexItems
-        .map(item => item?.[0])
-        .filter(isValidDate)
-    )
-  ].sort((a, b) => b.localeCompare(a))
-
-  if (!dates.length) {
-    throw new Error(
-      'index.json 中没有找到有效的壁纸日期'
-    )
-  }
-
-  return dates
-}
-
-/**
- * 按月份分组，避免每张壁纸都重复请求同一个月的数据。
- */
-function groupDatesByMonth(dates) {
-  const groups = new Map()
-
-  for (const date of dates) {
-    const month = date.slice(0, 7)
-
-    if (!groups.has(month)) {
-      groups.set(month, [])
-    }
-
-    groups.get(month).push(date)
-  }
-
-  return groups
-}
-
-async function loadMonthlyWallpapers(months) {
-  const allWallpapers = new Map()
-
-  const monthEntries = [...months.keys()]
-
-  // 限制并发，避免历史数据较多时同时发出大量请求。
-  const concurrency = 6
-
-  let cursor = 0
-
-  async function worker() {
-    while (cursor < monthEntries.length) {
-      const month = monthEntries[cursor++]
-
-      const [year, monthNumber] = month.split('-')
-
-      const url =
-        `${DATA_BASE_URL}/data/` +
-        `${year}/${monthNumber}.json`
-
-      console.log(`读取月份数据：${month}`)
-
-      const data = await fetchJson(url)
-
-      const items = Array.isArray(data.items)
-        ? data.items
-        : []
-
-      for (const item of items) {
-        if (!isValidDate(item?.date)) {
-          continue
-        }
-
-        allWallpapers.set(item.date, item)
-      }
-    }
-  }
-
-  await Promise.all(
-    Array.from(
-      {
-        length: Math.min(
-          concurrency,
-          monthEntries.length
-        )
-      },
-      () => worker()
-    )
-  )
-
-  return allWallpapers
 }
 
 /**
@@ -1883,14 +1764,14 @@ function createWallpaperHtml(
  */
 
 async function main() {
-  const dates = await loadWallpaperIndex()
-
-  const months = groupDatesByMonth(dates)
+  const {
+    dates,
+    months,
+    wallpapers: rawWallpapers
+  } = await loadSourceDataset()
 
   console.log(`索引中共有 ${dates.length} 个日期`)
-  console.log(`需要读取 ${months.size} 个月的数据`)
-
-  const rawWallpapers = await loadMonthlyWallpapers(months)
+  console.log(`需要读取 ${months.length} 个月的数据`)
 
   const wallpapers = dates
     .map(date => {
