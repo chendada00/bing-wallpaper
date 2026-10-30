@@ -9,11 +9,20 @@ const fileEnv = loadEnv(
   'VITE_'
 )
 
-const SITE_URL = (
+const RAW_SITE_URL =
   process.env.VITE_SITE_URL ||
   fileEnv.VITE_SITE_URL ||
   'https://bing.伴随.cn'
-).replace(/\/+$/, '')
+
+// 使用 URL 标准化域名，中文域名会自动转换为 Punycode
+const parsedSiteUrl = new URL(RAW_SITE_URL)
+
+if (parsedSiteUrl.protocol !== 'https:') {
+  throw new Error('VITE_SITE_URL 必须使用 HTTPS')
+}
+
+// 只保留网站 origin，避免路径、查询参数影响 Sitemap URL
+const SITE_URL = parsedSiteUrl.origin
 
 if (!SITE_URL) {
   throw new Error('VITE_SITE_URL is required when generating sitemap.')
@@ -70,7 +79,7 @@ async function main() {
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     ''
   ].join('\n')
-
+  
   await writeFile('public/robots.txt', robots, 'utf8')
 
   console.log(`Sitemap 数据版本：${SOURCE_SHA}`)
