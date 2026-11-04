@@ -81,6 +81,14 @@ function normalizeImageUrl(value) {
   return normalizeSourceImageUrl(value)
 }
 
+function shortenDescription(text, maxLength = 160) {
+  const value = String(text || '').trim()
+
+  return value.length <= maxLength
+    ? value
+    : `${value.slice(0, maxLength - 1)}…`
+}
+
 /**
  * =========================================================
  * 5. 壁纸数据规范化
@@ -93,10 +101,17 @@ function normalizeWallpaper(item, date) {
     item?.copyright ||
     `Bing Wallpaper ${date}`
 
-  const description =
+  const rawDescription =
     item?.description ||
     item?.copyright ||
-    `${date} Bing 每日壁纸`
+    ''
+
+  const description = shortenDescription(
+    rawDescription
+      ? `${title}。${rawDescription}。查看 ${date} 的 Bing 每日壁纸及图片说明。`
+      : `查看 ${date} 的 Bing 每日壁纸：${title}。浏览图片并打开高清原图。`,
+    160
+  )
 
   // 与现有项目的图片 URL 优先级保持一致。
   const image =
