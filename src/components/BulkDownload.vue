@@ -56,76 +56,126 @@
                   </span>
                 </div>
 
-                <div class="bulk-date-grid">
-                  <label class="bulk-field">
-                    <span>开始日期</span>
-                    <input
-                      v-model="startDate"
-                      type="date"
-                      :max="endDate || availableMaxDate"
-                      @change="validateRange"
-                    />
-                  </label>
+<div class="bulk-calendar">
+  <div class="bulk-calendar-header">
+    <button
+      type="button"
+      class="bulk-calendar-nav"
+      aria-label="上个月"
+      @click="changeCalendarMonth(-1)"
+    >
+      ‹
+    </button>
 
-                  <label class="bulk-field">
-                    <span>结束日期</span>
-                    <input
-                      v-model="endDate"
-                      type="date"
-                      :min="startDate"
-                      :max="availableMaxDate"
-                      @change="validateRange"
-                    />
-                  </label>
-                </div>
+    <strong>{{ calendarTitle }}</strong>
 
-                <div class="bulk-date-presets">
-                  <button type="button" @click="applyPreset(7)">最近 7 天</button>
-                  <button type="button" @click="applyPreset(30)">最近 30 天</button>
-                  <button type="button" @click="applyPreset(60)">最近 60 天</button>
-                </div>
+    <button
+      type="button"
+      class="bulk-calendar-nav"
+      aria-label="下个月"
+      :disabled="calendarNextDisabled"
+      @click="changeCalendarMonth(1)"
+    >
+      ›
+    </button>
+  </div>
 
-                <p v-if="rangeError" class="bulk-error">
-                  {{ rangeError }}
-                </p>
-              </div>
+  <div class="bulk-calendar-weekdays">
+    <span v-for="day in weekDays" :key="day">
+      {{ day }}
+    </span>
+  </div>
 
-              <div class="bulk-quality">
-                <span class="bulk-section-label">保存方式</span>
+  <div class="bulk-calendar-grid">
+    <button
+      v-for="day in calendarCells"
+      :key="day.value"
+      type="button"
+      class="bulk-calendar-day"
+      :class="{
+        'is-outside': !day.inMonth,
+        'is-selected': isDateSelected(day.value),
+        'is-in-range': isDateInRange(day.value),
+        'is-disabled': day.value > todayString
+      }"
+      :disabled="day.value > todayString"
+      @click="selectCalendarDate(day.value)"
+    >
+      {{ day.day }}
+    </button>
+  </div>
 
-                <label
-                  class="bulk-quality-option"
-                  :class="{ selected: saveMode === 'browser' }"
-                >
-                  <input v-model="saveMode" type="radio" value="browser" />
+  <div class="bulk-calendar-selection">
+    <div>
+      <span>开始日期</span>
+      <strong>{{ startDate || '请选择' }}</strong>
+    </div>
 
-                  <span class="bulk-radio-mark"></span>
+    <div class="bulk-calendar-selection-arrow">→</div>
 
-                  <span class="bulk-quality-copy">
-                    <strong>浏览器下载</strong>
-                    <small>通过浏览器下载，能在下载记录中查看</small>
-                  </span>
-                </label>
+    <div>
+      <span>结束日期</span>
+      <strong>{{ endDate || '请选择' }}</strong>
+    </div>
+  </div>
 
-                <label
-                  class="bulk-quality-option"
-                  :class="{ selected: saveMode === 'folder' }"
-                >
-                  <input
-                    v-model="saveMode"
-                    type="radio"
-                    value="folder"
-                    :disabled="!supportsSavePicker"
-                  />
+  <div class="bulk-date-presets">
+    <button type="button" @click="applyPreset(7)">最近 7 天</button>
+    <button type="button" @click="applyPreset(30)">最近 30 天</button>
+    <button type="button" @click="applyPreset(60)">最近 60 天</button>
+  </div>
 
-                  <span class="bulk-radio-mark"></span>
+  <p v-if="rangeError" class="bulk-error">
+    {{ rangeError }}
+  </p>
+</div>
 
-                  <span class="bulk-quality-copy">
-                    <strong>保存到指定位置</strong>
-                    <small>直接写入选择的文件，更适合大量 UHD 图片</small>
-                  </span>
-                </label>
-              </div>
+
+
+<div class="bulk-quality">
+  <span class="bulk-section-label">图片清晰度</span>
+
+  <label
+    class="bulk-quality-option"
+    :class="{ selected: quality === 'preview' }"
+  >
+    <input
+      v-model="quality"
+      type="radio"
+      value="preview"
+    />
+
+    <span class="bulk-radio-mark"></span>
+
+    <span class="bulk-quality-copy">
+      <strong>预览图</strong>
+      <small>文件较小，下载速度快，适合日常收藏</small>
+    </span>
+
+    <span class="bulk-quality-tag">默认</span>
+  </label>
+
+  <label
+    class="bulk-quality-option"
+    :class="{ selected: quality === 'uhd' }"
+  >
+    <input
+      v-model="quality"
+      type="radio"
+      value="uhd"
+    />
+
+    <span class="bulk-radio-mark"></span>
+
+    <span class="bulk-quality-copy">
+      <strong>高清原图 UHD</strong>
+      <small>高分辨率壁纸，文件较大，下载耗时更长</small>
+    </span>
+
+    <span class="bulk-quality-tag">UHD</span>
+  </label>
+</div>
+</div>
 
               <div v-if="quality === 'uhd'" class="bulk-notice">
                 <span class="bulk-notice-icon">i</span>
@@ -273,21 +323,14 @@ const currentFile = ref('')
 const failedItems = ref([])
 const availableMinDate = ref('')
 const availableMaxDate = ref('')
-const phase = ref
 
 let activeController = null
 let pauseResolver = null
 let pauseRequested = false
 let cancelRequested = false
 let zipWriter = null
-let activeWritable = null
 let taskItems = []
 let taskToken = 0
-
-const saveMode = ref('browser')
-const supportsSavePicker =
-  typeof window !== 'undefined' &&
-  'showSaveFilePicker' in window
 
 const busy = computed(() => [
   'loading',
@@ -299,6 +342,132 @@ const selectedMonthCount = computed(() => {
   if (!startDate.value || !endDate.value) return 0
   return monthDistance(startDate.value, endDate.value) + 1
 })
+
+
+const todayString = formatDate(new Date())
+
+const calendarMonth = ref(
+  new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1
+  )
+)
+
+const weekDays = [
+  '日', '一', '二', '三', '四', '五', '六'
+]
+
+const calendarTitle = computed(() => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'long'
+  }).format(calendarMonth.value)
+})
+
+const calendarNextDisabled = computed(() => {
+  const current = calendarMonth.value
+  const today = new Date()
+
+  return (
+    current.getFullYear() > today.getFullYear() ||
+    (
+      current.getFullYear() === today.getFullYear() &&
+      current.getMonth() >= today.getMonth()
+    )
+  )
+})
+
+const calendarCells = computed(() => {
+  const year = calendarMonth.value.getFullYear()
+  const month = calendarMonth.value.getMonth()
+
+  const firstDay = new Date(year, month, 1)
+  const gridStart = new Date(
+    year,
+    month,
+    1 - firstDay.getDay()
+  )
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+
+    return {
+      value: formatDate(date),
+      day: date.getDate(),
+      inMonth: date.getMonth() === month
+    }
+  })
+})
+
+function changeCalendarMonth(offset) {
+  const current = calendarMonth.value
+
+  const next = new Date(
+    current.getFullYear(),
+    current.getMonth() + offset,
+    1
+  )
+
+  const today = new Date()
+
+  if (
+    next.getFullYear() > today.getFullYear() ||
+    (
+      next.getFullYear() === today.getFullYear() &&
+      next.getMonth() > today.getMonth()
+    )
+  ) {
+    return
+  }
+
+  calendarMonth.value = next
+}
+
+function isDateSelected(date) {
+  return date === startDate.value || date === endDate.value
+}
+
+function isDateInRange(date) {
+  return Boolean(
+    startDate.value &&
+    endDate.value &&
+    date >= startDate.value &&
+    date <= endDate.value
+  )
+}
+
+function selectCalendarDate(date) {
+  if (date > todayString) return
+
+  // 尚未选择开始日期，或者之前的范围已经完整
+  if (!startDate.value || endDate.value) {
+    startDate.value = date
+    endDate.value = ''
+  } else {
+    if (date < startDate.value) {
+      startDate.value = date
+    } else {
+      endDate.value = date
+    }
+  }
+
+  validateRange()
+}
+
+function applyPreset(days) {
+  endDate.value = todayString
+  startDate.value = shiftDate(todayString, -(days - 1))
+
+  calendarMonth.value = new Date(
+    `${startDate.value.slice(0, 7)}-01T12:00:00`
+  )
+
+  validateRange()
+}
+
+
 const canStart = computed(() => {
   return Boolean(
     startDate.value &&
@@ -364,23 +533,14 @@ function shiftDate(dateString, days) {
 function openDialog() {
   visible.value = true
 
-  // 这里只设置默认日期，不发起任何网络请求
   if (!startDate.value || !endDate.value) {
-    const today = formatDate(new Date())
-
-    availableMaxDate.value = today
-    endDate.value = today
-    startDate.value = shiftDate(today, -29)
-
-    validateRange()
+    endDate.value = todayString
+    startDate.value = shiftDate(todayString, -29)
   }
-}
 
-function applyPreset(days) {
-  const today = availableMaxDate.value || formatDate(new Date())
-
-  endDate.value = today
-  startDate.value = shiftDate(today, -(days - 1))
+  calendarMonth.value = new Date(
+    `${startDate.value.slice(0, 7)}-01T12:00:00`
+  )
 
   validateRange()
 }
@@ -528,38 +688,11 @@ function waitWhilePaused() {
 }
 
 async function createZipWriter() {
-  const fileName =
-    `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
-
-  if (saveMode.value === 'folder') {
-    if (!supportsSavePicker) {
-      throw new Error('当前浏览器不支持选择文件保存位置。')
-    }
-
-    const handle = await window.showSaveFilePicker({
-      suggestedName: fileName,
-      types: [
-        {
-          description: 'ZIP archive',
-          accept: {
-            'application/zip': ['.zip']
-          }
-        }
-      ]
-    })
-
-    activeWritable = await handle.createWritable()
-
-    return new ZipWriter(activeWritable, {
-      bufferedWrite: true
-    })
-  }
-
-  activeWritable = null
-
   return new ZipWriter(
     new BlobWriter('application/zip'),
-    { bufferedWrite: true }
+    {
+      bufferedWrite: true
+    }
   )
 }
 
@@ -584,7 +717,6 @@ async function startDownload() {
 
   // 点击后立即进入任务界面
   status.value = 'loading'
-  phase.value = 'loading-data'
 
   try {
     // 先创建 ZIP 写入器
@@ -605,8 +737,7 @@ async function startDownload() {
     }
 
     totalCount.value = taskItems.length
-
-    phase.value = 'downloading'
+ 
     status.value = 'running'
     preparing.value = false
 
@@ -620,12 +751,6 @@ async function startDownload() {
       taskError.value = error.message || '创建 ZIP 文件失败。'
       loadError.value = taskError.value
       status.value = 'error'
-    }
-
-    if (activeWritable && status.value !== 'done') {
-      try {
-        await activeWritable.abort()
-      } catch {}
     }
   }
 }
@@ -706,23 +831,17 @@ async function runTask(token) {
 
   // 所有图片处理完毕，进入 ZIP 最终生成阶段
   status.value = 'packaging'
-  phase.value = 'packaging'
   currentFile.value = '正在生成 ZIP 文件目录…'
 
   try {
-    if (activeWritable) {
-      await zipWriter.close()
-      status.value = 'done'
-    } else {
-      const zipBlob = await zipWriter.close()
+    const zipBlob = await zipWriter.close()
 
-      saveBlob(
-        zipBlob,
-        `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
-      )
+    saveBlob(
+      zipBlob,
+      `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
+    )
 
-      status.value = 'done'
-    }
+    status.value = 'done'
 
     if (failedItems.value.length) {
       taskError.value =
@@ -731,12 +850,6 @@ async function runTask(token) {
   } catch (error) {
     taskError.value = error.message || 'ZIP 文件生成失败。'
     status.value = 'error'
-
-    if (activeWritable) {
-      try {
-        await activeWritable.abort()
-      } catch {}
-    }
   }
 }
 
@@ -788,7 +901,6 @@ function resetTask() {
   failedItems.value = []
   taskItems = []
   zipWriter = null
-  activeWritable = null
   cancelRequested = false
   pauseRequested = false
 }
@@ -799,9 +911,6 @@ onBeforeUnmount(() => {
   const resolve = pauseResolver
   pauseResolver = null
   resolve?.()
-  if (activeWritable) {
-    activeWritable.abort().catch(() => {})
-  }
 })
 </script>
 
@@ -1163,6 +1272,207 @@ onBeforeUnmount(() => {
     background: #292e33;
     border-color: #444b51;
     color-scheme: dark;
+  }
+
+  .bulk-date-presets button {
+    color: #c5cdd3;
+    background: #30363b;
+    border-color: #4a5157;
+  }
+}
+
+.bulk-calendar {
+  padding: 17px;
+  border: 1px solid rgba(120, 135, 148, .18);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .58);
+}
+
+.bulk-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 17px;
+}
+
+.bulk-calendar-header strong {
+  color: #303941;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.bulk-calendar-nav {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #e5e9ec;
+  border-radius: 10px;
+  color: #586b7a;
+  background: rgba(255,255,255,.8);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.bulk-calendar-nav:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+
+.bulk-calendar-weekdays,
+.bulk-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.bulk-calendar-weekdays {
+  margin-bottom: 7px;
+}
+
+.bulk-calendar-weekdays span {
+  padding: 7px 0;
+  color: #92999f;
+  text-align: center;
+  font-size: 10px;
+}
+
+.bulk-calendar-day {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  min-width: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: #3c454d;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.bulk-calendar-day:hover:not(:disabled):not(.is-selected) {
+  background: #edf2f5;
+}
+
+.bulk-calendar-day.is-outside {
+  color: #c0c5c9;
+}
+
+.bulk-calendar-day.is-in-range {
+  color: #496478;
+  background: #eaf0f4;
+  border-radius: 0;
+}
+
+.bulk-calendar-day.is-selected {
+  color: white;
+  background: #526b7e;
+  border-radius: 10px;
+  font-weight: 750;
+}
+
+.bulk-calendar-day.is-disabled {
+  opacity: .25;
+  cursor: not-allowed;
+}
+
+.bulk-calendar-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 17px;
+  padding: 13px;
+  border: 1px solid #e8ecef;
+  border-radius: 12px;
+  background: rgba(255,255,255,.55);
+}
+
+.bulk-calendar-selection > div:not(.bulk-calendar-selection-arrow) {
+  display: grid;
+  gap: 5px;
+}
+
+.bulk-calendar-selection span {
+  color: #92999f;
+  font-size: 9px;
+}
+
+.bulk-calendar-selection strong {
+  color: #35414b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulk-calendar-selection-arrow {
+  color: #9ba6ad;
+  font-size: 16px;
+}
+
+.bulk-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.bulk-date-presets button {
+  padding: 7px 12px;
+  border: 1px solid #e1e6e9;
+  border-radius: 9px;
+  color: #687783;
+  background: rgba(255,255,255,.72);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.bulk-date-presets button:hover {
+  border-color: #94a9b8;
+  color: #40586a;
+  background: #f0f4f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bulk-calendar {
+    border-color: #41494f;
+    background: rgba(40,45,49,.7);
+  }
+
+  .bulk-calendar-header strong,
+  .bulk-calendar-selection strong {
+    color: #edf0f2;
+  }
+
+  .bulk-calendar-nav {
+    color: #d5dde2;
+    background: #30363b;
+    border-color: #4a5157;
+  }
+
+  .bulk-calendar-day {
+    color: #dce2e6;
+  }
+
+  .bulk-calendar-day.is-outside {
+    color: #666f76;
+  }
+
+  .bulk-calendar-day.is-in-range {
+    color: #d6e2e9;
+    background: #34434d;
+  }
+
+  .bulk-calendar-day.is-selected {
+    color: white;
+    background: #607f94;
+  }
+
+  .bulk-calendar-selection {
+    border-color: #41494f;
+    background: rgba(30,34,37,.55);
   }
 
   .bulk-date-presets button {
