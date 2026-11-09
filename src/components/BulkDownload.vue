@@ -123,6 +123,7 @@
                     <button type="button" @click="applyPreset(7)">最近 7 天</button>
                     <button type="button" @click="applyPreset(30)">最近 30 天</button>
                     <button type="button" @click="applyPreset(60)">最近 60 天</button>
+                    <button type="button" @click="applyPreset(90)">最近 90 天</button>
                   </div>
 
                   <p v-if="rangeError" class="bulk-error">
