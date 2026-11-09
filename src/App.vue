@@ -91,6 +91,10 @@
               @retry="openMonthPicker"
             />
 
+            <BulkDownload
+              :data-base-url="dataBaseUrl"
+              :max-months="BULK_DOWNLOAD_MAX_MONTHS"
+            />
 
             <div
               ref="sourceMenu"
@@ -471,6 +475,8 @@ import { setHomeSeo } from './utils/seo'
 
 import SiteFooter from './components/SiteFooter.vue'
 
+import BulkDownload from './components/BulkDownload.vue'
+
 import {
   useBingData
 } from './composables/useBingData'
@@ -512,6 +518,15 @@ const {
   loadMoreHistoryResults,
   clear
 }=useWallpaperSearch(items,historySearchItems)
+
+
+const bulkDownloadMaxMonthsEnv = Number(
+  import.meta.env.VITE_BULK_DOWNLOAD_MAX_MONTHS || 3
+)
+const BULK_DOWNLOAD_MAX_MONTHS = Number.isFinite(bulkDownloadMaxMonthsEnv)
+  ? Math.max(1, Math.min(12, Math.floor(bulkDownloadMaxMonthsEnv)))
+  : 3
+
 
 const historyIndex=useHistoryIndex(dataBaseUrl)
 
@@ -2147,6 +2162,14 @@ function updateIntroTheme(item) {
     font-size: 9px;
   }
 }
+.header-right {
+  gap: 9px;
+}
 
+@media (max-width: 640px) {
+  .header-right {
+    gap: 6px;
+  }
+}
 
 </style>
