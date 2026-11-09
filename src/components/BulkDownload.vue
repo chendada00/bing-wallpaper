@@ -56,126 +56,126 @@
                   </span>
                 </div>
 
-<div class="bulk-calendar">
-  <div class="bulk-calendar-header">
-    <button
-      type="button"
-      class="bulk-calendar-nav"
-      aria-label="上个月"
-      @click="changeCalendarMonth(-1)"
-    >
-      ‹
-    </button>
+                <div class="bulk-calendar">
+                  <div class="bulk-calendar-header">
+                    <button
+                      type="button"
+                      class="bulk-calendar-nav"
+                      aria-label="上个月"
+                      @click="changeCalendarMonth(-1)"
+                    >
+                      ‹
+                    </button>
 
-    <strong>{{ calendarTitle }}</strong>
+                    <strong>{{ calendarTitle }}</strong>
 
-    <button
-      type="button"
-      class="bulk-calendar-nav"
-      aria-label="下个月"
-      :disabled="calendarNextDisabled"
-      @click="changeCalendarMonth(1)"
-    >
-      ›
-    </button>
-  </div>
+                    <button
+                      type="button"
+                      class="bulk-calendar-nav"
+                      aria-label="下个月"
+                      :disabled="calendarNextDisabled"
+                      @click="changeCalendarMonth(1)"
+                    >
+                      ›
+                    </button>
+                  </div>
 
-  <div class="bulk-calendar-weekdays">
-    <span v-for="day in weekDays" :key="day">
-      {{ day }}
-    </span>
-  </div>
+                  <div class="bulk-calendar-weekdays">
+                    <span v-for="day in weekDays" :key="day">
+                      {{ day }}
+                    </span>
+                  </div>
 
-  <div class="bulk-calendar-grid">
-    <button
-      v-for="day in calendarCells"
-      :key="day.value"
-      type="button"
-      class="bulk-calendar-day"
-      :class="{
-        'is-outside': !day.inMonth,
-        'is-selected': isDateSelected(day.value),
-        'is-in-range': isDateInRange(day.value),
-        'is-disabled': day.value > todayString
-      }"
-      :disabled="day.value > todayString"
-      @click="selectCalendarDate(day.value)"
-    >
-      {{ day.day }}
-    </button>
-  </div>
+                  <div class="bulk-calendar-grid">
+                    <button
+                      v-for="day in calendarCells"
+                      :key="day.value"
+                      type="button"
+                      class="bulk-calendar-day"
+                      :class="{
+                        'is-outside': !day.inMonth,
+                        'is-selected': isDateSelected(day.value),
+                        'is-in-range': isDateInRange(day.value),
+                        'is-disabled': day.value > todayString
+                      }"
+                      :disabled="day.value > todayString"
+                      @click="selectCalendarDate(day.value)"
+                    >
+                      {{ day.day }}
+                    </button>
+                  </div>
 
-  <div class="bulk-calendar-selection">
-    <div>
-      <span>开始日期</span>
-      <strong>{{ startDate || '请选择' }}</strong>
-    </div>
+                  <div class="bulk-calendar-selection">
+                    <div>
+                      <span>开始日期</span>
+                      <strong>{{ startDate || '请选择' }}</strong>
+                    </div>
 
-    <div class="bulk-calendar-selection-arrow">→</div>
+                    <div class="bulk-calendar-selection-arrow">→</div>
 
-    <div>
-      <span>结束日期</span>
-      <strong>{{ endDate || '请选择' }}</strong>
-    </div>
-  </div>
+                    <div>
+                      <span>结束日期</span>
+                      <strong>{{ endDate || '请选择' }}</strong>
+                    </div>
+                  </div>
 
-  <div class="bulk-date-presets">
-    <button type="button" @click="applyPreset(7)">最近 7 天</button>
-    <button type="button" @click="applyPreset(30)">最近 30 天</button>
-    <button type="button" @click="applyPreset(60)">最近 60 天</button>
-  </div>
+                  <div class="bulk-date-presets">
+                    <button type="button" @click="applyPreset(7)">最近 7 天</button>
+                    <button type="button" @click="applyPreset(30)">最近 30 天</button>
+                    <button type="button" @click="applyPreset(60)">最近 60 天</button>
+                  </div>
 
-  <p v-if="rangeError" class="bulk-error">
-    {{ rangeError }}
-  </p>
-</div>
+                  <p v-if="rangeError" class="bulk-error">
+                    {{ rangeError }}
+                  </p>
+                </div>
 
 
 
-<div class="bulk-quality">
-  <span class="bulk-section-label">图片清晰度</span>
+                <div class="bulk-quality">
+                  <span class="bulk-section-label">图片清晰度</span>
 
-  <label
-    class="bulk-quality-option"
-    :class="{ selected: quality === 'preview' }"
-  >
-    <input
-      v-model="quality"
-      type="radio"
-      value="preview"
-    />
+                  <label
+                    class="bulk-quality-option"
+                    :class="{ selected: quality === 'preview' }"
+                  >
+                    <input
+                      v-model="quality"
+                      type="radio"
+                      value="preview"
+                    />
 
-    <span class="bulk-radio-mark"></span>
+                    <span class="bulk-radio-mark"></span>
 
-    <span class="bulk-quality-copy">
-      <strong>预览图</strong>
-      <small>文件较小，下载速度快，适合日常收藏</small>
-    </span>
+                    <span class="bulk-quality-copy">
+                      <strong>预览图</strong>
+                      <small>文件较小，下载速度快，适合日常收藏</small>
+                    </span>
 
-    <span class="bulk-quality-tag">默认</span>
-  </label>
+                    <span class="bulk-quality-tag">默认</span>
+                  </label>
 
-  <label
-    class="bulk-quality-option"
-    :class="{ selected: quality === 'uhd' }"
-  >
-    <input
-      v-model="quality"
-      type="radio"
-      value="uhd"
-    />
+                  <label
+                    class="bulk-quality-option"
+                    :class="{ selected: quality === 'uhd' }"
+                  >
+                    <input
+                      v-model="quality"
+                      type="radio"
+                      value="uhd"
+                    />
 
-    <span class="bulk-radio-mark"></span>
+                    <span class="bulk-radio-mark"></span>
 
-    <span class="bulk-quality-copy">
-      <strong>高清原图 UHD</strong>
-      <small>高分辨率壁纸，文件较大，下载耗时更长</small>
-    </span>
+                    <span class="bulk-quality-copy">
+                      <strong>高清原图 UHD</strong>
+                      <small>高分辨率壁纸，文件较大，下载耗时更长</small>
+                    </span>
 
-    <span class="bulk-quality-tag">UHD</span>
-  </label>
-</div>
-</div>
+                    <span class="bulk-quality-tag">UHD</span>
+                  </label>
+                </div>
+              </div>
 
               <div v-if="quality === 'uhd'" class="bulk-notice">
                 <span class="bulk-notice-icon">i</span>
