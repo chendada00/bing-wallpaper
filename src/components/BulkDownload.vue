@@ -44,48 +44,86 @@
             </header>
 
             <div v-if="status === 'idle' || status === 'error'" class="bulk-config">
-              <div class="bulk-date-grid">
-                <label class="bulk-field">
-                  <span>开始日期</span>
-                  <input
-                    v-model="startDate"
-                    type="date"
-                    :min="availableMinDate"
-                    :max="endDate || availableMaxDate"
-                    @change="validateRange"
-                  />
-                </label>
-                <label class="bulk-field">
-                  <span>结束日期</span>
-                  <input
-                    v-model="endDate"
-                    type="date"
-                    :min="startDate || availableMinDate"
-                    :max="availableMaxDate"
-                    @change="validateRange"
-                  />
-                </label>
+              <div class="bulk-range-card">
+                <div class="bulk-range-heading">
+                  <div>
+                    <strong>选择下载日期</strong>
+                    <small>选择你想收藏的壁纸时间范围</small>
+                  </div>
+
+                  <span class="bulk-range-count">
+                    {{ selectedMonthCount }} / {{ maxMonths }} 个月
+                  </span>
+                </div>
+
+                <div class="bulk-date-grid">
+                  <label class="bulk-field">
+                    <span>开始日期</span>
+                    <input
+                      v-model="startDate"
+                      type="date"
+                      :max="endDate || availableMaxDate"
+                      @change="validateRange"
+                    />
+                  </label>
+
+                  <label class="bulk-field">
+                    <span>结束日期</span>
+                    <input
+                      v-model="endDate"
+                      type="date"
+                      :min="startDate"
+                      :max="availableMaxDate"
+                      @change="validateRange"
+                    />
+                  </label>
+                </div>
+
+                <div class="bulk-date-presets">
+                  <button type="button" @click="applyPreset(7)">最近 7 天</button>
+                  <button type="button" @click="applyPreset(30)">最近 30 天</button>
+                  <button type="button" @click="applyPreset(60)">最近 60 天</button>
+                </div>
+
+                <p v-if="rangeError" class="bulk-error">
+                  {{ rangeError }}
+                </p>
               </div>
 
               <div class="bulk-quality">
-                <span class="bulk-section-label">图片质量</span>
-                <label class="bulk-quality-option" :class="{ selected: quality === 'preview' }">
-                  <input v-model="quality" type="radio" value="preview" />
+                <span class="bulk-section-label">保存方式</span>
+
+                <label
+                  class="bulk-quality-option"
+                  :class="{ selected: saveMode === 'browser' }"
+                >
+                  <input v-model="saveMode" type="radio" value="browser" />
+
                   <span class="bulk-radio-mark"></span>
+
                   <span class="bulk-quality-copy">
-                    <strong>预览图</strong>
-                    <small>体积较小，下载更快，适合日常收藏</small>
+                    <strong>浏览器下载</strong>
+                    <small>通过浏览器下载，能在下载记录中查看</small>
                   </span>
-                  <span class="bulk-quality-tag">轻量</span>
                 </label>
-                <label class="bulk-quality-option" :class="{ selected: quality === 'uhd' }">
-                  <input v-model="quality" type="radio" value="uhd" />
+
+                <label
+                  class="bulk-quality-option"
+                  :class="{ selected: saveMode === 'folder' }"
+                >
+                  <input
+                    v-model="saveMode"
+                    type="radio"
+                    value="folder"
+                    :disabled="!supportsSavePicker"
+                  />
+
                   <span class="bulk-radio-mark"></span>
+
                   <span class="bulk-quality-copy">
-                    <strong>高清原图</strong>
-                    <small>最高可达 3840 × 2160，适合桌面壁纸</small>
+                    <strong>保存到指定位置</strong>
+                    <small>直接写入选择的文件，更适合大量 UHD 图片</small>
                   </span>
-                  <span class="bulk-quality-tag">UHD</span>
                 </label>
               </div>
 
@@ -235,8 +273,8 @@ const currentFile = ref('')
 const failedItems = ref([])
 const availableMinDate = ref('')
 const availableMaxDate = ref('')
+const phase = ref
 
-let indexPromise = null
 let activeController = null
 let pauseResolver = null
 let pauseRequested = false
@@ -246,7 +284,17 @@ let activeWritable = null
 let taskItems = []
 let taskToken = 0
 
-const busy = computed(() => status.value === 'running' || status.value === 'paused')
+const saveMode = ref('browser')
+const supportsSavePicker =
+  typeof window !== 'undefined' &&
+  'showSaveFilePicker' in window
+
+const busy = computed(() => [
+  'loading',
+  'running',
+  'paused',
+  'packaging'
+].includes(status.value))
 const selectedMonthCount = computed(() => {
   if (!startDate.value || !endDate.value) return 0
   return monthDistance(startDate.value, endDate.value) + 1
@@ -264,19 +312,23 @@ const progressPercent = computed(() => {
   return Math.min(100, Math.round(completedCount.value / totalCount.value * 100))
 })
 const statusTitle = computed(() => ({
-  running: '正在打包壁纸',
+  loading: '正在读取壁纸数据',
+  running: '正在下载图片',
   paused: '下载已暂停',
+  packaging: '正在生成 ZIP 文件',
   done: '打包完成',
   cancelled: '任务已取消',
   error: '打包未完成'
 }[status.value] || '下载任务'))
 const statusLabel = computed(() => ({
-  running: '进行中',
+  loading: '准备中',
+  running: '下载中',
   paused: '已暂停',
+  packaging: '打包中',
   done: '已完成',
   cancelled: '已取消',
   error: '异常'
-}[status.value] || '准备中'))
+}[status.value] || '等待开始'))
 
 function monthDistance(from, to) {
   const a = new Date(`${from.slice(0, 7)}-01T00:00:00`)
@@ -296,9 +348,11 @@ function validateRange() {
     rangeError.value = `当前范围跨越 ${count} 个自然月，最多只能选择 ${props.maxMonths} 个月。`
   }
 }
-
 function formatDate(date) {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function shiftDate(dateString, days) {
@@ -307,48 +361,28 @@ function shiftDate(dateString, days) {
   return formatDate(date)
 }
 
-async function loadHistoryIndex() {
-  if (indexPromise) return indexPromise
-  indexPromise = fetch(`${props.dataBaseUrl.replace(/\/$/, '')}/data/index.json`, {
-    cache: 'force-cache'
-  }).then(async response => {
-    if (!response.ok) throw new Error(`历史索引加载失败（HTTP ${response.status}）`)
-    const data = await response.json()
-    if (data?.version !== 1 || !Array.isArray(data.items)) {
-      throw new Error('历史索引格式不正确')
-    }
-    const dates = data.items
-      .map(row => String(row?.[0] || ''))
-      .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
-      .sort()
-    if (!dates.length) throw new Error('历史索引中没有可下载的壁纸')
-    availableMinDate.value = dates[0]
-    availableMaxDate.value = dates[dates.length - 1]
-    return dates
-  }).catch(error => {
-    indexPromise = null
-    throw error
-  })
-  return indexPromise
+function openDialog() {
+  visible.value = true
+
+  // 这里只设置默认日期，不发起任何网络请求
+  if (!startDate.value || !endDate.value) {
+    const today = formatDate(new Date())
+
+    availableMaxDate.value = today
+    endDate.value = today
+    startDate.value = shiftDate(today, -29)
+
+    validateRange()
+  }
 }
 
-async function openDialog() {
-  visible.value = true
-  if (availableMaxDate.value) return
-  preparing.value = true
-  loadError.value = ''
-  try {
-    const dates = await loadHistoryIndex()
-    endDate.value = dates[dates.length - 1]
-    startDate.value = dates.includes(shiftDate(endDate.value, -29))
-      ? shiftDate(endDate.value, -29)
-      : dates[Math.max(0, dates.length - 30)]
-    validateRange()
-  } catch (error) {
-    loadError.value = error.message || '无法读取历史壁纸索引。'
-  } finally {
-    preparing.value = false
-  }
+function applyPreset(days) {
+  const today = availableMaxDate.value || formatDate(new Date())
+
+  endDate.value = today
+  startDate.value = shiftDate(today, -(days - 1))
+
+  validateRange()
 }
 
 function closeDialog() {
@@ -393,23 +427,21 @@ async function loadRangeItems() {
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
-function getImageUrl(item) {
+function getImageUrls(item) {
   if (quality.value === 'preview') {
-    return item.preview || ''
+    return item.preview ? [item.preview] : []
   }
-  if (item.image) return item.image
-  if (item.date) {
-    const [year, month] = item.date.split('-')
-    return `${UHD_BASE_URL}/images/${year}/${month}/${item.date}.jpg`
-  }
-  return item.sourceImage || ''
-}
 
-function getFallbackUrl(item, primary) {
-  if (quality.value === 'uhd' && item.sourceImage && item.sourceImage !== primary) {
-    return item.sourceImage
-  }
-  return ''
+  const ownUhdUrl = item.date
+    ? `${UHD_BASE_URL}/images/${item.date.slice(0, 4)}/${item.date.slice(5, 7)}/${item.date}.jpg`
+    : ''
+
+  // 高清图：官方 CDN 优先，自有 CDN 作为回退
+  return [...new Set([
+    item.sourceImage,
+    item.image,
+    ownUhdUrl
+  ].filter(Boolean))]
 }
 
 function openDatabase() {
@@ -496,57 +528,104 @@ function waitWhilePaused() {
 }
 
 async function createZipWriter() {
-  const fileName = `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: 'ZIP archive', accept: { 'application/zip': ['.zip'] } }]
-      })
-      activeWritable = await handle.createWritable()
-      return new ZipWriter(activeWritable, { bufferedWrite: true })
-    } catch (error) {
-      if (error?.name === 'AbortError') throw error
-      console.warn('无法使用流式文件写入，将使用浏览器内存生成 ZIP：', error)
+  const fileName =
+    `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
+
+  if (saveMode.value === 'folder') {
+    if (!supportsSavePicker) {
+      throw new Error('当前浏览器不支持选择文件保存位置。')
     }
+
+    const handle = await window.showSaveFilePicker({
+      suggestedName: fileName,
+      types: [
+        {
+          description: 'ZIP archive',
+          accept: {
+            'application/zip': ['.zip']
+          }
+        }
+      ]
+    })
+
+    activeWritable = await handle.createWritable()
+
+    return new ZipWriter(activeWritable, {
+      bufferedWrite: true
+    })
   }
-  return new ZipWriter(new BlobWriter('application/zip'), { bufferedWrite: true })
+
+  activeWritable = null
+
+  return new ZipWriter(
+    new BlobWriter('application/zip'),
+    { bufferedWrite: true }
+  )
 }
 
 async function startDownload() {
   validateRange()
+
   if (!canStart.value || preparing.value) return
+
   preparing.value = true
   loadError.value = ''
   taskError.value = ''
   failedItems.value = []
   completedCount.value = 0
   cachedCount.value = 0
+  totalCount.value = 0
   currentFile.value = ''
+
   cancelRequested = false
   pauseRequested = false
+
   const token = ++taskToken
 
+  // 点击后立即进入任务界面
+  status.value = 'loading'
+  phase.value = 'loading-data'
+
   try {
-    // 先在用户点击事件仍有效时请求保存位置；随后再加载数据。
+    // 先创建 ZIP 写入器
+    // 直接保存模式需要在用户点击事件中触发文件选择器
     zipWriter = await createZipWriter()
+
+    currentFile.value = '正在读取所选日期范围内的壁纸数据…'
+
     taskItems = await loadRangeItems()
-    if (!taskItems.length) throw new Error('所选日期范围内没有可下载的壁纸。')
+
+    if (token !== taskToken || cancelRequested) {
+      status.value = 'cancelled'
+      return
+    }
+
+    if (!taskItems.length) {
+      throw new Error('所选日期范围内没有可下载的壁纸。')
+    }
+
     totalCount.value = taskItems.length
+
+    phase.value = 'downloading'
     status.value = 'running'
     preparing.value = false
+
     await runTask(token)
   } catch (error) {
     preparing.value = false
+
     if (error?.name === 'AbortError') {
       status.value = 'cancelled'
     } else {
       taskError.value = error.message || '创建 ZIP 文件失败。'
-      status.value = 'error'
       loadError.value = taskError.value
+      status.value = 'error'
     }
+
     if (activeWritable && status.value !== 'done') {
-      try { await activeWritable.abort() } catch {}
+      try {
+        await activeWritable.abort()
+      } catch {}
     }
   }
 }
@@ -561,22 +640,24 @@ async function runTask(token) {
     const date = item.date
     const title = safeFilePart(item.title || item.description || 'Bing Wallpaper')
     const fileName = `${date}-${title}.jpg`
-    const cacheKey = `${quality.value}:${date}:${getImageUrl(item)}`
+    const urls = getImageUrls(item)
+    const cacheKey = `${quality.value}:${date}:${urls.join('|')}`
     currentFile.value = fileName
 
     let blob = await cacheGet(cacheKey)
     let fromCache = Boolean(blob)
 
     if (!blob) {
-      const primary = getImageUrl(item)
-      if (!primary) {
-        failedItems.value.push({ date, reason: '没有可用图片地址' })
-        completedCount.value += 1
-        continue
-      }
+    if (!urls.length) {
+      failedItems.value.push({
+        date,
+        reason: '没有可用图片地址'
+      })
+      completedCount.value += 1
+      continue
+    }
 
-      let lastError = null
-      const urls = [primary, getFallbackUrl(item, primary)].filter(Boolean)
+    let lastError = null
       for (const url of urls) {
         try {
           activeController = new AbortController()
@@ -623,18 +704,10 @@ async function runTask(token) {
     }
   }
 
-  if (cancelRequested || token !== taskToken) {
-    status.value = 'cancelled'
-    if (activeWritable) {
-      try { await activeWritable.abort() } catch {}
-    }
-    return
-  }
-
-  if (pauseRequested) {
-    status.value = 'paused'
-    return
-  }
+  // 所有图片处理完毕，进入 ZIP 最终生成阶段
+  status.value = 'packaging'
+  phase.value = 'packaging'
+  currentFile.value = '正在生成 ZIP 文件目录…'
 
   try {
     if (activeWritable) {
@@ -642,17 +715,27 @@ async function runTask(token) {
       status.value = 'done'
     } else {
       const zipBlob = await zipWriter.close()
-      saveBlob(zipBlob, `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`)
+
+      saveBlob(
+        zipBlob,
+        `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
+      )
+
       status.value = 'done'
     }
+
     if (failedItems.value.length) {
-      taskError.value = `${failedItems.value.length} 张图片未能加入压缩包，请检查失败列表。`
+      taskError.value =
+        `${failedItems.value.length} 张图片未能加入压缩包，请检查失败列表。`
     }
   } catch (error) {
     taskError.value = error.message || 'ZIP 文件生成失败。'
     status.value = 'error'
+
     if (activeWritable) {
-      try { await activeWritable.abort() } catch {}
+      try {
+        await activeWritable.abort()
+      } catch {}
     }
   }
 }
@@ -967,5 +1050,125 @@ onBeforeUnmount(() => {
   .bulk-download-trigger span { display: none; }
   .bulk-limit { flex-direction: column; gap: 4px; }
   .bulk-dialog-footer { flex-direction: column; gap: 4px; }
+}
+
+.bulk-range-card {
+  padding: 17px;
+  border: 1px solid rgba(120, 135, 148, .18);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .58);
+}
+
+.bulk-range-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bulk-range-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.bulk-range-heading strong {
+  color: #303941;
+  font-size: 14px;
+}
+
+.bulk-range-heading small {
+  color: #92999f;
+  font-size: 11px;
+}
+
+.bulk-range-count {
+  color: #657d90;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bulk-date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+
+.bulk-field {
+  display: grid;
+  gap: 8px;
+  color: #727d86;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.bulk-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 45px;
+  padding: 0 10px;
+  border: 1px solid #e1e6e9;
+  border-radius: 11px;
+  outline: none;
+  color: #303941;
+  background: rgba(255,255,255,.9);
+  font: inherit;
+  font-size: 12px;
+  color-scheme: light;
+}
+
+.bulk-field input:focus {
+  border-color: #879eaf;
+  box-shadow: 0 0 0 3px rgba(110,139,163,.12);
+}
+
+.bulk-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.bulk-date-presets button {
+  padding: 7px 12px;
+  border: 1px solid #e1e6e9;
+  border-radius: 9px;
+  color: #687783;
+  background: rgba(255,255,255,.72);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.bulk-date-presets button:hover {
+  border-color: #94a9b8;
+  color: #40586a;
+  background: #f0f4f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bulk-range-card {
+    background: rgba(40,45,49,.7);
+    border-color: #41494f;
+  }
+
+  .bulk-range-heading strong {
+    color: #edf0f2;
+  }
+
+  .bulk-field input {
+    color: #eee;
+    background: #292e33;
+    border-color: #444b51;
+    color-scheme: dark;
+  }
+
+  .bulk-date-presets button {
+    color: #c5cdd3;
+    background: #30363b;
+    border-color: #4a5157;
+  }
 }
 </style>
