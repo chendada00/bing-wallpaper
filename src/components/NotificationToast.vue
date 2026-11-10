@@ -162,6 +162,8 @@ onBeforeUnmount(() => {
 }
 
 .notice-toast-card {
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
   pointer-events: auto;
   display: flex;
   align-items: flex-start;
@@ -247,20 +249,36 @@ onBeforeUnmount(() => {
 }
 
 .notice-toast-title {
-  margin: 5px;
-  font-size: 17px;
+  margin: 0 0 10px;
+
+  font-size: 15px;
   font-weight: 600;
+
   color: #fff;
-  line-height: 1.3;
-  text-align: center
+
+  line-height: 1.5;
+  text-align: left;
+
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .notice-toast-body {
   margin: 0;
+
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.8;
+
   color: rgba(255, 255, 255, 0.8);
-  word-break: break-word;
+
+  /* 保留手动换行 */
+  white-space: pre-line;
+
+  /* 长英文、URL 等内容允许自动折行 */
+  overflow-wrap: anywhere;
+
+  /* 使用正常的单词换行规则 */
+  word-break: normal;
 }
 
 .notice-toast-link {
