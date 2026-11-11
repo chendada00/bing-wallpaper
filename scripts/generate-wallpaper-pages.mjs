@@ -318,7 +318,7 @@ function createWallpaperHtml(
     href="${escapedImage}"
     fetchpriority="high"
   >
-
+  <script defer src="/goatcounter.js"></script>
   <script>
     (function () {
       var host = window.location.hostname;
@@ -1241,6 +1241,208 @@ function createWallpaperHtml(
       }
     }
 
+    /* ================================================
+    GoatCounter 访问统计
+    ================================================ */
+ 
+    .gc-widget {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      z-index: 30;
+    }
+    
+    .gc-widget[hidden] {
+      display: none !important;
+    }
+    
+    .gc-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    
+      min-height: 28px;
+      padding: 4px 10px;
+    
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 999px;
+    
+      background: rgba(255, 255, 255, .07);
+      color: rgba(255, 255, 255, .72);
+    
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: 0;
+    
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    
+    .gc-trigger:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, .13);
+      border-color: rgba(255, 255, 255, .25);
+    }
+    
+    .gc-trigger svg {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+    
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    .gc-trigger strong {
+      color: rgba(255, 255, 255, .96);
+      font-size: 11px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .gc-panel {
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 12px);
+    
+      width: 280px;
+      padding: 17px;
+    
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 16px;
+    
+      background: rgba(22, 24, 29, .88);
+      color: rgba(255, 255, 255, .94);
+    
+      box-shadow:
+        0 14px 40px rgba(0, 0, 0, .28),
+        inset 0 1px 0 rgba(255, 255, 255, .07);
+    
+      backdrop-filter: blur(26px) saturate(145%);
+      -webkit-backdrop-filter: blur(26px) saturate(145%);
+    
+      z-index: 100;
+      animation: gc-panel-in .18s ease both;
+    }
+    
+    .gc-panel[hidden] {
+      display: none !important;
+    }
+    
+    @keyframes gc-panel-in {
+      from {
+        opacity: 0;
+        transform: translateY(5px) scale(.985);
+      }
+    
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    .gc-panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    
+      padding-bottom: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, .09);
+    }
+    
+    .gc-panel-heading > div {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    
+    .gc-panel-heading strong {
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+    
+    .gc-panel-heading span {
+      color: rgba(255, 255, 255, .42);
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+    
+    .gc-live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #56c69a;
+      box-shadow: 0 0 0 4px rgba(86, 198, 154, .12);
+    }
+    
+    .gc-total-block {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 14px 0;
+    }
+    
+    .gc-total-block > span,
+    .gc-stat-item > span {
+      color: rgba(255, 255, 255, .48);
+      font-size: 11px;
+      letter-spacing: 0;
+    }
+    
+    .gc-total-block > strong {
+      font-size: 27px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -.5px;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .gc-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, .09);
+    }
+    
+    .gc-stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .gc-stat-item > strong {
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .gc-panel-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, .09);
+    
+      color: rgba(255, 255, 255, .38);
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+    
+    @media (max-width: 640px) {
+      .gc-panel {
+        width: min(280px, calc(100vw - 30px));
+      }
+    }
 
 
     /* ================================================
@@ -1553,6 +1755,68 @@ function createWallpaperHtml(
         aria-valuenow="${currentIndex + 1}"
       >
         <span class="progress-value"></span>
+      </div>
+
+      <div class="gc-widget" data-gc-widget hidden>
+        <button
+          type="button"
+          class="gc-trigger"
+          data-gc-trigger
+          aria-expanded="false"
+          aria-controls="gc-panel-detail"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"
+            />
+            <circle cx="12" cy="12" r="2.8"/>
+          </svg>
+      
+          <span>累计访问</span>
+          <strong data-gc-total>—</strong>
+        </button>
+      
+        <div
+          id="gc-panel-detail"
+          class="gc-panel"
+          data-gc-panel
+          hidden
+        >
+          <div class="gc-panel-heading">
+            <div>
+              <strong>访问统计</strong>
+              <span>网站访问概况</span>
+            </div>
+            <span class="gc-live-dot"></span>
+          </div>
+      
+          <div class="gc-total-block">
+            <span>累计访问量</span>
+            <strong data-gc-total>—</strong>
+          </div>
+      
+          <div class="gc-stat-grid">
+            <div class="gc-stat-item">
+              <span>今日</span>
+              <strong data-gc-today>—</strong>
+            </div>
+      
+            <div class="gc-stat-item">
+              <span>近 7 天</span>
+              <strong data-gc-week>—</strong>
+            </div>
+      
+            <div class="gc-stat-item">
+              <span>近 30 天</span>
+              <strong data-gc-month>—</strong>
+            </div>
+          </div>
+      
+          <div class="gc-panel-footer">
+            <span>统计数据由 GoatCounter 提供</span>
+            <span>↗</span>
+          </div>
+        </div>
       </div>
 
       <span>${String(total).padStart(3, '0')} IMAGES</span>
