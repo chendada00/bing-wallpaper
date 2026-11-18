@@ -100,7 +100,7 @@
               <section class="ai-story-section" :id="`${dialogId}-body`">
                 <div class="ai-story-section-heading">
                   <span class="ai-story-section-index">01</span>
-                  <h3>画面故事</h3>
+                  <h3>意境漫游</h3>
                 </div>
                 <p class="ai-story-body">{{ aiStory.story }}</p>
               </section>
@@ -108,7 +108,7 @@
               <section v-if="moodTags.length" class="ai-story-section ai-story-tags-section">
                 <div class="ai-story-section-heading">
                   <span class="ai-story-section-index">02</span>
-                  <h3>此刻氛围</h3>
+                  <h3>心境回声</h3>
                 </div>
                 <div class="ai-story-tags">
                   <span
@@ -122,7 +122,7 @@
               <section v-if="visualTags.length" class="ai-story-section ai-story-visual-section">
                 <div class="ai-story-section-heading">
                   <span class="ai-story-section-index">03</span>
-                  <h3>画面元素</h3>
+                  <h3>细节之诗</h3>
                 </div>
                 <div class="ai-story-tags">
                   <span
@@ -132,22 +132,6 @@
                   >{{ tag }}</span>
                 </div>
               </section>
-
-              <div v-if="palette.length" class="ai-story-palette">
-                <div class="ai-story-palette-heading">
-                  <span>INSPIRED BY THIS IMAGE</span>
-                  <strong>画面主色</strong>
-                </div>
-                <div class="ai-story-palette-swatches">
-                  <span
-                    v-for="(color, index) in palette"
-                    :key="`${color}-${index}`"
-                    class="ai-story-swatch"
-                    :style="{ backgroundColor: color }"
-                    :title="color"
-                  />
-                </div>
-              </div>
 
               <footer class="ai-story-footer">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -161,7 +145,6 @@
         </div>
       </Transition>
     </Teleport>
-
 </template>
 
 <script setup>
@@ -314,7 +297,7 @@ onBeforeUnmount(() => {
   min-height: 30px;
   padding: 0 11px;
   border: 1px solid color-mix(in srgb, var(--ai-accent) 48%, rgba(255,255,255,.42));
-  border-radius: 999px;
+  border-radius: 10px;
   color: #fff;
   background:
     linear-gradient(135deg,
@@ -659,50 +642,6 @@ onBeforeUnmount(() => {
 .ai-story-tag--visual {
   color: rgba(255,255,255,.68);
   background: rgba(255,255,255,.045);
-}
-
-.ai-story-palette {
-  margin-top: 24px;
-  padding: 13px 14px 12px;
-  border: 1px solid rgba(255,255,255,.075);
-  border-radius: 13px;
-  background: linear-gradient(110deg,
-    color-mix(in srgb, var(--ai-accent) 11%, rgba(255,255,255,.035)),
-    color-mix(in srgb, var(--ai-accent-2) 7%, rgba(255,255,255,.025)));
-}
-
-.ai-story-palette-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.ai-story-palette-heading span {
-  color: rgba(255,255,255,.32);
-  font-size: 8px;
-  font-weight: 650;
-  letter-spacing: .12em;
-}
-
-.ai-story-palette-heading strong {
-  color: rgba(255,255,255,.66);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.ai-story-palette-swatches {
-  display: flex;
-  gap: 6px;
-}
-
-.ai-story-swatch {
-  width: 27px;
-  height: 27px;
-  border: 1px solid rgba(255,255,255,.28);
-  border-radius: 8px;
-  box-shadow: 0 3px 9px rgba(0,0,0,.16);
 }
 
 .ai-story-footer {
