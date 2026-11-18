@@ -243,6 +243,14 @@
              * ================================================= -->
             <div class="viewer-actions">
 
+              <!-- AI 解读：没有有效 aiStory.story 时组件不会渲染按钮 -->
+              <AiStoryPanel
+                v-if="hasAiStory"
+                :item="item"
+                :accent-color="primaryColor"
+                variant="viewer"
+              />
+
               <!-- 下载原图 -->
               <button
                 class="download-button"
@@ -493,6 +501,8 @@ import {
   getHighResImageUrl,
   getStableHighResImageUrl
 } from '../utils/image'
+
+import AiStoryPanel from './AiStoryPanel.vue'
 
 const highResImageUrl = computed(() => {
   return getHighResImageUrl(
@@ -885,6 +895,11 @@ const colorPalette = computed(() => {
  */
 const primaryColor = computed(() => {
   return colorPalette.value[0] || ''
+})
+
+const hasAiStory = computed(() => {
+  const story = props.item?.aiStory?.story
+  return typeof story === 'string' && story.trim().length > 0
 })
 
 /*

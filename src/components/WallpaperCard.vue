@@ -4,13 +4,13 @@
     class="wallpaper-card"
     :style="cardStyle"
     tabindex="0"
-    role="button"
+    role="group"
     :aria-label="`查看壁纸：${item.title || item.date}`"
     :aria-busy="loadState === 'loading'"
     @click="handleClick"
     @mouseenter="handleMouseEnter"
-    @keydown.enter.prevent="handleKeyboardClick"
-    @keydown.space.prevent="handleKeyboardClick"
+    @keydown.enter.self.prevent="handleKeyboardClick"
+    @keydown.space.self.prevent="handleKeyboardClick"
   >
     <div class="card-image">
       <!-- Base64 模糊占位 -->
@@ -114,8 +114,17 @@
 
       <!-- 底部信息 -->
       <div class="card-content">
-        <div class="card-title">
-          {{ item.title || 'Bing Wallpaper' }}
+        <div class="card-title-row">
+          <div class="card-title">
+            {{ item.title || 'Bing Wallpaper' }}
+          </div>
+
+          <AiStoryPanel
+            v-if="hasAiStory"
+            :item="item"
+            :accent-color="accentColor"
+            variant="card"
+          />
         </div>
         <div
           v-if="colorFingerprint.length"
@@ -204,6 +213,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import AiStoryPanel from './AiStoryPanel.vue'
 
 const props = defineProps({
   isLatest: {
@@ -480,6 +490,11 @@ const accentColor = computed(() => {
     color.DarkMuted ||
     ''
   )
+})
+
+const hasAiStory = computed(() => {
+  const story = props.item?.aiStory?.story
+  return typeof story === 'string' && story.trim().length > 0
 })
 
 const cardStyle = computed(() => {
@@ -1504,5 +1519,34 @@ watch(
   line-height: 1;
 }
 
+/* 标题与 AI 解读入口并排，按钮点击由组件内部 stop 阻止卡片跳转 */
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.card-title-row .card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.card-title-row .ai-story-trigger {
+  margin-left: auto;
+}
+
+@media (max-width: 420px) {
+  .card-title-row {
+    gap: 6px;
+  }
+
+  .card-title-row .ai-story-trigger {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+}
 
 </style>
