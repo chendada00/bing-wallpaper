@@ -50,18 +50,32 @@ button {
   isolation: isolate;
 }
 
-#app, body {
+
+/* ==========================================
+   Footer 底部安全空间
+========================================== */
+
+body {
   box-sizing: border-box;
   min-height: 100vh;
-  
-  padding-bottom: 35px; 
+  padding-bottom: 0;
 }
 
+#app {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding-bottom: 35px;
+}
+
+/* 移动端 Footer 改为两行，预留足够空间 */
 @media (max-width: 768px) {
-  #app, body {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  #app {
+    padding-bottom: calc(
+      88px + env(safe-area-inset-bottom, 0px)
+    );
   }
 }
+
 
 
 /* ================================

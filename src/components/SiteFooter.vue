@@ -3,10 +3,14 @@
   <footer class="site-footer">
     <div class="footer-inner">
 
-      <!-- 左侧：品牌 -->
+      <!-- 第一行左侧：品牌 -->
       <div class="footer-left">
         <span class="brand-wrapper">
-          <a class="footer-brand" href="/" aria-label="返回首页">
+          <a
+            class="footer-brand"
+            href="/"
+            aria-label="返回首页"
+          >
             <strong>Bing Wallpaper</strong>
           </a>
 
@@ -24,19 +28,7 @@
         </span>
       </div>
 
-      <!-- 中间：备案 -->
-      <div class="footer-center">
-        <a
-          href="https://beian.miit.gov.cn/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="link-item"
-        >
-          京ICP备2022017849号-4
-        </a>
-      </div>
-
-      <!-- 右侧：访问量 + 版权 + 返回顶部 -->
+      <!-- 第一行右侧：访问统计与返回顶部 -->
       <div class="footer-right">
 
         <!-- GoatCounter 统计组件 -->
@@ -114,15 +106,36 @@
           </div>
         </div>
 
-        <span class="copyright">
-          © {{ currentYear }} 保留所有权利
-        </span>
-
-        <a href="#app" class="back-top" aria-label="返回顶部">
+        <a
+          href="#app"
+          class="back-top"
+          aria-label="返回顶部"
+        >
           ↑ 顶部
         </a>
 
       </div>
+
+      <!-- 第二行：备案与版权 -->
+      <div class="footer-meta">
+
+        <div class="footer-center">
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link-item"
+          >
+            京ICP备2022017849号-4
+          </a>
+        </div>
+
+        <span class="copyright">
+          © {{ currentYear }} 保留所有权利
+        </span>
+
+      </div>
+
     </div>
   </footer>
 </template>
@@ -132,6 +145,20 @@ const currentYear = new Date().getFullYear()
 </script>
 
 <style scoped>
+
+/* 桌面端维持：品牌 | 备案版权 | 操作 */
+.footer-meta {
+  order: 2;
+}
+
+.footer-right {
+  order: 3;
+}
+
+/* =================================
+   Footer 基础布局
+================================= */
+
 .site-footer {
   position: fixed;
   z-index: 1000;
@@ -141,8 +168,9 @@ const currentYear = new Date().getFullYear()
 
   box-sizing: border-box;
   width: 100%;
+
   padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 
   background: rgba(247, 247, 247, 0.72);
 
@@ -158,10 +186,15 @@ const currentYear = new Date().getFullYear()
   justify-content: space-between;
 
   max-width: 1440px;
-  height: 48px;
+  min-height: 48px;
+
   margin: 0 auto;
   gap: 20px;
 }
+
+/* =================================
+   左侧品牌
+================================= */
 
 .footer-left {
   display: flex;
@@ -239,38 +272,25 @@ const currentYear = new Date().getFullYear()
   transform: translateX(-50%) translateY(0);
 }
 
-.footer-center {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.link-item {
-  color: var(--text-secondary, #666);
-  font-size: 12px;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.link-item:hover {
-  color: #2b5af4;
-}
+/* =================================
+   右侧操作区
+================================= */
 
 .footer-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
-  min-width: 0;
-}
+  gap: 12px;
 
-.copyright {
-  color: var(--text-secondary, #777);
-  font-size: 12px;
-  white-space: nowrap;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .back-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   color: var(--text-secondary, #666);
   font-size: 12px;
   text-decoration: none;
@@ -288,9 +308,46 @@ const currentYear = new Date().getFullYear()
   color: #2b5af4;
 }
 
-/* ==============================
-   GoatCounter 访问量
-   ============================== */
+/* =================================
+   第二行备案与版权
+================================= */
+
+.footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  flex: 0 0 auto;
+}
+
+.footer-center {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.link-item {
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.link-item:hover {
+  color: #2b5af4;
+}
+
+.copyright {
+  color: var(--text-secondary, #777);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* =================================
+   GoatCounter 访问统计
+================================= */
 
 .gc-widget {
   position: relative;
@@ -353,12 +410,14 @@ const currentYear = new Date().getFullYear()
   font-variant-numeric: tabular-nums;
 }
 
-/* 统计悬浮卡片 */
+/* 统计弹窗 */
+
 .gc-panel {
   position: absolute;
   right: 0;
   bottom: calc(100% + 12px);
 
+  box-sizing: border-box;
   width: 280px;
   padding: 17px;
 
@@ -400,6 +459,7 @@ const currentYear = new Date().getFullYear()
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   padding-bottom: 13px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -482,46 +542,86 @@ const currentYear = new Date().getFullYear()
   font-size: 10px;
 }
 
-/* ==============================
-   移动端
-   ============================== */
+/* =================================
+   移动端：两行布局
+================================= */
 
 @media (max-width: 768px) {
   .site-footer {
-    padding: 0 16px;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .footer-inner {
-    height: 44px;
-    gap: 10px;
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "meta meta";
+
+    align-items: center;
+
+    min-height: 0;
+    gap: 7px 10px;
+
+    padding: 9px 0 8px;
+  }
+
+  .footer-left {
+    grid-area: brand;
+    min-width: 0;
   }
 
   .brand-wrapper {
     font-size: 13px;
+    letter-spacing: 0.2px;
   }
 
   .footer-right {
-    gap: 8px;
+    grid-area: actions;
+    gap: 7px;
+  }
+
+  .footer-meta {
+    grid-area: meta;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    flex-wrap: wrap;
+    gap: 4px 12px;
+
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.055);
   }
 
   .link-item,
-  .copyright,
+  .copyright {
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
   .back-top {
+    padding: 5px 9px;
     font-size: 11px;
   }
 
-  .back-top {
-    padding: 4px 8px;
-  }
-
   .gc-trigger {
+    min-height: 30px;
     padding: 5px 8px;
     gap: 5px;
+    font-size: 10px;
+  }
+
+  .gc-trigger strong {
+    font-size: 11px;
   }
 
   .gc-panel {
-    width: min(280px, calc(100vw - 32px));
+    width: min(280px, calc(100vw - 28px));
   }
 
   .personal-link::after {
@@ -529,20 +629,112 @@ const currentYear = new Date().getFullYear()
   }
 }
 
-@media (max-width: 420px) {
-  .footer-center,
-  .copyright {
-    display: none;
+/* =================================
+   小屏手机：进一步压缩间距
+================================= */
+
+@media (max-width: 380px) {
+  .site-footer {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .footer-inner {
+    gap: 6px 7px;
+    padding-top: 8px;
+    padding-bottom: 7px;
+  }
+
+  .brand-wrapper {
+    font-size: 12px;
   }
 
   .footer-right {
-    margin-left: auto;
+    gap: 5px;
   }
 
   .gc-label {
     display: none;
   }
+
+  .gc-trigger {
+    min-width: 32px;
+    justify-content: center;
+    padding: 5px 7px;
+  }
+
+  .back-top {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .footer-meta {
+    gap: 3px 8px;
+  }
+
+  .link-item,
+  .copyright {
+    font-size: 9px;
+  }
 }
+
+/* =================================
+   深色模式
+================================= */
+
+@media (prefers-color-scheme: dark) {
+  .site-footer {
+    background: rgba(25, 25, 25, 0.78);
+    border-top-color: rgba(255, 255, 255, 0.09);
+  }
+
+  .footer-meta {
+    border-top-color: rgba(255, 255, 255, 0.09);
+  }
+
+  .gc-trigger {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    color: #bbb;
+  }
+
+  .gc-trigger strong {
+    color: #eee;
+  }
+
+  .back-top {
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .gc-panel {
+    background: rgba(35, 35, 35, 0.96);
+    color: #eee;
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .gc-panel-heading {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .gc-stat-grid,
+  .gc-panel-footer {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .gc-panel-heading span,
+  .gc-total-block > span,
+  .gc-stat-item > span {
+    color: #aaa;
+  }
+
+  .gc-panel-footer {
+    color: #999;
+  }
+}
+
+/* =================================
+   减少动态效果
+================================= */
 
 @media (prefers-reduced-motion: reduce) {
   *,
