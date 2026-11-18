@@ -81,14 +81,27 @@
                 </span>
               </div>
 
-              <div class="ai-story-title-block">
-                <p class="ai-story-kicker">A LITTLE STORY BEHIND THE VIEW</p>
-                <h2 :id="`${dialogId}-title`">
-                  {{ aiStory.title || item?.title || '这一刻的风景' }}
-                </h2>
-                <p v-if="aiStory.subtitle" class="ai-story-subtitle">
-                  {{ aiStory.subtitle }}
-                </p>
+              <div class="ai-story-intro">
+                <div class="ai-story-title-block">
+                  <p class="ai-story-kicker">A LITTLE STORY BEHIND THE VIEW</p>
+                  <h2 :id="`${dialogId}-title`">
+                    {{ aiStory.title || item?.title || '这一刻的风景' }}
+                  </h2>
+                  <p v-if="aiStory.subtitle" class="ai-story-subtitle">
+                    {{ aiStory.subtitle }}
+                  </p>
+                </div>
+
+                <figure v-if="previewUrl && !previewFailed" class="ai-story-preview">
+                  <img
+                    :src="previewUrl"
+                    :alt="`${item?.date || ''} 壁纸预览图`"
+                    loading="eager"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    @error="previewFailed = true"
+                  />
+                </figure>
               </div>
 
               <div class="ai-story-divider">
@@ -201,6 +214,23 @@ function normalizeTags(value) {
 
 const moodTags = computed(() => normalizeTags(aiStory.value.mood))
 const visualTags = computed(() => normalizeTags(aiStory.value.visualElements))
+
+// 只展示月度数据中的 preview（预览图 CDN 地址），不使用 image/sourceImage/UHD。
+const previewFailed = ref(false)
+const previewUrl = computed(() => {
+  const value = props.item?.preview
+  if (typeof value !== 'string' || !value.trim()) return ''
+  try {
+    const url = new URL(value, typeof window !== 'undefined' ? window.location.origin : 'https://localhost')
+    return url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+})
+
+watch(() => props.item?.preview, () => {
+  previewFailed.value = false
+})
 
 const palette = computed(() => {
   const colors = props.item?.color || {}
@@ -552,6 +582,41 @@ onBeforeUnmount(() => {
   line-height: 1.65;
 }
 
+.ai-story-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+  align-items: center;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.ai-story-intro .ai-story-title-block {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.ai-story-preview {
+  width: 100%;
+  max-width: 220px;
+  max-height: 124px;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+}
+
+.ai-story-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 124px;
+  object-fit: cover;
+}
+
+
 .ai-story-divider {
   display: flex;
   align-items: center;
@@ -706,8 +771,24 @@ onBeforeUnmount(() => {
     padding: 17px 19px 22px;
   }
 
-  .ai-story-title-block {
+  .ai-story-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
     margin-top: 17px;
+  }
+
+  .ai-story-preview {
+    max-width: 100%;
+    max-height: 190px;
+    aspect-ratio: 16 / 9;
+  }
+
+  .ai-story-preview img {
+    max-height: 190px;
+  }
+
+  .ai-story-title-block {
+    margin-top: 0;
   }
 
   .ai-story-title-block h2 {
