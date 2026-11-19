@@ -483,21 +483,18 @@ function buildHtml(wallpaper) {
 html,body{
   margin:0;
   padding:0;
-  background:#101116;
+  background:transparent;
   color:#f7f7fa;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
 }
-body{padding:18px 10px}
 a{color:inherit;text-decoration:none}
 .container{
-  width: 100%;
-  max-width: 560px; /* 手机端最大 560 */
+  width:100%;
+  max-width:560px; /* 手机端/窄屏最大 560px */
   margin:0 auto;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:20px;
+  border-radius:12px;
   background:linear-gradient(145deg,#23252d,#12141b 72%);
-  box-shadow:0 18px 55px rgba(0,0,0,.35);
 }
 .accent-line{
   height:2px;
@@ -722,19 +719,17 @@ h1{
   letter-spacing:.08em;
   text-align:center;
 }
-@media(min-width: 768px) {
-  body { padding: 30px 20px; }
-  .container {
-    max-width: 800px; /* 电脑端撑开到 800px，画面会丰满很多 */
-    border-radius: 24px;
+@media(min-width:768px){
+  .container{
+    max-width:800px; /* 宽屏最大 800px */
+    border-radius:14px;
   }
-  .preview, .preview img {
-    max-height: 400px; /* 电脑端图片也可以更高一些，更好看 */
+  .preview,.preview img{
+    max-height:400px;
   }
 }
 @media(max-width:420px){
-  body{padding:8px 5px}
-  .container{border-radius:15px}
+  .container{border-radius:0}
   .header{padding:16px}
   .content{padding:17px}
   h1{font-size:24px}
