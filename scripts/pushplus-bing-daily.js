@@ -459,8 +459,6 @@ function buildHtml(wallpaper) {
       ` : ''}
 
       <div class="ai-footer">
-        <span class="footer-icon">ⓘ</span>
-        <span>AI 生成内容，仅供欣赏与参考</span>
         ${generatedAt ? `<span class="generated">生成于 ${generatedAt}</span>` : ''}
       </div>
     `
@@ -479,7 +477,7 @@ function buildHtml(wallpaper) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>AI 解读 · ${safeDate}</title>
+<title>${storyTitle} · ${safeDate}</title>
 <style>
 *{box-sizing:border-box}
 html,body{
@@ -742,8 +740,8 @@ h1{
   <header class="header">
     <div class="mark">✧</div>
     <div class="heading">
-      <strong>AI 解读</strong>
-      <small>由 AI 生成的画面解读</small>
+      <strong>灵感视界</strong>
+      <small>画面的无声回响</small>
     </div>
     <div class="date">${safeDate}</div>
   </header>
