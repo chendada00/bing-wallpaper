@@ -1,3 +1,4 @@
+
 'use strict';
 
 import https from 'node:https';
@@ -5,15 +6,26 @@ import https from 'node:https';
 const BING_API =
   'https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN';
 
+const DATA_BASE_URL =
+  'https://raw.githubusercontent.com/chendada00/bing-data/main';
+
 const PUSHPLUS_API = 'https://www.pushplus.plus/send';
-const MAX_HTML_LENGTH = 18000;
+
+// PushPlus 正文长度安全限制
+const MAX_HTML_LENGTH = 19000;
+
+// AI 正文最大长度，避免单条解读过长
+const MAX_STORY_LENGTH = 900;
 
 function loadTargets() {
   const raw = process.env.PUSHPLUS_TARGETS;
 
-  if (!raw) throw new Error('未配置 PUSHPLUS_TARGETS');
+  if (!raw) {
+    throw new Error('未配置 PUSHPLUS_TARGETS');
+  }
 
   let targets;
+
   try {
     targets = JSON.parse(raw);
   } catch {
@@ -35,15 +47,19 @@ function loadTargets() {
     const token = String(target.token || '').trim();
     const topic = String(target.topic || '').trim();
 
-    if (!token) throw new Error(`${name} 缺少 token`);
+    if (!token) {
+      throw new Error(`${name} 缺少 token`);
+    }
 
     const key = `${token}\n${topic}`;
+
     if (seen.has(key)) {
       console.log(`跳过重复目标：${name}`);
       return null;
     }
 
     seen.add(key);
+
     return { name, token, topic };
   }).filter(Boolean);
 }
@@ -58,11 +74,16 @@ function request(url, options = {}) {
       const chunks = [];
 
       res.on('data', chunk => chunks.push(chunk));
+
       res.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8');
 
         if (res.statusCode < 200 || res.statusCode >= 300) {
-          reject(new Error(`HTTP ${res.statusCode}: ${body.slice(0, 500)}`));
+          reject(
+            new Error(
+              `HTTP ${res.statusCode}: ${body.slice(0, 500)}`
+            )
+          );
           return;
         }
 
@@ -70,10 +91,16 @@ function request(url, options = {}) {
       });
     });
 
-    req.on('timeout', () => req.destroy(new Error('请求超时')));
+    req.on('timeout', () => {
+      req.destroy(new Error('请求超时'));
+    });
+
     req.on('error', reject);
 
-    if (options.body) req.write(options.body);
+    if (options.body) {
+      req.write(options.body);
+    }
+
     req.end();
   });
 }
@@ -88,12 +115,35 @@ function escapeHtml(value) {
 }
 
 function toBingUrl(path) {
-  if (!path) return 'https://www.bing.com/';
+  if (!path) {
+    return 'https://www.bing.com/';
+  }
 
-  if (/^https?:\/\//i.test(path)) return path;
-  if (path.startsWith('//')) return `https:${path}`;
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  if (path.startsWith('//')) {
+    return `https:${path}`;
+  }
 
   return `https://www.bing.com${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+function safeHttpsUrl(value, fallback = '') {
+  if (typeof value !== 'string' || !value.trim()) {
+    return fallback;
+  }
+
+  try {
+    const url = new URL(value);
+
+    return url.protocol === 'https:'
+      ? url.href
+      : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function formatDate(rawDate) {
@@ -104,13 +154,19 @@ function formatDate(rawDate) {
   return {
     iso: `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`,
     display: `${rawDate.slice(0, 4)}.${rawDate.slice(4, 6)}.${rawDate.slice(6, 8)}`,
+    year: rawDate.slice(0, 4),
+    month: rawDate.slice(4, 6),
   };
 }
 
+/**
+ * 获取 Bing 当天壁纸。
+ */
 async function getTodayWallpaper() {
   const response = await request(BING_API);
 
   let data;
+
   try {
     data = JSON.parse(response);
   } catch {
@@ -128,6 +184,8 @@ async function getTodayWallpaper() {
   return {
     date: date.iso,
     displayDate: date.display,
+    year: date.year,
+    month: date.month,
     title: image.title || 'Bing 每日壁纸',
     copyright: image.copyright || 'Bing Wallpaper',
     copyrightLink: image.copyrightlink
@@ -137,13 +195,283 @@ async function getTodayWallpaper() {
   };
 }
 
+/**
+ * 根据 Bing 日期读取 bing-data 对应月份的数据。
+ *
+ * 例如：
+ * data/2026/11.json
+ */
+async function getWallpaperData(wallpaper) {
+  const url =
+    `${DATA_BASE_URL}/data/${wallpaper.year}/${wallpaper.month}.json`;
+
+  try {
+    const response = await request(url, {
+      headers: {
+        'User-Agent': 'Bing-Wallpaper-PushPlus/1.0',
+      },
+    });
+
+    const data = JSON.parse(response);
+
+    if (!Array.isArray(data.items)) {
+      throw new Error('月度 JSON 中不存在 items 数组');
+    }
+
+    const item = data.items.find(
+      entry => entry.date === wallpaper.date
+    );
+
+    if (!item) {
+      console.warn(`bing-data 中没有找到 ${wallpaper.date} 的记录`);
+      return null;
+    }
+
+    console.log(`成功读取壁纸数据：${wallpaper.date}`);
+
+    return item;
+  } catch (error) {
+    console.warn(
+      `读取 bing-data 失败，将使用 Bing 官方数据继续推送：${error.message}`
+    );
+
+    return null;
+  }
+}
+
+/**
+ * 规范化标签。
+ */
+function normalizeTags(value, max = 4) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(item => typeof item === 'string' && item.trim())
+    .map(item => item.trim())
+    .slice(0, max);
+}
+
+/**
+ * 获取图片主题色。
+ */
+function getPalette(item) {
+  const colors = item?.color || {};
+
+  const candidates = [
+    colors.Vibrant,
+    colors.LightVibrant,
+    colors.DarkVibrant,
+    colors.Muted,
+    colors.LightMuted,
+    colors.DarkMuted,
+  ];
+
+  const palette = candidates.filter(
+    color => typeof color === 'string' &&
+      /^#[0-9a-fA-F]{6}$/.test(color)
+  );
+
+  return {
+    accent: palette[0] || '#9588df',
+    accent2: palette[1] || '#c2a2dc',
+    accent3: palette[2] || '#86a9b7',
+  };
+}
+
+/**
+ * 截断过长的 AI 正文。
+ */
+function truncateStory(value, maxLength = MAX_STORY_LENGTH) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const story = value.trim();
+
+  if (story.length <= maxLength) {
+    return story;
+  }
+
+  return `${story.slice(0, maxLength).trim()}……`;
+}
+
+/**
+ * 组合壁纸和 AI 解读数据。
+ */
+function mergeWallpaperData(wallpaper, item) {
+  if (!item) {
+    return {
+      ...wallpaper,
+      aiStory: null,
+      previewUrl: wallpaper.imageUrl,
+      palette: getPalette(null),
+    };
+  }
+
+  const aiStory =
+    item.aiStory && typeof item.aiStory === 'object'
+      ? item.aiStory
+      : null;
+
+  const previewUrl = safeHttpsUrl(
+    item.preview,
+    wallpaper.imageUrl
+  );
+
+  return {
+    ...wallpaper,
+
+    title: item.title || wallpaper.title,
+
+    copyright: item.copyright || wallpaper.copyright,
+
+    copyrightLink: safeHttpsUrl(
+      item.copyrightLink,
+      wallpaper.copyrightLink
+    ),
+
+    previewUrl,
+
+    aiStory: aiStory
+      ? {
+          title: aiStory.title || item.title || '这一刻的风景',
+          subtitle: aiStory.subtitle || '',
+          story: truncateStory(aiStory.story),
+          mood: normalizeTags(aiStory.mood),
+          visualElements: normalizeTags(aiStory.visualElements),
+          generatedAt: aiStory.generatedAt || '',
+        }
+      : null,
+
+    palette: getPalette(item),
+  };
+}
+
+/**
+ * 生成 AI 解读卡片 HTML。
+ *
+ * 视觉结构参考前端 AiStoryPanel.vue：
+ * - 深色渐变卡片
+ * - 顶部 AI 标识
+ * - 日期信息
+ * - 标题和副标题
+ * - 图片预览
+ * - 意境漫游
+ * - 心境回声
+ * - 细节之诗
+ * - AI 生成说明
+ */
 function buildHtml(wallpaper) {
-  const date = escapeHtml(wallpaper.date);
-  const displayDate = escapeHtml(wallpaper.displayDate);
-  const title = escapeHtml(wallpaper.title);
-  const copyright = escapeHtml(wallpaper.copyright);
-  const copyrightLink = escapeHtml(wallpaper.copyrightLink);
-  const imageUrl = escapeHtml(wallpaper.imageUrl);
+  const {
+    date,
+    displayDate,
+    title,
+    copyright,
+    copyrightLink,
+    imageUrl,
+    previewUrl,
+    aiStory,
+    palette,
+  } = wallpaper;
+
+  const accent = palette.accent;
+  const accent2 = palette.accent2;
+  const accent3 = palette.accent3;
+
+  const safeDate = escapeHtml(date);
+  const safeDisplayDate = escapeHtml(displayDate);
+  const safeTitle = escapeHtml(title);
+  const safeCopyright = escapeHtml(copyright);
+  const safeCopyrightLink = escapeHtml(copyrightLink);
+  const safeImageUrl = escapeHtml(imageUrl);
+  const safePreviewUrl = escapeHtml(previewUrl);
+
+  const hasStory = Boolean(
+    aiStory &&
+    typeof aiStory.story === 'string' &&
+    aiStory.story.trim()
+  );
+
+  const storyTitle = escapeHtml(
+    aiStory?.title || title
+  );
+
+  const subtitle = escapeHtml(
+    aiStory?.subtitle || ''
+  );
+
+  const story = escapeHtml(
+    aiStory?.story || ''
+  );
+
+  const generatedAt = aiStory?.generatedAt
+    ? escapeHtml(
+        String(aiStory.generatedAt).slice(0, 10)
+      )
+    : '';
+
+  const moodTags = (aiStory?.mood || [])
+    .map(tag => `
+      <span class="tag mood">${escapeHtml(tag)}</span>
+    `)
+    .join('');
+
+  const visualTags = (aiStory?.visualElements || [])
+    .map(tag => `
+      <span class="tag visual">${escapeHtml(tag)}</span>
+    `)
+    .join('');
+
+  const storyContent = hasStory
+    ? `
+      <div class="divider">
+        <span></span><span></span><span></span>
+      </div>
+
+      <section class="section">
+        <div class="section-heading">
+          <span class="index">01</span>
+          <span class="section-title">意境漫游</span>
+        </div>
+        <div class="story">${story}</div>
+      </section>
+
+      ${moodTags ? `
+        <section class="section">
+          <div class="section-heading">
+            <span class="index">02</span>
+            <span class="section-title">心境回声</span>
+          </div>
+          <div class="tags">${moodTags}</div>
+        </section>
+      ` : ''}
+
+      ${visualTags ? `
+        <section class="section">
+          <div class="section-heading">
+            <span class="index">03</span>
+            <span class="section-title">细节之诗</span>
+          </div>
+          <div class="tags">${visualTags}</div>
+        </section>
+      ` : ''}
+
+      <div class="ai-footer">
+        <span class="footer-icon">ⓘ</span>
+        <span>AI 生成内容，仅供欣赏与参考</span>
+        ${generatedAt ? `<span class="generated">生成于 ${generatedAt}</span>` : ''}
+      </div>
+    `
+    : `
+      <div class="divider">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="empty-story">
+        今日 AI 解读暂未生成，先欣赏这幅风景吧。
+      </div>
+    `;
 
   const html = `<!doctype html>
 <html lang="zh-CN">
@@ -151,105 +479,327 @@ function buildHtml(wallpaper) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>Bing Wallpaper · ${date}</title>
+<title>AI 解读 · ${safeDate}</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#101114}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#fff}
+html,body{
+  margin:0;
+  padding:0;
+  background:#101116;
+  color:#f7f7fa;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+body{padding:18px 10px}
 a{color:inherit;text-decoration:none}
-.page{position:relative;min-height:100vh;overflow:hidden;background:#101114}
-.scene{position:absolute;inset:0;overflow:hidden;background:#101114}
-.scene-image{position:absolute;inset:-5%;width:110%;height:110%;object-fit:cover;filter:blur(48px) saturate(1.18);opacity:.42}
-.scene-tint{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,${escapeHtml(wallpaper.color || '#52647A')}55,transparent 70%);opacity:.7}
-.scene-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,6,9,.58),rgba(5,6,9,.12) 30%,rgba(5,6,9,.24) 65%,rgba(5,6,9,.94))}
-.scene-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 28%,rgba(0,0,0,.24) 75%,rgba(0,0,0,.48))}
-.content{position:relative;z-index:1;max-width:1180px;min-height:100vh;margin:auto;padding:28px 38px 24px;display:flex;flex-direction:column}
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px}
-.brand{font-size:13px;font-weight:700;letter-spacing:1.5px;color:#fff}
-.brand span{font-weight:400;color:#c8d0dc}
-.date-pill{padding:10px 15px;border:1px solid rgba(255,255,255,.24);border-radius:30px;background:rgba(20,22,27,.24);font-size:10px;letter-spacing:.04em;color:#e1e7ef}
-.intro{margin:36px 0 22px}
-.eyebrow{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#d1dbea;margin-bottom:14px}
-h1{margin:0;color:#fff;font-size:clamp(27px,4vw,43px);line-height:1.3;font-weight:700;letter-spacing:-.03em;text-shadow:0 3px 25px rgba(0,0,0,.25)}
-.sub{margin:10px 0 0;font-size:12px;line-height:1.8;color:#e1e7ef}
-.hero{width:100%;max-width:850px;margin:0 auto;border:1px solid rgba(255,255,255,.16);border-radius:19px;overflow:hidden;background:rgba(17,23,32,.62);box-shadow:0 24px 70px rgba(0,0,0,.35)}
-.photo-link{display:block;background:#1b2632}
-.photo{display:block;width:100%;height:auto;max-height:520px;object-fit:cover;border:0}
-.info{padding:23px 27px 25px;background:linear-gradient(140deg,rgba(29,42,56,.97),rgba(14,21,30,.98))}
-.label{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#c0d2e7}
-.caption{margin:10px 0 0;font-size:21px;line-height:1.55;font-weight:700;color:#fff;overflow-wrap:anywhere}
-.copyright{margin:10px 0 0;font-size:12px;line-height:1.9;color:#d2dce8;overflow-wrap:anywhere}
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
-.btn{display:inline-block;padding:12px 17px;border-radius:10px;font-size:12px;line-height:1.5;font-weight:650;text-align:center}
-.primary{background:#f3f6fa;color:#17212e}
-.secondary{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.04);color:#f3f6fa}
-.note{max-width:850px;width:100%;margin:17px auto 0;display:flex;gap:10px;align-items:flex-start;font-size:11px;line-height:1.8;color:#d1dbea}
-.dot{width:6px;height:6px;flex:0 0 6px;margin-top:7px;border-radius:50%;background:#a9c8ed}
-.footer{max-width:850px;width:100%;margin:22px auto 0;padding-top:15px;border-top:1px solid rgba(255,255,255,.22);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;letter-spacing:.08em;color:#c1cbd9}
-@media(max-width:600px){.content{padding:18px 15px 20px}.intro{margin:30px 0 17px}.hero{border-radius:14px}.photo{max-height:none}.info{padding:19px 17px 20px}.caption{font-size:18px}.copyright{font-size:11px}.btn{padding:11px 12px}.note{font-size:10px}.date-pill{padding:8px 10px;font-size:9px}.brand{font-size:11px}}
+.container{
+  width:100%;
+  max-width:560px;
+  margin:0 auto;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:20px;
+  background:linear-gradient(145deg,#23252d,#12141b 72%);
+  box-shadow:0 18px 55px rgba(0,0,0,.35);
+}
+.accent-line{
+  height:2px;
+  margin:0 8%;
+  background:linear-gradient(90deg,transparent,${accent},${accent2},${accent3},transparent);
+}
+.header{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:19px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.075);
+}
+.mark{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:39px;
+  height:39px;
+  flex:0 0 39px;
+  border:1px solid ${accent}88;
+  border-radius:13px;
+  color:${accent2};
+  background:${accent}22;
+  font-size:21px;
+}
+.heading{flex:1;min-width:0}
+.heading strong{
+  display:block;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+}
+.heading small{
+  display:block;
+  margin-top:4px;
+  color:rgba(255,255,255,.43);
+  font-size:10px;
+  letter-spacing:.04em;
+}
+.date{
+  color:rgba(255,255,255,.48);
+  font-size:10px;
+  white-space:nowrap;
+}
+.content{padding:19px 21px 21px}
+.meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:rgba(255,255,255,.46);
+  font-size:10px;
+  letter-spacing:.04em;
+}
+.date-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:${accent};
+  box-shadow:0 0 10px ${accent};
+}
+.kicker{
+  margin:20px 0 9px;
+  color:${accent2};
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.15em;
+}
+h1{
+  margin:0;
+  color:#fff;
+  font-size:27px;
+  font-weight:720;
+  line-height:1.3;
+  letter-spacing:-.025em;
+}
+.subtitle{
+  margin:8px 0 0;
+  color:#c2a2dc;
+  font-size:12px;
+  line-height:1.7;
+}
+.preview{
+  display:block;
+  width:100%;
+  max-height:230px;
+  margin:17px 0 0;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:13px;
+  background:#252936;
+}
+.preview img{
+  display:block;
+  width:100%;
+  max-height:230px;
+  object-fit:cover;
+}
+.divider{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  margin:21px 0 19px;
+}
+.divider span:nth-child(1){
+  width:32px;
+  height:2px;
+  border-radius:2px;
+  background:${accent};
+}
+.divider span:nth-child(2){
+  width:13px;
+  height:2px;
+  border-radius:2px;
+  background:${accent2};
+}
+.divider span:nth-child(3){
+  width:5px;
+  height:2px;
+  border-radius:2px;
+  background:${accent3};
+}
+.section{margin-top:19px}
+.section-heading{
+  display:flex;
+  align-items:baseline;
+  gap:9px;
+  margin-bottom:9px;
+}
+.index{
+  color:${accent};
+  font-family:monospace;
+  font-size:10px;
+  letter-spacing:.06em;
+}
+.section-title{
+  color:rgba(255,255,255,.9);
+  font-size:13px;
+  font-weight:680;
+}
+.story{
+  color:rgba(241,242,246,.78);
+  font-size:13px;
+  line-height:1.95;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
+}
+.tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.tag{
+  display:inline-block;
+  padding:6px 10px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:30px;
+  font-size:10px;
+  line-height:1.4;
+}
+.mood{
+  border-color:${accent}55;
+  color:#e2d9ff;
+  background:${accent}20;
+}
+.visual{
+  color:rgba(255,255,255,.72);
+  background:rgba(255,255,255,.045);
+}
+.ai-footer{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:23px;
+  padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.075);
+  color:rgba(255,255,255,.38);
+  font-size:10px;
+}
+.footer-icon{color:${accent2}}
+.generated{margin-left:auto}
+.empty-story{
+  color:rgba(255,255,255,.58);
+  font-size:12px;
+  line-height:1.8;
+}
+.copyright{
+  margin-top:17px;
+  padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.07);
+  color:rgba(255,255,255,.38);
+  font-size:10px;
+  line-height:1.7;
+}
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:16px;
+}
+.btn{
+  display:inline-block;
+  padding:10px 13px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:9px;
+  color:#eee;
+  background:rgba(255,255,255,.06);
+  font-size:11px;
+  font-weight:600;
+}
+.btn.primary{
+  border-color:#fff;
+  color:#20232b;
+  background:#f3f4f7;
+}
+.bottom{
+  padding:13px 20px;
+  border-top:1px solid rgba(255,255,255,.07);
+  color:rgba(255,255,255,.28);
+  font-size:9px;
+  letter-spacing:.08em;
+  text-align:center;
+}
+@media(max-width:420px){
+  body{padding:8px 5px}
+  .container{border-radius:15px}
+  .header{padding:16px}
+  .content{padding:17px}
+  h1{font-size:24px}
+  .story{font-size:12px;line-height:1.9}
+  .date{font-size:9px}
+}
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="scene" aria-hidden="true">
-    <img class="scene-image" src="${imageUrl}" alt="">
-    <div class="scene-tint"></div>
-    <div class="scene-shade"></div>
-    <div class="scene-vignette"></div>
-  </div>
+<div class="container">
+  <div class="accent-line"></div>
+
+  <header class="header">
+    <div class="mark">✧</div>
+    <div class="heading">
+      <strong>AI 解读</strong>
+      <small>由 AI 生成的画面解读</small>
+    </div>
+    <div class="date">${safeDate}</div>
+  </header>
 
   <main class="content">
-    <header class="topbar">
-      <div class="brand">BING <span>WALLPAPER</span></div>
-      <div class="date-pill">DAILY EDITION · ${date}</div>
-    </header>
-
-    <section class="intro">
-      <div class="eyebrow">A MOMENT OF BEAUTY, EVERY DAY</div>
-      <h1>今日的世界，值得一看。</h1>
-      <p class="sub">${displayDate} · Bing 每日精选壁纸</p>
-    </section>
-
-    <article class="hero">
-      <a class="photo-link" href="${imageUrl}" target="_blank" rel="noopener noreferrer">
-        <img class="photo" src="${imageUrl}" alt="${title}">
-      </a>
-
-      <div class="info">
-        <div class="label">TODAY'S HIGHLIGHT</div>
-        <div class="caption">${title}</div>
-        <p class="copyright">${copyright}</p>
-
-        <div class="actions">
-          <a class="btn primary" href="${imageUrl}" target="_blank" rel="noopener noreferrer">查看高清原图 ↗</a>
-          <a class="btn secondary" href="${copyrightLink}" target="_blank" rel="noopener noreferrer">了解图片来源</a>
-          <a class="btn secondary" href="https://bing.xn--xpqp35o.cn/" target="_blank" rel="noopener noreferrer" style="border-color:rgba(160,195,255,.55);background:rgba(105,150,220,.16);color:#e4edff;">探索更多每日壁纸 ↗</a>
-
-        </div>
-      </div>
-    </article>
-
-    <div class="note">
-      <span class="dot"></span>
-      <span>图片版权归原作者所有。此消息仅用于每日壁纸欣赏，图片由 Bing 官方图片服务提供。</span>
+    <div class="meta">
+      <span class="date-dot"></span>
+      <span>${safeDisplayDate}</span>
     </div>
 
-    <footer class="footer">
-      <span>Bing Daily Wallpaper</span>
-      <span>ONE DAY · ONE PICTURE</span>
-    </footer>
+    <div class="kicker">A LITTLE STORY BEHIND THE VIEW</div>
+    <h1>${storyTitle}</h1>
+    ${subtitle ? `<p class="subtitle">${subtitle}</p>` : ''}
+
+    <a class="preview" href="${safeImageUrl}" target="_blank">
+      <img src="${safePreviewUrl}" alt="${safeTitle}">
+    </a>
+
+    ${storyContent}
+
+    <div class="copyright">
+      ${safeCopyright}
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="${safeImageUrl}" target="_blank">
+        查看高清原图 ↗
+      </a>
+      <a class="btn" href="${safeCopyrightLink}" target="_blank">
+        图片来源 ↗
+      </a>
+      <a class="btn" href="https://bing.xn--xpqp35o.cn/" target="_blank">
+        探索更多壁纸 ↗
+      </a>
+    </div>
   </main>
+
+  <footer class="bottom">
+    BING WALLPAPER · ONE DAY · ONE PICTURE
+  </footer>
 </div>
 </body>
 </html>`;
 
   if (html.length > MAX_HTML_LENGTH) {
-    throw new Error(`HTML 正文超出安全长度：${html.length} > ${MAX_HTML_LENGTH}`);
+    throw new Error(
+      `HTML 正文超出安全长度：${html.length} > ${MAX_HTML_LENGTH}`
+    );
   }
 
   return html;
 }
 
+/**
+ * 推送 PushPlus。
+ */
 async function sendPushPlus(target, title, content) {
   const payload = {
     token: target.token,
@@ -258,9 +808,12 @@ async function sendPushPlus(target, title, content) {
     template: 'html',
   };
 
-  if (target.topic) payload.topic = target.topic;
+  if (target.topic) {
+    payload.topic = target.topic;
+  }
 
   const body = JSON.stringify(payload);
+
   const response = await request(PUSHPLUS_API, {
     method: 'POST',
     headers: {
@@ -271,36 +824,69 @@ async function sendPushPlus(target, title, content) {
   });
 
   let result;
+
   try {
     result = JSON.parse(response);
   } catch {
-    throw new Error(`PushPlus 返回非 JSON 内容：${response.slice(0, 300)}`);
+    throw new Error(
+      `PushPlus 返回非 JSON 内容：${response.slice(0, 300)}`
+    );
   }
 
   if (Number(result.code) !== 200) {
-    throw new Error(`PushPlus 返回失败：code=${result.code}, msg=${result.msg || '未知错误'}`);
+    throw new Error(
+      `PushPlus 返回失败：code=${result.code}, msg=${result.msg || '未知错误'}`
+    );
   }
 
   return result;
 }
 
+/**
+ * 主流程。
+ */
 async function main() {
   const targets = loadTargets();
+
   console.log(`准备推送，目标数量：${targets.length}`);
 
-  const wallpaper = await getTodayWallpaper();
-  console.log(`Bing 壁纸日期：${wallpaper.date}`);
-  console.log(`Bing 壁纸标题：${wallpaper.title}`);
+  // 1. 获取 Bing 当天壁纸
+  const bingWallpaper = await getTodayWallpaper();
 
+  console.log(`Bing 壁纸日期：${bingWallpaper.date}`);
+  console.log(`Bing 壁纸标题：${bingWallpaper.title}`);
+
+  // 2. 从 bing-data 获取 AI 解读
+  const dataItem = await getWallpaperData(bingWallpaper);
+
+  if (dataItem?.aiStory?.story) {
+    console.log('当天 AI 解读已找到');
+  } else {
+    console.log('当天没有可用的 AI 解读，将推送普通壁纸卡片');
+  }
+
+  // 3. 合并数据
+  const wallpaper = mergeWallpaperData(
+    bingWallpaper,
+    dataItem
+  );
+
+  // 4. 生成 HTML
   const html = buildHtml(wallpaper);
+
   console.log(`HTML 正文长度：${html.length} 字符`);
 
-  const title = `Bing 每日壁纸 · ${wallpaper.date}`;
+  const title = wallpaper.aiStory
+    ? `AI 解读 · ${wallpaper.date} · ${wallpaper.title}`
+    : `Bing 每日壁纸 · ${wallpaper.date}`;
 
+  // 5. 多目标推送
   const results = await Promise.allSettled(
     targets.map(async target => {
       console.log(`开始推送：${target.name}`);
+
       await sendPushPlus(target, title, html);
+
       console.log(`推送请求成功：${target.name}`);
     })
   );
@@ -310,11 +896,16 @@ async function main() {
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
       failures++;
-      console.error(`推送失败 [${targets[index].name}]：${result.reason.message}`);
+
+      console.error(
+        `推送失败 [${targets[index].name}]：${result.reason.message}`
+      );
     }
   });
 
-  console.log(`推送结束：成功 ${results.length - failures}，失败 ${failures}`);
+  console.log(
+    `推送结束：成功 ${results.length - failures}，失败 ${failures}`
+  );
 
   if (failures > 0) {
     throw new Error(`${failures} 个推送目标失败，请查看日志`);
@@ -322,6 +913,10 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error('Bing 每日壁纸推送任务失败：', error.message);
+  console.error(
+    'Bing 每日壁纸推送任务失败：',
+    error.message
+  );
+
   process.exitCode = 1;
 });
