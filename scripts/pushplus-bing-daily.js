@@ -490,8 +490,8 @@ html,body{
 body{padding:18px 10px}
 a{color:inherit;text-decoration:none}
 .container{
-  width:100%;
-  max-width:560px;
+  width: 100%;
+  max-width: 560px; /* 手机端最大 560 */
   margin:0 auto;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.14);
@@ -722,6 +722,16 @@ h1{
   letter-spacing:.08em;
   text-align:center;
 }
+@media(min-width: 768px) {
+  body { padding: 30px 20px; }
+  .container {
+    max-width: 800px; /* 电脑端撑开到 800px，画面会丰满很多 */
+    border-radius: 24px;
+  }
+  .preview, .preview img {
+    max-height: 400px; /* 电脑端图片也可以更高一些，更好看 */
+  }
+}
 @media(max-width:420px){
   body{padding:8px 5px}
   .container{border-radius:15px}
@@ -875,7 +885,7 @@ async function main() {
   console.log(`HTML 正文长度：${html.length} 字符`);
 
   const title = wallpaper.aiStory
-    ? `AI 解读 · ${wallpaper.date} · ${wallpaper.title}`
+    ? `${wallpaper.aiStory.title} · ${wallpaper.date} · ${wallpaper.title}`
     : `Bing 每日壁纸 · ${wallpaper.date}`;
 
   // 5. 多目标推送
