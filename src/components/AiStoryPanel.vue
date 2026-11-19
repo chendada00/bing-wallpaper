@@ -36,6 +36,7 @@
           @click.self="close"
         >
           <section
+            ref="dialogRef"
             class="ai-story-dialog"
             role="dialog"
             aria-modal="true"
@@ -48,7 +49,14 @@
 
             <header class="ai-story-header">
               <div class="ai-story-heading-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
                   <path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
                 </svg>
@@ -59,18 +67,58 @@
                 <span>由 AI 生成的画面解读</span>
               </div>
 
-              <button
-                ref="closeRef"
-                type="button"
-                class="ai-story-close"
-                aria-label="关闭 AI 解读"
-                @click="close"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-                  <path d="m6 6 12 12M18 6 6 18" />
-                </svg>
-              </button>
+              <div class="ai-story-header-actions">
+                <!-- 导出截图 -->
+                <button
+                  type="button"
+                  class="ai-story-export"
+                  :disabled="isExporting"
+                  :title="exportError || '导出完整卡片为高清 PNG'"
+                  data-export-hide
+                  @click="exportCard"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 3v12" />
+                    <path d="m7 10 5 5 5-5" />
+                    <path d="M5 17v3h14v-3" />
+                  </svg>
+
+                  <span aria-live="polite">
+                    {{ isExporting ? '生成中…' : exportStatus || '导出长图' }}
+                  </span>
+                </button>
+
+                <!-- 关闭按钮：导出时隐藏 -->
+                <button
+                  ref="closeRef"
+                  type="button"
+                  class="ai-story-close"
+                  aria-label="关闭 AI 解读"
+                  data-export-hide
+                  @click="close"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 6 12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
             </header>
+
 
             <div class="ai-story-scroll">
               <div class="ai-story-meta" v-if="item?.date">
@@ -160,6 +208,7 @@
     </Teleport>
 </template>
 
+
 <script setup>
 import {
   computed,
@@ -170,6 +219,8 @@ import {
   useId,
   watch
 } from 'vue'
+
+import { toBlob } from 'html-to-image'
 
 const props = defineProps({
   item: {
@@ -188,9 +239,17 @@ const props = defineProps({
 })
 
 const dialogId = useId()
+
 const isOpen = ref(false)
 const triggerRef = ref(null)
 const closeRef = ref(null)
+const dialogRef = ref(null)
+
+// 截图状态
+const isExporting = ref(false)
+const exportStatus = ref('')
+const exportError = ref('')
+
 let previousBodyOverflow = ''
 
 const aiStory = computed(() => {
@@ -215,13 +274,24 @@ function normalizeTags(value) {
 const moodTags = computed(() => normalizeTags(aiStory.value.mood))
 const visualTags = computed(() => normalizeTags(aiStory.value.visualElements))
 
-// 只展示月度数据中的 preview（预览图 CDN 地址），不使用 image/sourceImage/UHD。
+// 只使用月度数据中的 preview
 const previewFailed = ref(false)
+
 const previewUrl = computed(() => {
   const value = props.item?.preview
-  if (typeof value !== 'string' || !value.trim()) return ''
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return ''
+  }
+
   try {
-    const url = new URL(value, typeof window !== 'undefined' ? window.location.origin : 'https://localhost')
+    const url = new URL(
+      value,
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://localhost'
+    )
+
     return url.protocol === 'https:' ? url.href : ''
   } catch {
     return ''
@@ -234,6 +304,7 @@ watch(() => props.item?.preview, () => {
 
 const palette = computed(() => {
   const colors = props.item?.color || {}
+
   const priority = [
     props.accentColor,
     colors.Vibrant,
@@ -245,7 +316,8 @@ const palette = computed(() => {
   ]
 
   return [...new Set(priority.filter(value => {
-    return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)
+    return typeof value === 'string' &&
+      /^#[0-9a-fA-F]{6}$/.test(value)
   }).map(value => value.toUpperCase()))].slice(0, 5)
 })
 
@@ -257,8 +329,12 @@ const themeStyle = computed(() => ({
 
 function formatDate(value) {
   if (!value) return ''
+
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10)
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10)
+  }
 
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -276,6 +352,289 @@ function close() {
   isOpen.value = false
 }
 
+/**
+ * 等待图片加载完成。
+ *
+ * 避免图片尚未加载完就开始截图。
+ */
+function waitForImage(image) {
+  if (image.complete) {
+    if (!image.naturalWidth) {
+      return Promise.reject(
+        new Error('卡片中的图片尚未成功加载')
+      )
+    }
+
+    return typeof image.decode === 'function'
+      ? image.decode().catch(() => {})
+      : Promise.resolve()
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup()
+      reject(new Error('图片加载超时'))
+    }, 15000)
+
+    function cleanup() {
+      window.clearTimeout(timeout)
+      image.removeEventListener('load', onLoad)
+      image.removeEventListener('error', onError)
+    }
+
+    function onLoad() {
+      cleanup()
+      resolve()
+    }
+
+    function onError() {
+      cleanup()
+      reject(new Error('图片加载失败'))
+    }
+
+    image.addEventListener('load', onLoad, { once: true })
+    image.addEventListener('error', onError, { once: true })
+  })
+}
+
+/**
+ * 生成安全文件名。
+ */
+function createExportFilename() {
+  const date = props.item?.date || 'wallpaper'
+
+  const title =
+    aiStory.value.title ||
+    props.item?.title ||
+    'AI解读'
+
+  const safeTitle = String(title)
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 60)
+
+  return `Bing-AI-${date}-${safeTitle}.png`
+}
+
+/**
+ * 导出完整 AI 解读卡片。
+ *
+ * 直接截图真实 DOM，不再克隆节点到屏幕外。
+ * 截图前临时展开弹窗和滚动区域，完成后恢复原样。
+ */
+async function exportCard() {
+  const source = dialogRef.value
+
+  if (!source || isExporting.value) {
+    return
+  }
+
+  const scroll = source.querySelector('.ai-story-scroll')
+
+  if (!scroll) {
+    exportStatus.value = '导出失败'
+    exportError.value = '未找到卡片内容区域'
+    return
+  }
+
+  isExporting.value = true
+  exportStatus.value = ''
+  exportError.value = ''
+
+  // 保存原始内联样式，确保导出结束后恢复
+  const originalSourceStyle = source.getAttribute('style')
+  const originalScrollStyle = scroll.getAttribute('style')
+
+  try {
+    // 1. 等待 Vue 完成 DOM 更新
+    await nextTick()
+
+    // 2. 等待字体加载
+    if (document.fonts?.ready) {
+      await document.fonts.ready
+    }
+
+    // 3. 等待原始卡片中的图片加载
+    const sourceImages = [
+      ...source.querySelectorAll('img')
+    ]
+
+    await Promise.all(
+      sourceImages.map(waitForImage)
+    )
+
+    // 4. 记录当前弹窗宽度
+    const cardWidth = Math.ceil(
+      source.getBoundingClientRect().width
+    )
+
+    if (!cardWidth || cardWidth < 100) {
+      throw new Error('无法获取有效的卡片宽度')
+    }
+
+    // 5. 将主题变量直接设置到截图目标上
+    // 避免截图时依赖 backdrop 上的 CSS 变量
+    Object.entries(themeStyle.value).forEach(
+      ([key, value]) => {
+        source.style.setProperty(key, value)
+      }
+    )
+
+    // 6. 展开弹窗，解除最大高度和 overflow 限制
+    Object.assign(source.style, {
+      width: `${cardWidth}px`,
+      maxWidth: 'none',
+      maxHeight: 'none',
+      height: 'auto',
+      overflow: 'visible',
+      transform: 'none',
+      margin: '0',
+      flex: '0 0 auto',
+      boxSizing: 'border-box'
+    })
+
+    // 7. 展开内部滚动区域
+    Object.assign(scroll.style, {
+      overflow: 'visible',
+      maxHeight: 'none',
+      height: 'auto',
+      flex: '0 0 auto',
+      overscrollBehavior: 'auto'
+    })
+
+    // 8. 等待浏览器重新计算布局
+    await nextTick()
+
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resolve)
+      })
+    })
+
+    // 9. 获取展开后的真实尺寸
+    const rect = source.getBoundingClientRect()
+
+    // 以卡片实际宽度作为截图宽度
+    const width = Math.ceil(rect.width)
+
+    // 以完整内容高度作为截图高度
+    const height = Math.ceil(
+      Math.max(
+        source.scrollHeight,
+        scroll.scrollHeight
+      )
+    )
+
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      throw new Error(
+        `截图尺寸异常：${width} × ${height}`
+      )
+    }
+
+    // 防止异常长内容导致 Canvas 尺寸过大
+    const pixelRatio = Math.max(
+      1,
+      Math.min(
+        3,
+        16000 / Math.max(width, height),
+        Math.sqrt(24000000 / (width * height))
+      )
+    )
+
+    console.log('AI 解读截图尺寸：', {
+      width,
+      height,
+      pixelRatio,
+      scrollHeight: scroll.scrollHeight,
+      sourceHeight: source.scrollHeight
+    })
+
+    // 10. 直接截图真实弹窗
+    const blob = await toBlob(source, {
+      pixelRatio,
+      cacheBust: true,
+      width,
+      height,
+
+      // 给 Canvas 设置不透明底色
+      // 卡片本身的渐变背景仍由原 CSS 绘制
+      backgroundColor: '#17191f',
+
+      // 排除不需要出现在图片中的按钮
+      filter: node => {
+        return !(
+          node instanceof HTMLElement &&
+          node.hasAttribute('data-export-hide')
+        )
+      }
+    })
+
+    if (!blob || blob.size === 0) {
+      throw new Error('PNG 图片生成失败，未获得有效数据')
+    }
+
+    // 11. 下载 PNG
+    const objectUrl = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+
+    link.href = objectUrl
+    link.download = createExportFilename()
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    // 延迟释放下载地址
+    window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl)
+    }, 3000)
+
+    exportStatus.value = '已保存'
+
+  } catch (error) {
+    console.error('AI 解读卡片导出失败：', error)
+
+    const message = String(error?.message || '')
+
+    if (/cors|cross-origin|taint|fetch/i.test(message)) {
+      exportStatus.value = '导出失败'
+      exportError.value =
+        '图片可能存在跨域限制，请检查图片服务器的 CORS 配置'
+    } else {
+      exportStatus.value = '导出失败'
+      exportError.value = message || '请稍后重试'
+    }
+
+  } finally {
+    // 12. 恢复弹窗原始样式
+    if (originalSourceStyle === null) {
+      source.removeAttribute('style')
+    } else {
+      source.setAttribute('style', originalSourceStyle)
+    }
+
+    // 13. 恢复滚动区域原始样式
+    if (originalScrollStyle === null) {
+      scroll.removeAttribute('style')
+    } else {
+      scroll.setAttribute('style', originalScrollStyle)
+    }
+
+    isExporting.value = false
+  }
+}
+
+
+/**
+ * ESC 关闭弹窗。
+ */
 function handleDocumentKeydown(event) {
   if (event.key === 'Escape' && isOpen.value) {
     event.preventDefault()
@@ -283,30 +642,47 @@ function handleDocumentKeydown(event) {
   }
 }
 
+/**
+ * 弹窗打开和关闭时管理页面滚动。
+ */
 watch(isOpen, async opened => {
   if (typeof document === 'undefined') return
 
   if (opened) {
     previousBodyOverflow = document.body.style.overflow
+
     document.body.style.overflow = 'hidden'
+
     await nextTick()
+
     closeRef.value?.focus()
+
   } else {
     document.body.style.overflow = previousBodyOverflow
+
     await nextTick()
+
     triggerRef.value?.focus()
   }
 })
 
 onMounted(() => {
-  document.addEventListener('keydown', handleDocumentKeydown)
+  document.addEventListener(
+    'keydown',
+    handleDocumentKeydown
+  )
 })
 
 onBeforeUnmount(() => {
   if (typeof document !== 'undefined') {
-    document.removeEventListener('keydown', handleDocumentKeydown)
+    document.removeEventListener(
+      'keydown',
+      handleDocumentKeydown
+    )
+
     if (isOpen.value) {
-      document.body.style.overflow = previousBodyOverflow
+      document.body.style.overflow =
+        previousBodyOverflow
     }
   }
 })
@@ -815,4 +1191,106 @@ onBeforeUnmount(() => {
     transition: none;
   }
 }
+
+
+/* ================================
+   AI 解读卡片截图导出按钮
+================================ */
+
+.ai-story-header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.ai-story-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 34px;
+  padding: 0 11px;
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--ai-accent) 48%,
+    rgba(255,255,255,.18)
+  );
+
+  border-radius: 10px;
+
+  color: rgba(255,255,255,.9);
+
+  background: color-mix(
+    in srgb,
+    var(--ai-accent) 16%,
+    rgba(255,255,255,.055)
+  );
+
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background .2s ease,
+    border-color .2s ease,
+    transform .2s ease,
+    opacity .2s ease;
+}
+
+.ai-story-export:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--ai-accent) 28%,
+    rgba(255,255,255,.08)
+  );
+
+  border-color: var(--ai-accent);
+
+  transform: translateY(-1px);
+}
+
+.ai-story-export:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+.ai-story-export:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.ai-story-export svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.ai-story-export:focus-visible {
+  outline: 2px solid var(--ai-accent);
+  outline-offset: 3px;
+}
+
+/* 手机端 */
+@media (max-width: 640px) {
+  .ai-story-header-actions {
+    gap: 6px;
+  }
+
+  .ai-story-export {
+    min-height: 32px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
+  .ai-story-export svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 </style>
