@@ -24,7 +24,7 @@
         <path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
         <path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
       </svg>
-      <span>AI 解读</span>
+      <span>AI 漫读</span>
     </button>
 
     <Teleport to="body">
@@ -63,8 +63,8 @@
               </div>
 
               <div class="ai-story-heading-copy">
-                <strong>AI 解读</strong>
-                <span>由 AI 生成的画面解读</span>
+                <strong>光影札记</strong>
+                <span>每一幕都有未说完的故事</span>
               </div>
 
               <div class="ai-story-header-actions">
