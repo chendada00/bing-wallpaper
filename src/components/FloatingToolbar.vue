@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
     <!-- 操作面板 -->
     <Transition name="floating-panel">
       <div
-        v-if="open"
+        v-show="open"
         ref="panelRef"
         id="floating-toolbar-panel"
         class="floating-panel"
