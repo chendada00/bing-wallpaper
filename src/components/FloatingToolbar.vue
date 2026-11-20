@@ -357,7 +357,27 @@ onBeforeUnmount(() => {
       @pointercancel="onPointerUp"
       @click="togglePanel"
     >
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-selfhst="operational"><path d="m430.2 512H81.8C36.6 512 0 475.4 0 430.2V81.8C0 36.6 36.6 0 81.8 0h348.5C475.4 0 512 36.6 512 81.8v348.5c0 45.1-36.6 81.7-81.8 81.7"/><path d="m256 171.9v-61.6c0-6 3.9-8.3 9.4-5.6 45.6 22.8 91.3 45.6 137 68.3 3.1 1.5 3.7 3.4 3.7 6.5-.1 49-.1 98-.1 147 0 6-3.9 8.5-9.3 5.8-19.2-9.6-38.4-19.2-57.5-28.7-1.5-.7-2.9-1.4-5.2-2.5v61.2c0 6.7-3.7 8.9-9.9 5.8-21-10.5-41.9-20.9-62.9-31.4-1.5-.7-3-1.4-4.9-2.4-.1 1.7-.3 3.1-.3 4.4v63.5c0 5.2-4.1 7.8-8.9 5.4-45.9-22.9-91.9-45.9-137.8-68.8-2.4-1.2-3.3-2.5-3.3-5.3.1-49.7.1-99.3.1-149 0-4.8 4.3-7.3 8.8-5l64.2 32.1c1.5.7 2.9 1.4 4.9 2.4v-66.4c0-8 3.3-9.9 10.6-6.2 18.7 9.4 37.5 18.7 56.2 28.1 1.4.6 2.9 1.3 5.2 2.4" fill="#fefefe"/></svg>
+<svg
+  viewBox="0 0 24 24"
+  width="26"
+  height="26"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <g class="tool-grid-icon">
+    <rect class="tool-grid-piece piece-1"
+      x="3.5" y="3.5" width="7" height="7" rx="2" />
+    <rect class="tool-grid-piece piece-2"
+      x="13.5" y="3.5" width="7" height="7" rx="2" />
+    <rect class="tool-grid-piece piece-3"
+      x="3.5" y="13.5" width="7" height="7" rx="2" />
+    <rect class="tool-grid-piece piece-4"
+      x="13.5" y="13.5" width="7" height="7" rx="2" />
+  </g>
+</svg>
+
+
 
     </button>
 
@@ -785,4 +805,50 @@ onBeforeUnmount(() => {
   cursor: wait;
   opacity: 0.7;
 }
+
+
+/* 四宫格工具入口 */
+.tool-grid-icon {
+  color: currentColor;
+  transform-origin: center;
+}
+
+.tool-grid-piece {
+  fill: currentColor;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 280ms cubic-bezier(.2, .8, .2, 1),
+    opacity 280ms ease;
+}
+
+/* 悬停：四块轻微向外展开 */
+.floating-trigger:hover .piece-1 {
+  transform: translate(-1px, -1px);
+}
+
+.floating-trigger:hover .piece-2 {
+  transform: translate(1px, -1px);
+}
+
+.floating-trigger:hover .piece-3 {
+  transform: translate(-1px, 1px);
+}
+
+.floating-trigger:hover .piece-4 {
+  transform: translate(1px, 1px);
+}
+
+/* 点击反馈 */
+.floating-trigger:active .tool-grid-icon {
+  transform: scale(.88);
+}
+
+/* 减少动态效果偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .tool-grid-piece {
+    transition: none;
+  }
+}
+
 </style>
