@@ -768,7 +768,7 @@ onBeforeUnmount(() => {
 
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 10030;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -901,9 +901,20 @@ onBeforeUnmount(() => {
 
 .ai-story-scroll {
   position: relative;
-  overflow: auto;
+
+  flex: 1 1 auto;
+  min-height: 0;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
   padding: 20px 25px 22px;
+
   overscroll-behavior: contain;
+
+  -webkit-overflow-scrolling: touch;
+
+  touch-action: pan-y;
 }
 
 .ai-story-meta {
