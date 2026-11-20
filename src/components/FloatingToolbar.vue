@@ -246,6 +246,13 @@ function togglePanel() {
 
 function handleAction(action) {
   emit('action', action)
+
+  // 下载时保持工具栏展开，以便查看实时下载进度
+  if (action === 'download') {
+    return
+  }
+
+  // 其他普通操作执行后关闭工具栏
   open.value = false
 }
 
