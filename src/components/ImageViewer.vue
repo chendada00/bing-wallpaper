@@ -28,6 +28,22 @@
         ×
       </button>
 
+      <!-- 悬浮操作工具栏 -->
+      <FloatingToolbar
+        @action="handleToolbarAction"
+        :downloading="downloading"
+        :download-progress="downloadProgress"
+        :download-loaded="downloadLoaded"
+        :download-total="downloadTotal"
+      >
+        <AiStoryPanel
+          v-if="hasAiStory"
+          :item="item"
+          :accent-color="primaryColor"
+          variant="viewer"
+        />
+      </FloatingToolbar>
+
       <!-- =====================================================
        * 上一张
        * ===================================================== -->
@@ -238,134 +254,6 @@
               </div>
             </div>
 
-            <!-- =================================================
-             * 操作
-             * ================================================= -->
-            <div class="viewer-actions">
-
-              <!-- AI 解读：没有有效 aiStory.story 时组件不会渲染按钮 -->
-              <AiStoryPanel
-                v-if="hasAiStory"
-                :item="item"
-                :accent-color="primaryColor"
-                variant="viewer"
-              />
-
-              <!-- 下载原图 -->
-              <button
-                class="download-button"
-                :disabled="downloading"
-                @click="downloadImage"
-              >
-                <span
-                  v-if="downloading"
-                  class="download-progress-content"
-                >
-                  <span class="download-progress-track">
-                    <span
-                      class="download-progress-bar"
-                      :style="{
-                        width: `${downloadProgress}%`
-                      }"
-                    />
-                  </span>
-
-                  <span class="download-progress-text">
-                    <template v-if="downloadTotal">
-                      {{ downloadProgress }}%
-                      ·
-                      {{ formatBytes(downloadLoaded) }}
-                      /
-                      {{ formatBytes(downloadTotal) }}
-                    </template>
-
-                    <template v-else>
-                      下载中...
-                    </template>
-                  </span>
-                </span>
-
-                <span v-else>
-                  下载原图
-                </span>
-              </button>
-
-              <!-- 打开原图 -->
-              <a
-                v-if="highResImageUrl"
-                class="open-button"
-                :href="highResImageUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                打开原图
-              </a>
-
-              <!-- 分享链接 -->
-              <button
-                type="button"
-                class="share-button"
-                :disabled="!item?.date"
-                @click="copyShareLink"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4" />
-                </svg>
-
-                分享链接
-              </button>
-
-              <span
-                v-if="shareFeedback"
-                class="share-feedback"
-                :class="shareFeedback"
-                role="status"
-                aria-live="polite"
-              >
-                {{ shareFeedback === 'success' ? '链接已复制' : '复制失败，请重试' }}
-              </span>
-
-              <!-- 沉浸式浏览 -->
-              <a
-                v-if="item?.date"
-                class="immersive-button"
-                :href="`/wallpaper/${item.date}`"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-                  <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
-                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                </svg>
-                沉浸式浏览
-              </a>
-
-            </div>
 
             <!-- =================================================
              * 颜色分布
@@ -503,6 +391,7 @@ import {
 } from '../utils/image'
 
 import AiStoryPanel from './AiStoryPanel.vue'
+import FloatingToolbar from './FloatingToolbar.vue'
 
 const highResImageUrl = computed(() => {
   return getHighResImageUrl(
@@ -1130,6 +1019,74 @@ function loadCurrentImage() {
  */
 function close() {
   emit('close')
+}
+
+/*
+ * =========================================================
+ * 悬浮工具栏操作
+ * =========================================================
+ */
+function handleToolbarAction(action) {
+  switch (action) {
+    case 'download':
+      downloadImage()
+      break
+
+    case 'open':
+      openOriginalImage()
+      break
+
+    case 'share':
+      copyShareLink()
+      break
+
+    case 'immersive':
+      openImmersiveView()
+      break
+
+    default:
+      console.warn(
+        '未知的工具栏操作:',
+        action
+      )
+  }
+}
+
+/*
+ * =========================================================
+ * 打开原图
+ * =========================================================
+ */
+function openOriginalImage() {
+  if (!highResImageUrl.value) {
+    return
+  }
+
+  window.open(
+    highResImageUrl.value,
+    '_blank',
+    'noopener,noreferrer'
+  )
+}
+
+/*
+ * =========================================================
+ * 沉浸式浏览
+ * =========================================================
+ */
+function openImmersiveView() {
+  if (!props.item?.date) {
+    return
+  }
+
+  const url =
+    `/wallpaper/${props.item.date}`
+
+  window.open(
+    url,
+    '_blank',
+    'noopener,noreferrer'
+  )
 }
 
 /*
