@@ -144,7 +144,6 @@ function onPointerDown(event) {
   }
 
   dragging.value = true
-  open.value = false
 
   pointerStart = {
     pointerId: event.pointerId,
@@ -176,6 +175,9 @@ function onPointerMove(event) {
     Math.abs(dy) > dragThreshold
   ) {
     pointerStart.moved = true
+
+    // 只有确认用户开始拖动，才关闭工具栏
+    open.value = false
   }
 
   if (!pointerStart.moved) {
@@ -257,16 +259,17 @@ function handleAction(action) {
 }
 
 function handleOutsideClick(event) {
-  if (!open.value) {
+  if (!open.value) return
+
+  const root = document.querySelector('.floating-toolbar-root')
+  const trigger = event.target.closest('.floating-trigger')
+
+  // 点击工具栏内部或悬浮球本身，不触发外部关闭
+  if (root?.contains(event.target) || trigger) {
     return
   }
 
-  const root =
-    document.querySelector('.floating-toolbar-root')
-
-  if (root && !root.contains(event.target)) {
-    open.value = false
-  }
+  open.value = false
 }
 
 function handleKeydown(event) {
