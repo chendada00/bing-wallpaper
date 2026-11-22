@@ -1,0 +1,30 @@
+/* =========================================
+   Wallpaper List Enter / Leave
+========================================= */
+
+.wallpaper-list-enter-active,
+.wallpaper-list-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.wallpaper-list-enter-from,
+.wallpaper-list-leave-to {
+  opacity: 0;
+}
+
+.wallpaper-list-enter-to,
+.wallpaper-list-leave-from {
+  opacity: 1;
+}
+
+
+/* =========================================
+   Reduced Motion
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper-list-enter-active,
+  .wallpaper-list-leave-active {
+    transition-duration: 0.01ms;
+  }
+}

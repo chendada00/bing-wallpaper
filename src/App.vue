@@ -309,8 +309,10 @@
 
 
 
-        <section
+        <TransitionGroup
           v-if="displayResult.length > 0"
+          name="wallpaper-list"
+          tag="section"
           class="wallpaper-grid"
         >
           <WallpaperCard
@@ -339,9 +341,7 @@
             @retry-image="retryImage"
 
           />
-
-
-        </section>
+        </TransitionGroup>
 
         <div
           v-if="scope==='all' && historyTotal>historyVisibleCount"

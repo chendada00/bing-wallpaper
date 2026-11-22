@@ -1,378 +1,380 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="visible"
-      class="viewer"
-      :style="viewerStyle"
-      @click.self="close"
-    >
-      <!-- =====================================================
-       * 主色调氛围背景
-       * ===================================================== -->
+    <Transition name="viewer-transition">
       <div
-        class="viewer-color-bg"
-        :style="colorBackgroundStyle"
-      />
-
-      <!-- 深色遮罩 -->
-      <div class="viewer-overlay" />
-
-      <!-- =====================================================
-       * 关闭按钮
-       * ===================================================== -->
-      <button
-        class="viewer-close"
-        aria-label="关闭"
-        @click="close"
+        v-if="visible"
+        class="viewer"
+        :style="viewerStyle"
+        @click.self="close"
       >
-        ×
-      </button>
-
-      <!-- 悬浮操作工具栏 -->
-      <FloatingToolbar
-        @action="handleToolbarAction"
-        :downloading="downloading"
-        :download-progress="downloadProgress"
-        :download-loaded="downloadLoaded"
-        :download-total="downloadTotal"
-      >
-        <AiStoryPanel
-          v-if="hasAiStory"
-          :item="item"
-          :accent-color="primaryColor"
-          variant="viewer"
+        <!-- =====================================================
+        * 主色调氛围背景
+        * ===================================================== -->
+        <div
+          class="viewer-color-bg"
+          :style="colorBackgroundStyle"
         />
-      </FloatingToolbar>
 
-      <!-- =====================================================
-       * 上一张
-       * ===================================================== -->
-      <button
-        v-if="hasPrevious"
-        class="viewer-nav viewer-prev"
-        aria-label="上一张"
-        @click="previous"
-      >
-        ‹
-      </button>
+        <!-- 深色遮罩 -->
+        <div class="viewer-overlay" />
 
-      <!-- =====================================================
-       * 下一张
-       * ===================================================== -->
-      <button
-        v-if="hasNext"
-        class="viewer-nav viewer-next"
-        aria-label="下一张"
-        @click="next"
-      >
-        ›
-      </button>
+        <!-- =====================================================
+        * 关闭按钮
+        * ===================================================== -->
+        <button
+          class="viewer-close"
+          aria-label="关闭"
+          @click="close"
+        >
+          ×
+        </button>
 
-      <!-- =====================================================
-       * 唯一滚动区域
-       * ===================================================== -->
-      <div class="viewer-scroll">
-        <div class="viewer-content">
+        <!-- 悬浮操作工具栏 -->
+        <FloatingToolbar
+          @action="handleToolbarAction"
+          :downloading="downloading"
+          :download-progress="downloadProgress"
+          :download-loaded="downloadLoaded"
+          :download-total="downloadTotal"
+        >
+          <AiStoryPanel
+            v-if="hasAiStory"
+            :item="item"
+            :accent-color="primaryColor"
+            variant="viewer"
+          />
+        </FloatingToolbar>
 
-          <!-- ===================================================
-           * 显示器
-           * =================================================== -->
-          <div class="viewer-monitor">
+        <!-- =====================================================
+        * 上一张
+        * ===================================================== -->
+        <button
+          v-if="hasPrevious"
+          class="viewer-nav viewer-prev"
+          aria-label="上一张"
+          @click="previous"
+        >
+          ‹
+        </button>
 
-            <!-- 显示器主体 -->
-            <div class="viewer-monitor-bezel">
+        <!-- =====================================================
+        * 下一张
+        * ===================================================== -->
+        <button
+          v-if="hasNext"
+          class="viewer-nav viewer-next"
+          aria-label="下一张"
+          @click="next"
+        >
+          ›
+        </button>
 
-              <!-- ================================
-               * 屏幕
-               * ================================ -->
-              <div class="viewer-image-wrapper">
+        <!-- =====================================================
+        * 唯一滚动区域
+        * ===================================================== -->
+        <div class="viewer-scroll">
+          <div class="viewer-content">
 
-                <!-- Base64 模糊占位图 -->
-                <img
-                  v-if="placeholderImage"
-                  :src="placeholderImage"
-                  :alt="item?.title || item?.date"
-                  class="viewer-image viewer-placeholder"
-                >
+            <!-- ===================================================
+            * 显示器
+            * =================================================== -->
+            <div class="viewer-monitor">
 
-                <!-- 高清图片 -->
-                <img
-                  v-if="highResLoaded && activeHighResUrl"
-                  :src="activeHighResUrl"
-                  :alt="item?.title || item?.date"
-                  class="viewer-image viewer-high-res"
-                >
+              <!-- 显示器主体 -->
+              <div class="viewer-monitor-bezel">
 
-                <!-- 高清图加载 -->
-                <div
-                  v-if="imageLoading"
-                  class="viewer-loading"
-                >
-                  <span class="viewer-spinner" />
+                <!-- ================================
+                * 屏幕
+                * ================================ -->
+                <div class="viewer-image-wrapper">
 
-                  <span class="viewer-loading-text">
-                    正在加载高清壁纸...
-                  </span>
-                </div>
-
-                <!-- 高清图加载失败 -->
-                <div
-                  v-if="imageError"
-                  class="viewer-error"
-                >
-                  高清图片加载失败
-                </div>
-              </div>
-
-              <!-- ================================
-               * 顶部摄像头
-               * ================================ -->
-              <span
-                class="viewer-monitor-camera"
-                aria-hidden="true"
-              />
-
-              <!-- ================================
-               * 品牌装饰线
-               * ================================ -->
-              <span
-                class="viewer-monitor-brand"
-                aria-hidden="true"
-              />
-
-
-            </div>
-
-            <!-- ================================
-             * 显示器支架
-             * ================================ -->
-            <div
-              class="viewer-monitor-stand"
-              aria-hidden="true"
-            >
-              <div class="viewer-monitor-neck" />
-              <div class="viewer-monitor-base" />
-            </div>
-          </div>
-
-          <!-- ===================================================
-           * 图片信息
-           * =================================================== -->
-          <div class="viewer-info">
-
-            <!-- 日期 + 序号 -->
-            <div class="viewer-meta">
-              <span class="viewer-date">
-                {{ item?.date }}
-              </span>
-
-              <span
-                v-if="currentIndex >= 0"
-                class="viewer-counter"
-              >
-                {{ currentIndex + 1 }} / {{ items.length }}
-              </span>
-            </div>
-
-            <!-- 标题 -->
-            <h2>
-              {{ item?.title || 'Bing Wallpaper' }}
-            </h2>
-
-            <!-- 版权 -->
-            <p
-              v-if="item?.copyright"
-              class="viewer-copyright"
-            >
-              {{ item.copyright }}
-            </p>
-
-            <!-- 图片描述 -->
-            <div
-              v-if="item?.description"
-              class="viewer-description"
-            >
-              <p
-                class="viewer-description-text"
-                :class="{ expanded: descriptionExpanded }"
-              >
-                {{ item.description }}
-              </p>
-
-              <button
-                v-if="item.description.length > 80"
-                type="button"
-                class="viewer-description-toggle"
-                @click="descriptionExpanded = !descriptionExpanded"
-              >
-                {{ descriptionExpanded ? '收起' : '展开描述' }}
-                <span>{{ descriptionExpanded ? '⌃' : '⌄' }}</span>
-              </button>
-            </div>
-
-            <!-- =================================================
-             * 主色调
-             * ================================================= -->
-            <div
-              v-if="colorPalette.length"
-              class="viewer-colors"
-            >
-              <div class="viewer-colors-title">
-                主色调
-              </div>
-
-              <div class="viewer-color-list">
-                <button
-                  v-for="color in colorPalette"
-                  :key="color"
-                  class="viewer-color"
-                  :class="{
-                    copied: copiedColor === color
-                  }"
-                  :title="`复制 ${color}`"
-                  @click="copyColor(color)"
-                >
-                  <span
-                    class="color-preview"
-                    :style="{
-                      backgroundColor: color
-                    }"
-                  />
-
-                  <span class="color-name">
-                    {{ color.toUpperCase() }}
-                  </span>
-
-                  <span class="color-copy">
-                    {{
-                      copiedColor === color
-                        ? '✓'
-                        : '复制'
-                    }}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-
-            <!-- =================================================
-             * 颜色分布
-             * ================================================= -->
-            <div
-              v-if="histogramCells.length"
-              class="viewer-histogram"
-            >
-              <div class="viewer-section-title">
-                <span>颜色分布</span>
-
-                <span class="viewer-section-meta">
-                  108 个 HSV 色彩区域
-                </span>
-              </div>
-
-              <div class="histogram-description">
-                统计整张图片的颜色组成，不对应图片中的空间位置。
-              </div>
-
-              <div class="histogram-wrapper">
-
-                <!-- Hue 横轴 -->
-                <div class="histogram-hue-axis">
-                  <span
-                    v-for="hue in HISTOGRAM_HUES"
-                    :key="hue.name"
-                    class="histogram-hue-label"
+                  <!-- Base64 模糊占位图 -->
+                  <img
+                    v-if="placeholderImage"
+                    :src="placeholderImage"
+                    :alt="item?.title || item?.date"
+                    class="viewer-image viewer-placeholder"
                   >
-                    {{ hue.name }}
-                  </span>
-                </div>
 
-                <div class="histogram-main">
+                  <!-- 高清图片 -->
+                  <img
+                    v-if="highResLoaded && activeHighResUrl"
+                    :src="activeHighResUrl"
+                    :alt="item?.title || item?.date"
+                    class="viewer-image viewer-high-res"
+                  >
 
-                  <!-- 左侧 Saturation / Value 标签 -->
-                  <div class="histogram-row-labels">
-                    <span
-                      v-for="row in HISTOGRAM_ROWS"
-                      :key="row.key"
-                      class="histogram-row-label"
-                    >
-                      {{ row.label }}
+                  <!-- 高清图加载 -->
+                  <div
+                    v-if="imageLoading"
+                    class="viewer-loading"
+                  >
+                    <span class="viewer-spinner" />
+
+                    <span class="viewer-loading-text">
+                      正在加载高清壁纸...
                     </span>
                   </div>
 
-                  <!-- 108 个颜色区域 -->
-                  <div class="histogram-grid">
-                    <button
-                      v-for="(cell, index) in histogramCells"
-                      :key="index"
-                      type="button"
-                      class="histogram-cell"
-                      :class="{
-                        active:
-                          hoveredHistogramIndex === index
-                      }"
-                      :style="{
-                        backgroundColor: cell.color,
-                        opacity: cell.opacity
-                      }"
-                      :aria-label="cell.description"
-                      @mouseenter="
-                        hoveredHistogramIndex = index
-                      "
-                      @mouseleave="
-                        hoveredHistogramIndex = -1
-                      "
-                      @focus="
-                        hoveredHistogramIndex = index
-                      "
-                      @blur="
-                        hoveredHistogramIndex = -1
-                      "
-                    />
+                  <!-- 高清图加载失败 -->
+                  <div
+                    v-if="imageError"
+                    class="viewer-error"
+                  >
+                    高清图片加载失败
                   </div>
                 </div>
+
+                <!-- ================================
+                * 顶部摄像头
+                * ================================ -->
+                <span
+                  class="viewer-monitor-camera"
+                  aria-hidden="true"
+                />
+
+                <!-- ================================
+                * 品牌装饰线
+                * ================================ -->
+                <span
+                  class="viewer-monitor-brand"
+                  aria-hidden="true"
+                />
+
+
               </div>
 
-              <!-- 当前格子详细信息 -->
-              <div class="histogram-hover-info">
-                <template v-if="hoveredHistogramCell">
-                  <span
-                    class="histogram-hover-color"
-                    :style="{
-                      backgroundColor:
-                        hoveredHistogramCell.color
-                    }"
-                  />
-
-                  <span class="histogram-hover-main">
-                    {{ hoveredHistogramCell.hueName }}
-                    ·
-                    {{ hoveredHistogramCell.saturationName }}
-                    ·
-                    {{ hoveredHistogramCell.valueName }}
-                  </span>
-
-                  <span class="histogram-hover-range">
-                    Hue {{ hoveredHistogramCell.hueRange }}
-                  </span>
-
-                  <strong>
-                    {{ hoveredHistogramCell.percentage }}%
-                  </strong>
-                </template>
-
-                <template v-else>
-                  <span class="histogram-hover-placeholder">
-                    将鼠标移动到色彩区域，可查看该区域的颜色和像素占比
-                  </span>
-                </template>
+              <!-- ================================
+              * 显示器支架
+              * ================================ -->
+              <div
+                class="viewer-monitor-stand"
+                aria-hidden="true"
+              >
+                <div class="viewer-monitor-neck" />
+                <div class="viewer-monitor-base" />
               </div>
             </div>
 
+            <!-- ===================================================
+            * 图片信息
+            * =================================================== -->
+            <div class="viewer-info">
+
+              <!-- 日期 + 序号 -->
+              <div class="viewer-meta">
+                <span class="viewer-date">
+                  {{ item?.date }}
+                </span>
+
+                <span
+                  v-if="currentIndex >= 0"
+                  class="viewer-counter"
+                >
+                  {{ currentIndex + 1 }} / {{ items.length }}
+                </span>
+              </div>
+
+              <!-- 标题 -->
+              <h2>
+                {{ item?.title || 'Bing Wallpaper' }}
+              </h2>
+
+              <!-- 版权 -->
+              <p
+                v-if="item?.copyright"
+                class="viewer-copyright"
+              >
+                {{ item.copyright }}
+              </p>
+
+              <!-- 图片描述 -->
+              <div
+                v-if="item?.description"
+                class="viewer-description"
+              >
+                <p
+                  class="viewer-description-text"
+                  :class="{ expanded: descriptionExpanded }"
+                >
+                  {{ item.description }}
+                </p>
+
+                <button
+                  v-if="item.description.length > 80"
+                  type="button"
+                  class="viewer-description-toggle"
+                  @click="descriptionExpanded = !descriptionExpanded"
+                >
+                  {{ descriptionExpanded ? '收起' : '展开描述' }}
+                  <span>{{ descriptionExpanded ? '⌃' : '⌄' }}</span>
+                </button>
+              </div>
+
+              <!-- =================================================
+              * 主色调
+              * ================================================= -->
+              <div
+                v-if="colorPalette.length"
+                class="viewer-colors"
+              >
+                <div class="viewer-colors-title">
+                  主色调
+                </div>
+
+                <div class="viewer-color-list">
+                  <button
+                    v-for="color in colorPalette"
+                    :key="color"
+                    class="viewer-color"
+                    :class="{
+                      copied: copiedColor === color
+                    }"
+                    :title="`复制 ${color}`"
+                    @click="copyColor(color)"
+                  >
+                    <span
+                      class="color-preview"
+                      :style="{
+                        backgroundColor: color
+                      }"
+                    />
+
+                    <span class="color-name">
+                      {{ color.toUpperCase() }}
+                    </span>
+
+                    <span class="color-copy">
+                      {{
+                        copiedColor === color
+                          ? '✓'
+                          : '复制'
+                      }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+
+              <!-- =================================================
+              * 颜色分布
+              * ================================================= -->
+              <div
+                v-if="histogramCells.length"
+                class="viewer-histogram"
+              >
+                <div class="viewer-section-title">
+                  <span>颜色分布</span>
+
+                  <span class="viewer-section-meta">
+                    108 个 HSV 色彩区域
+                  </span>
+                </div>
+
+                <div class="histogram-description">
+                  统计整张图片的颜色组成，不对应图片中的空间位置。
+                </div>
+
+                <div class="histogram-wrapper">
+
+                  <!-- Hue 横轴 -->
+                  <div class="histogram-hue-axis">
+                    <span
+                      v-for="hue in HISTOGRAM_HUES"
+                      :key="hue.name"
+                      class="histogram-hue-label"
+                    >
+                      {{ hue.name }}
+                    </span>
+                  </div>
+
+                  <div class="histogram-main">
+
+                    <!-- 左侧 Saturation / Value 标签 -->
+                    <div class="histogram-row-labels">
+                      <span
+                        v-for="row in HISTOGRAM_ROWS"
+                        :key="row.key"
+                        class="histogram-row-label"
+                      >
+                        {{ row.label }}
+                      </span>
+                    </div>
+
+                    <!-- 108 个颜色区域 -->
+                    <div class="histogram-grid">
+                      <button
+                        v-for="(cell, index) in histogramCells"
+                        :key="index"
+                        type="button"
+                        class="histogram-cell"
+                        :class="{
+                          active:
+                            hoveredHistogramIndex === index
+                        }"
+                        :style="{
+                          backgroundColor: cell.color,
+                          opacity: cell.opacity
+                        }"
+                        :aria-label="cell.description"
+                        @mouseenter="
+                          hoveredHistogramIndex = index
+                        "
+                        @mouseleave="
+                          hoveredHistogramIndex = -1
+                        "
+                        @focus="
+                          hoveredHistogramIndex = index
+                        "
+                        @blur="
+                          hoveredHistogramIndex = -1
+                        "
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 当前格子详细信息 -->
+                <div class="histogram-hover-info">
+                  <template v-if="hoveredHistogramCell">
+                    <span
+                      class="histogram-hover-color"
+                      :style="{
+                        backgroundColor:
+                          hoveredHistogramCell.color
+                      }"
+                    />
+
+                    <span class="histogram-hover-main">
+                      {{ hoveredHistogramCell.hueName }}
+                      ·
+                      {{ hoveredHistogramCell.saturationName }}
+                      ·
+                      {{ hoveredHistogramCell.valueName }}
+                    </span>
+
+                    <span class="histogram-hover-range">
+                      Hue {{ hoveredHistogramCell.hueRange }}
+                    </span>
+
+                    <strong>
+                      {{ hoveredHistogramCell.percentage }}%
+                    </strong>
+                  </template>
+
+                  <template v-else>
+                    <span class="histogram-hover-placeholder">
+                      将鼠标移动到色彩区域，可查看该区域的颜色和像素占比
+                    </span>
+                  </template>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -1569,21 +1571,33 @@ onBeforeUnmount(() => {
       rgba(8, 10, 14, 0.94),
       rgba(8, 10, 14, 0.97)
     );
-
-  animation:
-    viewer-in 0.25s ease;
 }
 
-@keyframes viewer-in {
-  from {
-    opacity: 0;
-  }
 
-  to {
-    opacity: 1;
-  }
+/* =========================================================
+ * 查看器进入 / 退出动画
+ * ========================================================= */
+
+.viewer-transition-enter-active,
+.viewer-transition-leave-active {
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s cubic-bezier(.22, 1, .36, 1);
 }
 
+.viewer-transition-enter-from,
+.viewer-transition-leave-to {
+  opacity: 0;
+
+  transform: scale(0.985);
+}
+
+.viewer-transition-enter-to,
+.viewer-transition-leave-from {
+  opacity: 1;
+
+  transform: scale(1);
+}
 
 /* =========================================================
  * 主色调氛围背景
@@ -3463,6 +3477,17 @@ onBeforeUnmount(() => {
 
 .viewer-description-toggle:hover {
   color: #fff;
+}
+
+/* =========================================================
+ * 尊重系统减少动效设置
+ * ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer-transition-enter-active,
+  .viewer-transition-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 
 </style>
