@@ -1,121 +1,27 @@
 /* =========================================
-   Wallpaper List Enter / Leave
-========================================= */
-
-.wallpaper-list-enter-active,
-.wallpaper-list-appear-active {
-  transition:
-    opacity 0.55s ease,
-    filter 0.55s ease;
-}
-
-.wallpaper-list-enter-from,
-.wallpaper-list-appear-from {
-  opacity: 0;
-
-  filter: blur(8px);
-}
-
-.wallpaper-list-enter-to,
-.wallpaper-list-appear-to {
-  opacity: 1;
-
-  filter: blur(0);
-}
-
-
-/* =========================================
-   Stagger Enter
-========================================= */
-
-.wallpaper-list-enter-active:nth-child(1),
-.wallpaper-list-appear-active:nth-child(1) {
-  transition-delay: 0ms;
-}
-
-.wallpaper-list-enter-active:nth-child(2),
-.wallpaper-list-appear-active:nth-child(2) {
-  transition-delay: 40ms;
-}
-
-.wallpaper-list-enter-active:nth-child(3),
-.wallpaper-list-appear-active:nth-child(3) {
-  transition-delay: 80ms;
-}
-
-.wallpaper-list-enter-active:nth-child(4),
-.wallpaper-list-appear-active:nth-child(4) {
-  transition-delay: 120ms;
-}
-
-.wallpaper-list-enter-active:nth-child(5),
-.wallpaper-list-appear-active:nth-child(5) {
-  transition-delay: 160ms;
-}
-
-.wallpaper-list-enter-active:nth-child(6),
-.wallpaper-list-appear-active:nth-child(6) {
-  transition-delay: 200ms;
-}
-
-.wallpaper-list-enter-active:nth-child(7),
-.wallpaper-list-appear-active:nth-child(7) {
-  transition-delay: 240ms;
-}
-
-.wallpaper-list-enter-active:nth-child(8),
-.wallpaper-list-appear-active:nth-child(8) {
-  transition-delay: 280ms;
-}
-
-.wallpaper-list-enter-active:nth-child(9),
-.wallpaper-list-appear-active:nth-child(9) {
-  transition-delay: 320ms;
-}
-
-.wallpaper-list-enter-active:nth-child(10),
-.wallpaper-list-appear-active:nth-child(10) {
-  transition-delay: 360ms;
-}
-
-.wallpaper-list-enter-active:nth-child(11),
-.wallpaper-list-appear-active:nth-child(11) {
-  transition-delay: 400ms;
-}
-
-.wallpaper-list-enter-active:nth-child(12),
-.wallpaper-list-appear-active:nth-child(12) {
-  transition-delay: 440ms;
-}
-
-
-/* =========================================
-   Leave
+   Wallpaper List Leave
 ========================================= */
 
 .wallpaper-list-leave-active {
-  transition:
-    opacity 0.25s ease,
-    filter 0.25s ease;
-}
-
-.wallpaper-list-leave-to {
-  opacity: 0;
-
-  filter: blur(4px);
-}
-
-
-/* =========================================
-   Reduced Motion
-========================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  .wallpaper-list-enter-active,
-  .wallpaper-list-appear-active,
-  .wallpaper-list-leave-active {
-    transition-duration: 0.01ms;
-
-    transition-delay: 0ms;
+    transition:
+      opacity 0.5s ease,
+      filter 0.5s ease;
   }
-}
+  
+  .wallpaper-list-leave-to {
+    opacity: 0;
+  
+    filter: blur(4px);
+  }
+  
+  
+  /* =========================================
+     Reduced Motion
+  ========================================= */
+  
+  @media (prefers-reduced-motion: reduce) {
+    .wallpaper-list-leave-active {
+      transition-duration: 0.01ms;
+      transition-delay: 0ms;
+    }
+  }

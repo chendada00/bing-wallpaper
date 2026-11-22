@@ -1,7 +1,9 @@
 <template>
   <article
+    ref="cardElement"
     :id="`wallpaper-${item.date}`"
     class="wallpaper-card"
+    :class="{ 'is-visible': cardVisible }"
     :style="cardStyle"
     tabindex="0"
     role="group"
@@ -212,7 +214,13 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import {
+  computed,
+  ref,
+  watch,
+  onMounted,
+  onBeforeUnmount
+} from 'vue'
 import AiStoryPanel from './AiStoryPanel.vue'
 
 const props = defineProps({
@@ -250,6 +258,58 @@ const emit = defineEmits([
 ])
 
 const imageLoaded = ref(false)
+
+// ================================
+// Card Viewport Entrance Animation
+// ================================
+
+const cardElement = ref(null)
+
+const cardVisible = ref(false)
+
+let cardObserver = null
+
+onMounted(() => {
+  // 兼容不支持 IntersectionObserver 的浏览器
+  if (!('IntersectionObserver' in window)) {
+    cardVisible.value = true
+    return
+  }
+
+  cardObserver = new IntersectionObserver(
+    entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) {
+          continue
+        }
+
+        // 卡片进入视口，触发动画
+        cardVisible.value = true
+
+        // 只触发一次，之后不再监听
+        cardObserver?.unobserve(entry.target)
+      }
+    },
+    {
+      root: null,
+
+      // 卡片进入视口一定比例后开始动画
+      threshold: 0.08,
+
+      // 不提前触发，真正进入视口附近才触发
+      rootMargin: '0px 0px -40px 0px'
+    }
+  )
+
+  if (cardElement.value) {
+    cardObserver.observe(cardElement.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  cardObserver?.disconnect()
+  cardObserver = null
+})
 
 const HUE_DEFINITIONS = [
   {
@@ -600,13 +660,25 @@ watch(
 
   background: #111;
 
-  transform: translateY(0);
-
   box-shadow: none;
 
+  /* 卡片进入视口之前 */
+  opacity: 0;
+
+  translate: 0 32px;
+
   transition:
+    opacity 0.7s cubic-bezier(.22, 1, .36, 1),
+    translate 0.7s cubic-bezier(.22, 1, .36, 1),
     transform 0.45s cubic-bezier(.2, .8, .2, 1),
     box-shadow 0.45s ease;
+}
+
+/* 卡片进入视口后 */
+.wallpaper-card.is-visible {
+  opacity: 1;
+
+  translate: 0 0;
 }
 
 
