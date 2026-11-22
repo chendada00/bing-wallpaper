@@ -539,6 +539,112 @@ body {
   transform: translateY(-1px);
 }
 
+/* ================================
+   Hero 自动切换倒计时
+================================ */
+
+.hero-countdown {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+
+  color: #fff;
+  background: rgba(20, 20, 20, 0.28);
+
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+
+  overflow: hidden;
+}
+
+.hero-countdown-ring {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.hero-countdown-track,
+.hero-countdown-progress {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.hero-countdown-track {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.hero-countdown-progress {
+  stroke: rgba(255, 255, 255, 0.88);
+  stroke-linecap: round;
+
+  stroke-dasharray: 94.25;
+  stroke-dashoffset: 0;
+
+  transition:
+    stroke-dashoffset 0.9s linear;
+}
+
+.hero-countdown-text {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.hero-countdown-text strong {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.hero-countdown-text small {
+  font-size: 8px;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+@media (max-width: 700px) {
+  .hero-countdown {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+
+  .hero-countdown-text strong {
+    font-size: 10px;
+  }
+}
+
+/* 尊重系统减少动态效果设置 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-countdown-progress {
+    transition: none;
+  }
+}
+
 /* 底部文案 */
 .hero-content {
   position: absolute;

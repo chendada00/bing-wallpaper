@@ -1664,7 +1664,7 @@ watch(
 
   translate: 0 0;
 
-  transition-delay: 0.08s;
+  transition-delay: 0.08s; 
 }
 
 @media (prefers-reduced-motion: reduce) {

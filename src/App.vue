@@ -267,11 +267,48 @@
             <!-- 右上角：操作与精选标签 -->
             <div class="hero-top">
               <span class="hero-label">随机精选</span>
-
+            
+              <!-- 自动切换倒计时 -->
+              <div
+                class="hero-countdown"
+                :title="`还有 ${heroCountdown} 秒自动切换`"
+                aria-live="off"
+              >
+                <svg
+                  class="hero-countdown-ring"
+                  viewBox="0 0 36 36"
+                  aria-hidden="true"
+                >
+                  <circle
+                    class="hero-countdown-track"
+                    cx="18"
+                    cy="18"
+                    r="15"
+                  />
+            
+                  <circle
+                    class="hero-countdown-progress"
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    :style="{
+                      strokeDashoffset:
+                        94.25 * (1 - heroCountdown / HERO_ROTATION_SECONDS)
+                    }"
+                  />
+                </svg>
+            
+                <span class="hero-countdown-text">
+                  <strong>{{ heroCountdown }}</strong>
+                  <small>s</small>
+                </span>
+              </div>
+            
               <button
                 type="button"
                 class="hero-refresh"
                 @click="pickRandomHero"
+                title="手动切换并重新开始倒计时"
               >
                 换一张 ↻
               </button>
@@ -848,6 +885,71 @@ const currentItem=ref(null)
 
 const heroItem = ref(null)
 
+// ========================================
+// Hero 主图自动切换
+// ========================================
+
+const HERO_ROTATION_SECONDS = 30
+
+// 剩余秒数
+const heroCountdown = ref(HERO_ROTATION_SECONDS)
+
+// 统一使用一个定时器，组件销毁时清理
+let heroCountdownTimer = null
+
+/**
+ * 重置倒计时。
+ */
+function resetHeroCountdown() {
+  heroCountdown.value = HERO_ROTATION_SECONDS
+}
+
+/**
+ * 每秒更新倒计时。
+ *
+ * 浏览器后台标签页、查看详情页、月份筛选模式
+ * 暂停倒计时，避免隐藏状态下自动切换主图。
+ */
+function startHeroCountdown() {
+  if (heroCountdownTimer !== null) {
+    clearInterval(heroCountdownTimer)
+    heroCountdownTimer = null
+  }
+
+  resetHeroCountdown()
+
+  heroCountdownTimer = setInterval(() => {
+    // 主图不可见时暂停
+    if (
+      document.visibilityState !== 'visible' ||
+      viewerVisible.value ||
+      selectedMonth.value ||
+      !heroItem.value
+    ) {
+      return
+    }
+
+    if (heroCountdown.value <= 1) {
+      // 自动切换，不重复重建定时器
+      pickRandomHero(false)
+      resetHeroCountdown()
+      return
+    }
+
+    heroCountdown.value--
+  }, 1000)
+}
+
+/**
+ * 清理倒计时。
+ */
+function stopHeroCountdown() {
+  if (heroCountdownTimer !== null) {
+    clearInterval(heroCountdownTimer)
+    heroCountdownTimer = null
+  }
+}
+
 const backgroundLayers = ref([
   null,
   null
@@ -927,7 +1029,7 @@ const latestWallpaperDate = computed(() => {
 
 
 
-function pickRandomHero() {
+function pickRandomHero(resetTimer = true) {
   const candidates = items.value.filter(item =>
     item?.date &&
     (item.preview || item.base64)
@@ -950,6 +1052,11 @@ function pickRandomHero() {
   const index = Math.floor(Math.random() * pool.length)
 
   heroItem.value = pool[index]
+
+  // 手动切换后重置倒计时
+  if (resetTimer) {
+    startHeroCountdown()
+  }
 }
 
 
@@ -1785,6 +1892,9 @@ async function initializeHome() {
 
 
 onBeforeUnmount(()=>{
+
+  stopHeroCountdown()
+
   window.removeEventListener('popstate', handleWallpaperHistoryChange)
 
 
