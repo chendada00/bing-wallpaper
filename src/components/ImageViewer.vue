@@ -1575,28 +1575,93 @@ onBeforeUnmount(() => {
 
 
 /* =========================================================
- * 查看器进入 / 退出动画
+ * 查看器整体背景淡入淡出
  * ========================================================= */
 
 .viewer-transition-enter-active,
 .viewer-transition-leave-active {
-  transition:
-    opacity 0.28s ease,
-    transform 0.28s cubic-bezier(.22, 1, .36, 1);
+  transition: opacity 0.32s ease;
 }
 
 .viewer-transition-enter-from,
 .viewer-transition-leave-to {
   opacity: 0;
-
-  transform: scale(0.985);
 }
 
 .viewer-transition-enter-to,
 .viewer-transition-leave-from {
   opacity: 1;
+}
 
-  transform: scale(1);
+
+/* =========================================================
+ * 氛围背景动画
+ * ========================================================= */
+
+.viewer-transition-enter-active .viewer-color-bg,
+.viewer-transition-leave-active .viewer-color-bg {
+  transition: opacity 0.45s ease;
+}
+
+.viewer-transition-enter-from .viewer-color-bg,
+.viewer-transition-leave-to .viewer-color-bg {
+  opacity: 0;
+}
+
+
+/* =========================================================
+ * 显示器主体动画
+ * ========================================================= */
+
+.viewer-transition-enter-active .viewer-monitor,
+.viewer-transition-leave-active .viewer-monitor {
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(.22, 1, .36, 1);
+}
+
+.viewer-transition-enter-from .viewer-monitor,
+.viewer-transition-leave-to .viewer-monitor {
+  opacity: 0;
+
+  transform:
+    translateY(24px)
+    scale(0.97);
+}
+
+.viewer-transition-enter-to .viewer-monitor,
+.viewer-transition-leave-from .viewer-monitor {
+  opacity: 1;
+
+  transform:
+    translateY(0)
+    scale(1);
+}
+
+
+/* =========================================================
+ * 关闭按钮、左右切换按钮
+ * ========================================================= */
+
+.viewer-transition-enter-active .viewer-close,
+.viewer-transition-leave-active .viewer-close,
+.viewer-transition-enter-active .viewer-nav,
+.viewer-transition-leave-active .viewer-nav {
+  transition: opacity 0.3s ease;
+}
+
+.viewer-transition-enter-from .viewer-close,
+.viewer-transition-leave-to .viewer-close,
+.viewer-transition-enter-from .viewer-nav,
+.viewer-transition-leave-to .viewer-nav {
+  opacity: 0;
+}
+
+.viewer-transition-enter-to .viewer-close,
+.viewer-transition-leave-from .viewer-close,
+.viewer-transition-enter-to .viewer-nav,
+.viewer-transition-leave-from .viewer-nav {
+  opacity: 1;
 }
 
 /* =========================================================
@@ -3485,7 +3550,15 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .viewer-transition-enter-active,
-  .viewer-transition-leave-active {
+  .viewer-transition-leave-active,
+  .viewer-transition-enter-active .viewer-monitor,
+  .viewer-transition-leave-active .viewer-monitor,
+  .viewer-transition-enter-active .viewer-color-bg,
+  .viewer-transition-leave-active .viewer-color-bg,
+  .viewer-transition-enter-active .viewer-close,
+  .viewer-transition-leave-active .viewer-close,
+  .viewer-transition-enter-active .viewer-nav,
+  .viewer-transition-leave-active .viewer-nav {
     transition-duration: 0.01ms;
   }
 }

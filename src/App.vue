@@ -314,6 +314,7 @@
           name="wallpaper-list"
           tag="section"
           class="wallpaper-grid"
+          appear
         >
           <WallpaperCard
             v-for="item in displayResult"
