@@ -26,7 +26,7 @@
         v-if="shouldLoad"
         :key="`${item.date}-${retryKey}`"
         class="wallpaper-image"
-        :class="{ loaded: imageLoaded }"
+        :class="{ loaded: imageLoaded && cardVisible }"
         :src="item.preview || item.base64"
         :alt="item.title || item.copyright || item.date"
         loading="eager"
@@ -665,11 +665,11 @@ watch(
   /* 卡片进入视口之前 */
   opacity: 0;
 
-  translate: 0 32px;
+  translate: 0 28px;
 
   transition:
-    opacity 0.7s cubic-bezier(.22, 1, .36, 1),
-    translate 0.7s cubic-bezier(.22, 1, .36, 1),
+    opacity 0.75s cubic-bezier(.22, 1, .36, 1),
+    translate 0.75s cubic-bezier(.22, 1, .36, 1),
     transform 0.45s cubic-bezier(.2, .8, .2, 1),
     box-shadow 0.45s ease;
 }
@@ -758,7 +758,9 @@ watch(
 }
 
 
-/* Wallpaper */
+/* ================================
+   Wallpaper Image Reveal
+================================ */
 
 .wallpaper-image {
   position: absolute;
@@ -772,16 +774,23 @@ watch(
 
   opacity: 0;
 
-  transform: scale(1.01);
+  transform: scale(1.08);
+
+  filter: blur(10px);
 
   transition:
-    opacity 0.6s ease,
-    transform 0.8s cubic-bezier(.2, .8, .2, 1),
-    filter 0.5s ease;
+    opacity 0.85s cubic-bezier(.22, 1, .36, 1),
+    transform 1.1s cubic-bezier(.22, 1, .36, 1),
+    filter 0.85s cubic-bezier(.22, 1, .36, 1);
 }
 
+/* 图片加载完成且卡片进入视口 */
 .wallpaper-image.loaded {
   opacity: 1;
+
+  transform: scale(1);
+
+  filter: blur(0);
 }
 
 
@@ -1621,4 +1630,59 @@ watch(
   }
 }
 
+/* 卡片信息随整体入场 */
+.card-content {
+  opacity: 0;
+
+  translate: 0 8px;
+
+  transition:
+    opacity 0.65s ease,
+    translate 0.65s cubic-bezier(.22, 1, .36, 1);
+}
+
+.wallpaper-card.is-visible .card-content {
+  opacity: 1;
+
+  translate: 0 0;
+
+  transition-delay: 0.12s;
+}
+
+.card-top {
+  opacity: 0;
+
+  translate: 0 -6px;
+
+  transition:
+    opacity 0.6s ease,
+    translate 0.6s cubic-bezier(.22, 1, .36, 1);
+}
+
+.wallpaper-card.is-visible .card-top {
+  opacity: 1;
+
+  translate: 0 0;
+
+  transition-delay: 0.08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper-card,
+  .wallpaper-card.is-visible,
+  .wallpaper-image,
+  .wallpaper-image.loaded,
+  .card-content,
+  .card-top {
+    opacity: 1 !important;
+
+    translate: none !important;
+
+    transform: none !important;
+
+    filter: none !important;
+
+    transition: none !important;
+  }
+}
 </style>
