@@ -24,7 +24,7 @@
         <path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
         <path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
       </svg>
-      <span>AI 漫读</span>
+      <span>AI 视界</span>
     </button>
 
     <Teleport to="body">
@@ -352,50 +352,6 @@ function close() {
   isOpen.value = false
 }
 
-/**
- * 等待图片加载完成。
- *
- * 避免图片尚未加载完就开始截图。
- */
-function waitForImage(image) {
-  if (image.complete) {
-    if (!image.naturalWidth) {
-      return Promise.reject(
-        new Error('卡片中的图片尚未成功加载')
-      )
-    }
-
-    return typeof image.decode === 'function'
-      ? image.decode().catch(() => {})
-      : Promise.resolve()
-  }
-
-  return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      cleanup()
-      reject(new Error('图片加载超时'))
-    }, 15000)
-
-    function cleanup() {
-      window.clearTimeout(timeout)
-      image.removeEventListener('load', onLoad)
-      image.removeEventListener('error', onError)
-    }
-
-    function onLoad() {
-      cleanup()
-      resolve()
-    }
-
-    function onError() {
-      cleanup()
-      reject(new Error('图片加载失败'))
-    }
-
-    image.addEventListener('load', onLoad, { once: true })
-    image.addEventListener('error', onError, { once: true })
-  })
-}
 
 /**
  * 生成安全文件名。
@@ -417,11 +373,14 @@ function createExportFilename() {
   return `Bing-AI-${date}-${safeTitle}.png`
 }
 
+
 /**
  * 导出完整 AI 解读卡片。
  *
- * 直接截图真实 DOM，不再克隆节点到屏幕外。
- * 截图前临时展开弹窗和滚动区域，完成后恢复原样。
+ * 原始弹窗保持不动。
+ * 使用 cloneNode 创建独立导出 DOM。
+ * 复用当前预览图片的 src，不主动重新加载图片，
+ * 不调用 fetch、decode 或 cacheBust。
  */
 async function exportCard() {
   const source = dialogRef.value
@@ -430,80 +389,70 @@ async function exportCard() {
     return
   }
 
-  const scroll = source.querySelector('.ai-story-scroll')
-
-  if (!scroll) {
-    exportStatus.value = '导出失败'
-    exportError.value = '未找到卡片内容区域'
-    return
-  }
-
   isExporting.value = true
   exportStatus.value = ''
   exportError.value = ''
 
-  // 保存原始内联样式，确保导出结束后恢复
-  const originalSourceStyle = source.getAttribute('style')
-  const originalScrollStyle = scroll.getAttribute('style')
+  let exportRoot = null
+  let objectUrl = null
 
   try {
-    // 1. 等待 Vue 完成 DOM 更新
+    // 1. 等待 Vue DOM 更新
     await nextTick()
 
-    // 2. 等待字体加载
+    // 2. 等待字体，避免导出字体布局不一致
     if (document.fonts?.ready) {
       await document.fonts.ready
     }
 
-    // 3. 等待原始卡片中的图片加载
-    const sourceImages = [
-      ...source.querySelectorAll('img')
-    ]
+    // 3. 获取当前卡片实际宽度
+    const rect = source.getBoundingClientRect()
+    const width = Math.ceil(rect.width)
 
-    await Promise.all(
-      sourceImages.map(waitForImage)
-    )
-
-    // 4. 记录当前弹窗宽度
-    const cardWidth = Math.ceil(
-      source.getBoundingClientRect().width
-    )
-
-    if (!cardWidth || cardWidth < 100) {
+    if (!width || width < 100) {
       throw new Error('无法获取有效的卡片宽度')
     }
 
-    // 5. 将主题变量直接设置到截图目标上
-    // 避免截图时依赖 backdrop 上的 CSS 变量
+    // 4. 克隆原始卡片，不修改正在显示的 DOM
+    const clone = source.cloneNode(true)
+
+    // 5. 移除不需要导出的按钮
+    clone.querySelectorAll('[data-export-hide]')
+      .forEach(node => node.remove())
+
+    // 6. 移除装饰性光晕
+    clone.querySelectorAll('.ai-story-dialog-glow')
+      .forEach(node => node.remove())
+
+    // 7. 标记导出 DOM
+    clone.classList.add('ai-story-export-root')
+
+    // 8. 直接将当前主题颜色应用到克隆节点
     Object.entries(themeStyle.value).forEach(
       ([key, value]) => {
-        source.style.setProperty(key, value)
+        clone.style.setProperty(key, value)
       }
     )
 
-    // 6. 展开弹窗，解除最大高度和 overflow 限制
-    Object.assign(source.style, {
-      width: `${cardWidth}px`,
-      maxWidth: 'none',
-      maxHeight: 'none',
+    // 9. 创建屏幕外容器
+    exportRoot = document.createElement('div')
+
+    Object.assign(exportRoot.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '0',
+      width: `${width}px`,
       height: 'auto',
       overflow: 'visible',
-      transform: 'none',
-      margin: '0',
-      flex: '0 0 auto',
-      boxSizing: 'border-box'
+      pointerEvents: 'none',
+      zIndex: '-1',
+      background: 'transparent'
     })
 
-    // 7. 展开内部滚动区域
-    Object.assign(scroll.style, {
-      overflow: 'visible',
-      maxHeight: 'none',
-      height: 'auto',
-      flex: '0 0 auto',
-      overscrollBehavior: 'auto'
-    })
+    exportRoot.appendChild(clone)
+    document.body.appendChild(exportRoot)
 
-    // 8. 等待浏览器重新计算布局
+    // 10. 等待独立 DOM 布局完成
     await nextTick()
 
     await new Promise(resolve => {
@@ -512,61 +461,60 @@ async function exportCard() {
       })
     })
 
-    // 9. 获取展开后的真实尺寸
-    const rect = source.getBoundingClientRect()
+    // 11. 计算完整卡片尺寸
+    const cloneRect = clone.getBoundingClientRect()
 
-    // 以卡片实际宽度作为截图宽度
-    const width = Math.ceil(rect.width)
+    const exportWidth = Math.ceil(cloneRect.width)
 
-    // 以完整内容高度作为截图高度
-    const height = Math.ceil(
+    const exportHeight = Math.ceil(
       Math.max(
-        source.scrollHeight,
-        scroll.scrollHeight
+        clone.scrollHeight,
+        cloneRect.height
       )
     )
 
     if (
-      !Number.isFinite(width) ||
-      !Number.isFinite(height) ||
-      width <= 0 ||
-      height <= 0
+      !Number.isFinite(exportWidth) ||
+      !Number.isFinite(exportHeight) ||
+      exportWidth <= 0 ||
+      exportHeight <= 0
     ) {
       throw new Error(
-        `截图尺寸异常：${width} × ${height}`
+        `导出尺寸异常：${exportWidth} × ${exportHeight}`
       )
     }
 
-    // 防止异常长内容导致 Canvas 尺寸过大
+    // 12. 限制 Canvas 尺寸和像素数量
     const pixelRatio = Math.max(
       1,
       Math.min(
         3,
-        16000 / Math.max(width, height),
-        Math.sqrt(24000000 / (width * height))
+        16000 / Math.max(exportWidth, exportHeight),
+        Math.sqrt(
+          24000000 / (exportWidth * exportHeight)
+        )
       )
     )
 
-    console.log('AI 解读截图尺寸：', {
-      width,
-      height,
-      pixelRatio,
-      scrollHeight: scroll.scrollHeight,
-      sourceHeight: source.scrollHeight
+    console.log('AI 解读导出尺寸：', {
+      width: exportWidth,
+      height: exportHeight,
+      pixelRatio
     })
 
-    // 10. 直接截图真实弹窗
-    const blob = await toBlob(source, {
+    // 13. 导出克隆 DOM
+    const blob = await toBlob(clone, {
       pixelRatio,
-      cacheBust: true,
-      width,
-      height,
+      width: exportWidth,
+      height: exportHeight,
 
-      // 给 Canvas 设置不透明底色
-      // 卡片本身的渐变背景仍由原 CSS 绘制
+      // 不使用缓存规避参数
+      cacheBust: false,
+
+      // 卡片本身有 CSS 背景
       backgroundColor: '#17191f',
 
-      // 排除不需要出现在图片中的按钮
+      // 过滤导出按钮等节点
       filter: node => {
         return !(
           node instanceof HTMLElement &&
@@ -576,11 +524,11 @@ async function exportCard() {
     })
 
     if (!blob || blob.size === 0) {
-      throw new Error('PNG 图片生成失败，未获得有效数据')
+      throw new Error('导出 PNG 失败，未生成有效图片')
     }
 
-    // 11. 下载 PNG
-    const objectUrl = URL.createObjectURL(blob)
+    // 14. 下载文件
+    objectUrl = URL.createObjectURL(blob)
 
     const link = document.createElement('a')
 
@@ -591,45 +539,32 @@ async function exportCard() {
     link.click()
     link.remove()
 
-    // 延迟释放下载地址
-    window.setTimeout(() => {
-      URL.revokeObjectURL(objectUrl)
-    }, 3000)
-
     exportStatus.value = '已保存'
 
   } catch (error) {
     console.error('AI 解读卡片导出失败：', error)
 
-    const message = String(error?.message || '')
+    exportStatus.value = '导出失败'
 
-    if (/cors|cross-origin|taint|fetch/i.test(message)) {
-      exportStatus.value = '导出失败'
-      exportError.value =
-        '图片可能存在跨域限制，请检查图片服务器的 CORS 配置'
-    } else {
-      exportStatus.value = '导出失败'
-      exportError.value = message || '请稍后重试'
-    }
+    exportError.value =
+      error?.message || '请稍后重试'
 
   } finally {
-    // 12. 恢复弹窗原始样式
-    if (originalSourceStyle === null) {
-      source.removeAttribute('style')
-    } else {
-      source.setAttribute('style', originalSourceStyle)
+    // 15. 清理独立 DOM
+    exportRoot?.remove()
+
+    // 16. 释放文件地址
+    if (objectUrl) {
+      window.setTimeout(() => {
+        URL.revokeObjectURL(objectUrl)
+      }, 3000)
     }
 
-    // 13. 恢复滚动区域原始样式
-    if (originalScrollStyle === null) {
-      scroll.removeAttribute('style')
-    } else {
-      scroll.setAttribute('style', originalScrollStyle)
-    }
-
+    // 17. 恢复导出状态
     isExporting.value = false
   }
 }
+
 
 
 /**
@@ -1303,5 +1238,111 @@ onBeforeUnmount(() => {
     height: 14px;
   }
 }
+
+
+/* ================================
+   AI 解读独立导出布局
+================================ */
+
+.ai-story-export-root {
+  width: 560px !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+
+  position: relative !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  flex: none !important;
+
+  box-sizing: border-box !important;
+
+  border-radius: 23px !important;
+}
+
+/* 导出时取消内部滚动 */
+.ai-story-export-root .ai-story-scroll {
+  width: 100% !important;
+
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  flex: none !important;
+
+  overscroll-behavior: auto !important;
+
+  -webkit-overflow-scrolling: auto !important;
+}
+
+/* 统一导出时的图片布局 */
+.ai-story-export-root .ai-story-intro {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) !important;
+  gap: 18px !important;
+}
+
+/* 统一导出时图片尺寸 */
+.ai-story-export-root .ai-story-preview {
+  width: 100% !important;
+  max-width: 220px !important;
+  max-height: 124px !important;
+
+  aspect-ratio: 16 / 9 !important;
+
+  overflow: hidden !important;
+
+  border-radius: 12px !important;
+}
+
+.ai-story-export-root .ai-story-preview img {
+  display: block !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  max-height: 124px !important;
+
+  object-fit: cover !important;
+}
+
+/* 保持标题尺寸统一 */
+.ai-story-export-root .ai-story-title-block h2 {
+  font-size: 34px !important;
+}
+
+/* 保持正文排版统一 */
+.ai-story-export-root .ai-story-body {
+  font-size: 13px !important;
+  line-height: 2 !important;
+}
+
+/* 导出时移除动态效果 */
+.ai-story-export-root *,
+.ai-story-export-root *::before,
+.ai-story-export-root *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* 不导出装饰光晕 */
+.ai-story-export-root .ai-story-dialog-glow {
+  display: none !important;
+}
+
+/* 确保顶部装饰线正常显示 */
+.ai-story-export-root .ai-story-dialog-accent-line {
+  opacity: 1 !important;
+}
+
 
 </style>
