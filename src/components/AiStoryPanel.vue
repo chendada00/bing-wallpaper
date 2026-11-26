@@ -159,13 +159,34 @@
               </div>
 
               <section class="ai-story-section" :id="`${dialogId}-body`">
+                <!-- 一级标题：保留原来的意境漫游 -->
                 <div class="ai-story-section-heading">
                   <span class="ai-story-section-index">01</span>
                   <h3>意境漫游</h3>
                 </div>
-                <p class="ai-story-body">{{ aiStory.story }}</p>
-              </section>
 
+                <!-- 有多个段落时，拆分为两个小标题 -->
+                <template v-if="storyParagraphs.length >= 2">
+                  <div class="ai-story-subsection">
+                    <h4 class="ai-story-subheading">① 光影与景致</h4>
+                    <p class="ai-story-body">
+                      {{ storyParagraphs[0] }}
+                    </p>
+                  </div>
+
+                  <div class="ai-story-subsection">
+                    <h4 class="ai-story-subheading">② 画面之外</h4>
+                    <p class="ai-story-body">
+                      {{ storyParagraphs.slice(1).join('\n\n') }}
+                    </p>
+                  </div>
+                </template>
+
+                <!-- 单段兼容：保留一级标题，正文不添加小标题 -->
+                <p v-else class="ai-story-body">
+                  {{ storyParagraphs[0] || aiStory.story }}
+                </p>
+              </section>
               <section v-if="moodTags.length" class="ai-story-section ai-story-tags-section">
                 <div class="ai-story-section-heading">
                   <span class="ai-story-section-index">02</span>
@@ -260,6 +281,34 @@ const aiStory = computed(() => {
 const hasStory = computed(() => {
   return typeof aiStory.value.story === 'string' &&
     aiStory.value.story.trim().length > 0
+})
+
+/**
+ * 将 AI Story 按段落拆分。
+ *
+ * 兼容：
+ * 1. Windows 换行符 \r\n
+ * 2. Unix 换行符 \n
+ * 3. 连续空行
+ * 4. 首尾空白
+ * 5. 只有一段的旧数据
+ *
+ * 至少存在两个段落时，前段用于画面解读，
+ * 后续段落合并为画面升华。
+ */
+const storyParagraphs = computed(() => {
+  const story = aiStory.value.story
+
+  if (typeof story !== 'string' || !story.trim()) {
+    return []
+  }
+
+  return story
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split(/\n\s*\n+/)
+    .map(paragraph => paragraph.trim())
+    .filter(Boolean)
 })
 
 function normalizeTags(value) {
@@ -1344,5 +1393,37 @@ onBeforeUnmount(() => {
   opacity: 1 !important;
 }
 
+/* AI 解读二级小标题容器 */
+.ai-story-subsection + .ai-story-subsection {
+  margin-top: 20px;
+}
 
+/* 二级小标题：轻量引导式样 */
+.ai-story-subheading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 0 0 8px;
+
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0.06em;
+}
+
+/* 小标题前的细线标记 */
+.ai-story-subheading::before {
+  content: '';
+  display: block;
+  flex-shrink: 0;
+
+  width: 2px;
+  height: 12px;
+
+  border-radius: 2px;
+  background: var(--ai-accent);
+  opacity: 0.75;
+}
 </style>
