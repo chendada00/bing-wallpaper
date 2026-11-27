@@ -174,11 +174,29 @@
                     </p>
                   </div>
 
-                  <div class="ai-story-subsection">
-                    <h4 class="ai-story-subheading">② 画面之外</h4>
-                    <p class="ai-story-body">
-                      {{ storyParagraphs.slice(1).join('\n\n') }}
-                    </p>
+                  <div class="ai-story-subsection ai-story-subsection--highlight">
+                    <div class="ai-story-insight-header">
+                      <div class="ai-story-insight-heading">
+                        <h4 class="ai-story-subheading ai-story-subheading--highlight">
+                          ② 画面之外
+                        </h4>
+                        <span class="ai-story-insight-label">
+                          BEYOND THE FRAME
+                        </span>
+                      </div>
+
+                      <span class="ai-story-insight-symbol" aria-hidden="true">✳</span>
+                    </div>
+
+                    <div class="ai-story-insight-content">
+                      <p class="ai-story-body ai-story-body--highlight">
+                        {{ storyParagraphs.slice(1).join('\n\n') }}
+                      </p>
+                    </div>
+
+                    <div class="ai-story-insight-end" aria-hidden="true">
+                      <span></span>
+                    </div>
                   </div>
                 </template>
 
@@ -1484,5 +1502,162 @@ onBeforeUnmount(() => {
   border-radius: 2px;
   background: var(--ai-accent);
   opacity: 0.75;
+}
+/* ================================
+   AI 核心洞察：画面之外
+================================ */
+
+/* 核心洞察独立容器 */
+.ai-story-subsection--highlight {
+  position: relative;
+  padding: 16px 15px 14px;
+  margin-top: 22px;
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--ai-accent) 22%,
+    rgba(255, 255, 255, 0.06)
+  );
+
+  border-radius: 15px;
+
+  background:
+    radial-gradient(
+      ellipse at top left,
+      color-mix(
+        in srgb,
+        var(--ai-accent) 9%,
+        transparent
+      ),
+      transparent 70%
+    ),
+    rgba(255, 255, 255, 0.018);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+/* 标题区域 */
+.ai-story-insight-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 标题与英文标识 */
+.ai-story-insight-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 强调标题 */
+.ai-story-subheading--highlight {
+  margin: 0;
+
+  color: color-mix(
+    in srgb,
+    var(--ai-accent) 78%,
+    white
+  );
+
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* 标题左侧装饰线 */
+.ai-story-subheading--highlight::before {
+  width: 3px;
+  height: 15px;
+
+  background: var(--ai-accent);
+  opacity: 1;
+
+  box-shadow:
+    0 0 8px color-mix(
+      in srgb,
+      var(--ai-accent) 40%,
+      transparent
+    );
+}
+
+/* 英文辅助标识 */
+.ai-story-insight-label {
+  padding-left: 11px;
+
+  color: color-mix(
+    in srgb,
+    var(--ai-accent) 55%,
+    rgba(255, 255, 255, 0.38)
+  );
+
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+}
+
+/* 右上角装饰 */
+.ai-story-insight-symbol {
+  flex: 0 0 auto;
+
+  color: color-mix(
+    in srgb,
+    var(--ai-accent) 65%,
+    white
+  );
+
+  font-size: 17px;
+  line-height: 1;
+
+  opacity: 0.8;
+}
+
+/* 正文区域 */
+.ai-story-insight-content {
+  margin-top: 13px;
+}
+
+/* 洞察正文 */
+.ai-story-body--highlight {
+  color: color-mix(
+    in srgb,
+    var(--ai-accent) 7%,
+    rgba(241, 242, 246, 0.86)
+  );
+
+  font-size: 13px;
+  line-height: 2;
+}
+
+/* 底部收束装饰 */
+.ai-story-insight-end {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 13px;
+}
+
+/* 主色渐变短线 */
+.ai-story-insight-end span {
+  display: block;
+
+  width: 34px;
+  height: 2px;
+
+  border-radius: 999px;
+
+  background: linear-gradient(
+    90deg,
+    color-mix(
+      in srgb,
+      var(--ai-accent) 35%,
+      transparent
+    ),
+    var(--ai-accent)
+  );
+
+  opacity: 0.8;
 }
 </style>
