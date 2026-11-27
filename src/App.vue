@@ -197,13 +197,18 @@
 
       <main
         class="main-content"
-        :class="{ 'month-filter-active': selectedMonth }"
+        :class="{ 'month-filter-active': transitionView === 'month' }"
       >
 
-      <!-- 月份归档导航：融入页面，不遮挡壁纸 -->
-      <Transition name="archive-nav">
+    <Transition name="view-switch" mode="out-in">
+      <div
+        :key="transitionView"
+        class="view-container"
+      >
+
+        <!-- 月份归档导航：融入页面，不遮挡壁纸 -->
         <nav
-          v-if="selectedMonth"
+          v-if="transitionView === 'month'"
           class="archive-nav"
           aria-label="月份归档导航"
         >
@@ -226,13 +231,12 @@
             {{ monthViewItems.length }} 张
           </span>
         </nav>
-      </Transition>
 
 
 
 
         <section
-          v-if="heroItem && !selectedMonth"
+          v-if="heroItem && transitionView === 'home'"
           class="hero-section"
         >
           <div class="hero-image">
@@ -346,7 +350,6 @@
           name="wallpaper-list"
           tag="section"
           class="wallpaper-grid"
-          appear
         >
           <WallpaperCard
             v-for="item in displayResult"
@@ -389,7 +392,8 @@
           </button>
         </div>
 
-
+      </div>
+    </Transition>
         <LoadingState
           v-if="initialLoading || loading || monthDataLoading"
         />
@@ -572,6 +576,11 @@ const historyIndex=useHistoryIndex(dataBaseUrl)
 // 空字符串表示正常首页。
 const selectedMonth = ref('')
 
+// 当前实际展示的页面视图。
+// home：首页；month：月份归档。
+// 与 selectedMonth 分离，避免数据状态更新时立即销毁首页。
+const transitionView = ref('home')
+
 // 当前月份对应的壁纸数据。
 const monthViewItems = ref([])
 
@@ -614,9 +623,10 @@ const availableMonths = computed(() => {
     .sort((a, b) => b.key.localeCompare(a.key))
 })
 
-// 月份模式下展示专属数据；正常首页仍然使用原来的搜索结果。
+// 根据当前实际显示视图决定列表数据。
+// 视图切换由 transitionView 控制，而不是 selectedMonth。
 const displayResult = computed(() => {
-  return selectedMonth.value
+  return transitionView.value === 'month'
     ? monthViewItems.value
     : result.value
 })
@@ -646,8 +656,10 @@ async function openMonthPicker() {
 }
 
 // 用户点击某个月份。
+
 async function selectMonth(month, options = {}) {
   const { updateUrl = true } = options
+
   if (!month?.key || monthDataLoading.value) {
     return
   }
@@ -675,7 +687,8 @@ async function selectMonth(month, options = {}) {
   monthIndexError.value = ''
 
   try {
-    // loadDates 会复用 useBingData 的月份缓存和请求去重机制。
+    // 1. 加载月份数据。
+    // 在此阶段不改变当前页面视图。
     const loaded = await loadDates(dates)
 
     const filtered = loaded
@@ -688,21 +701,26 @@ async function selectMonth(month, options = {}) {
       return
     }
 
-    // 清理旧搜索条件，避免月份视图与搜索条件产生冲突。
+    // 2. 清理旧搜索条件。
     clear()
     historySearchItems.value = []
 
-    // 切换到月份视图。
+    // 3. 先准备月份数据，暂不改变页面视图。
     monthViewItems.value = filtered
-    selectedMonth.value = key
 
-    // 月份切换后主动设置背景，避免直接刷新月份链接时背景为空。
-    // 优先使用该月份最新一张壁纸。
+    // 4. 提前准备月份背景。
+    // 不等用户鼠标进入卡片才更新背景。
     if (filtered[0]?.base64) {
       setBackground(filtered[0])
     }
 
-    // 将月份同步到 URL。
+    // 5. 重新分配图片加载任务。
+    resetHomeImageLoadState()
+
+    // 6. 等待月份数据和背景准备完成。
+    await nextTick()
+
+    // 7. 更新 URL。
     if (updateUrl) {
       const monthHash = `#${key}`
 
@@ -719,17 +737,24 @@ async function selectMonth(month, options = {}) {
       }
     }
 
-    // 每次切换展示集合时重新分配图片加载任务。
-    resetHomeImageLoadState()
+    // 8. 提交业务状态。
+    // selectedMonth 在这里更新，但模板不再直接依赖它控制视图。
+    selectedMonth.value = key
 
+    // 9. 真正切换视图。
+    // Transition mode="out-in" 将负责先退出首页再进入月份视图。
+    transitionView.value = 'month'
+
+    // 10. 等待视图切换开始后更新加载队列及滚动状态。
     await nextTick()
 
     fillImageLoadQueue()
     updateScrollState()
 
+    // 不使用 smooth，避免视图切换动画与滚动动画叠加。
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: 'instant'
     })
   } catch (err) {
     console.error('加载月份壁纸失败:', err)
@@ -741,6 +766,7 @@ async function selectMonth(month, options = {}) {
     loadingMonthKey.value = ''
   }
 }
+
 
 // 从 URL 恢复月份视图。
 async function restoreMonthFromHash(key) {
@@ -776,8 +802,6 @@ async function restoreMonthFromHash(key) {
 
 // 返回正常首页。
 async function returnToHome() {
-  selectedMonth.value = ''
-  monthViewItems.value = []
   monthIndexError.value = ''
 
   // 如果当前 URL 是月份哈希，清除哈希。
@@ -793,24 +817,40 @@ async function returnToHome() {
     )
   }
 
-  // 直接刷新进入月份时，首页可能尚未初始化。
+  // 直接刷新进入月份页面时，首页数据可能尚未初始化。
   if (!items.value.length) {
     await initializeHome()
-  } else {
-    // 首页已经有数据，只重置图片加载队列。
-    resetHomeImageLoadState()
-
-    await nextTick()
-
-    fillImageLoadQueue()
-    updateScrollState()
   }
+
+  // 提交首页业务状态。
+  selectedMonth.value = ''
+
+  // 切换实际视图。
+  transitionView.value = 'home'
+
+  // 等待视图切换状态更新。
+  await nextTick()
+
+  // 此时 displayResult 已经指向首页数据。
+  // 清理旧月份视图的加载状态。
+  resetHomeImageLoadState()
+
+  await nextTick()
+
+  // 在首页数据源下重新分配加载任务。
+  fillImageLoadQueue()
+  updateScrollState()
+
+  // 清理月份数据，不影响首页队列。
+  monthViewItems.value = []
 
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: 'instant'
   })
 }
+
+
 
 const WALLPAPER_HASH_RE = /^#(\d{4}-\d{2}-\d{2})$/
 const MONTH_HASH_RE = /^#(\d{4}-(0[1-9]|1[0-2]))$/
@@ -1362,12 +1402,12 @@ async function retryData() {
 // 搜索结果是 computed。原逻辑只在初次加载/图片完成后填队列，
 // 搜索条件变化时没有重新触发，因此新出现的结果可能永久停留在 idle。
 watch(
-  [result, items, monthViewItems],
-  async ()=>{
+  [result, items, monthViewItems, transitionView],
+  async () => {
     await nextTick()
     fillImageLoadQueue()
   },
-  {flush:'post'}
+  { flush: 'post' }
 )
 
 let historySearchRequestId=0
@@ -2524,6 +2564,50 @@ function updateIntroTheme(item) {
   .archive-nav-enter-active,
   .archive-nav-leave-active {
     transition: none !important;
+  }
+}
+
+/* ================================
+   首页 / 月份归档视图切换
+================================ */
+
+/* 两种视图的基础容器 */
+.view-container {
+  width: 100%;
+  min-width: 0;
+}
+
+/* 旧视图退出、新视图进入 */
+.view-switch-enter-active,
+.view-switch-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+/* 视图进入初始状态 */
+.view-switch-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* 视图退出状态 */
+.view-switch-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* 尊重系统减少动画设置 */
+@media (prefers-reduced-motion: reduce) {
+  .view-switch-enter-active,
+  .view-switch-leave-active {
+    transition: none !important;
+  }
+
+  .view-switch-enter-from,
+  .view-switch-leave-to {
+    opacity: 1;
+    transform: none;
   }
 }
 
