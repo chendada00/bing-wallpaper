@@ -391,7 +391,7 @@
 
 
         <LoadingState
-          v-if="initialLoading || loading"
+          v-if="initialLoading || loading || monthDataLoading"
         />
 
 
@@ -696,6 +696,12 @@ async function selectMonth(month, options = {}) {
     monthViewItems.value = filtered
     selectedMonth.value = key
 
+    // 月份切换后主动设置背景，避免直接刷新月份链接时背景为空。
+    // 优先使用该月份最新一张壁纸。
+    if (filtered[0]?.base64) {
+      setBackground(filtered[0])
+    }
+
     // 将月份同步到 URL。
     if (updateUrl) {
       const monthHash = `#${key}`
@@ -787,20 +793,24 @@ async function returnToHome() {
     )
   }
 
-  // 避免之前月份的数据继续占据图片加载队列。
-  resetHomeImageLoadState()
+  // 直接刷新进入月份时，首页可能尚未初始化。
+  if (!items.value.length) {
+    await initializeHome()
+  } else {
+    // 首页已经有数据，只重置图片加载队列。
+    resetHomeImageLoadState()
 
-  await nextTick()
+    await nextTick()
 
-  fillImageLoadQueue()
-  updateScrollState()
+    fillImageLoadQueue()
+    updateScrollState()
+  }
 
   window.scrollTo({
     top: 0,
     behavior: 'smooth'
   })
 }
-
 
 const WALLPAPER_HASH_RE = /^#(\d{4}-\d{2}-\d{2})$/
 const MONTH_HASH_RE = /^#(\d{4}-(0[1-9]|1[0-2]))$/
@@ -1941,23 +1951,34 @@ onMounted(async () => {
   document.addEventListener('click', handleSourceMenuOutsideClick)
   document.addEventListener('keydown', handleSourceMenuEscape)
 
-  // 首页只初始化一次；初始化完成后恢复 URL 对应的视图。
-  await initializeHome()
-
+  // 先判断 URL 决定初始化目标，避免月份链接闪现首页。
   const hash = window.location.hash
-
-  // 月份归档链接。
   const monthMatch = hash.match(MONTH_HASH_RE)
 
   if (monthMatch) {
-    await restoreMonthFromHash(monthMatch[1])
-  } else {
-    // 壁纸详情链接。
-    const date = getWallpaperDateFromHash()
+    setHomeSeo()
 
-    if (date) {
-      await openWallpaperFromHash(date)
+    resetHomeImageLoadState()
+
+    // 直接恢复月份，不初始化首页精选主图和首页数据。
+    await restoreMonthFromHash(monthMatch[1])
+
+    // 月份链接无效或恢复失败时，再退回正常首页。
+    if (!selectedMonth.value) {
+      await initializeHome()
     }
+
+    return
+  }
+
+  // 非月份链接，正常初始化首页。
+  await initializeHome()
+
+  // 壁纸详情链接。
+  const date = getWallpaperDateFromHash()
+
+  if (date) {
+    await openWallpaperFromHash(date)
   }
 })
 
