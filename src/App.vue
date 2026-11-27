@@ -651,7 +651,8 @@ async function openMonthPicker() {
 }
 
 // 用户点击某个月份。
-async function selectMonth(month) {
+async function selectMonth(month, options = {}) {
+  const { updateUrl = true } = options
   if (!month?.key || monthDataLoading.value) {
     return
   }
@@ -700,6 +701,23 @@ async function selectMonth(month) {
     monthViewItems.value = filtered
     selectedMonth.value = key
 
+    // 将月份同步到 URL。
+    if (updateUrl) {
+      const monthHash = `#${key}`
+
+      if (window.location.hash !== monthHash) {
+        window.history.pushState(
+          {
+            ...(window.history.state || {}),
+            wallpaperMonth: key,
+            wallpaperModal: false
+          },
+          '',
+          `${window.location.pathname}${window.location.search}${monthHash}`
+        )
+      }
+    }
+
     // 每次切换展示集合时重新分配图片加载任务。
     resetHomeImageLoadState()
 
@@ -723,11 +741,56 @@ async function selectMonth(month) {
   }
 }
 
+// 从 URL 恢复月份视图。
+async function restoreMonthFromHash(key) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) {
+    return
+  }
+
+  // 确保历史月份索引已经加载。
+  if (!historyIndex.index.value) {
+    monthIndexLoading.value = true
+
+    try {
+      await historyIndex.load()
+    } finally {
+      monthIndexLoading.value = false
+    }
+  }
+
+  const month = availableMonths.value.find(
+    item => item.key === key
+  )
+
+  if (!month) {
+    console.warn(`未找到月份归档：${key}`)
+    return
+  }
+
+  // 恢复月份时不要重复写入 URL。
+  await selectMonth(month, {
+    updateUrl: false
+  })
+}
+
 // 返回正常首页。
 async function returnToHome() {
   selectedMonth.value = ''
   monthViewItems.value = []
   monthIndexError.value = ''
+
+  // 如果当前 URL 是月份哈希，清除哈希。
+  if (/^#\d{4}-\d{2}$/.test(window.location.hash)) {
+    window.history.replaceState(
+      {
+        ...(window.history.state || {}),
+        wallpaperMonth: null,
+        wallpaperModal: false
+      },
+      '',
+      `${window.location.pathname}${window.location.search}`
+    )
+  }
 
   // 避免之前月份的数据继续占据图片加载队列。
   resetHomeImageLoadState()
@@ -745,6 +808,7 @@ async function returnToHome() {
 
 
 const WALLPAPER_HASH_RE = /^#(\d{4}-\d{2}-\d{2})$/
+const MONTH_HASH_RE = /^#(\d{4}-(0[1-9]|1[0-2]))$/
 
 function getWallpaperDateFromHash() {
   const match = window.location.hash.match(WALLPAPER_HASH_RE)
@@ -844,16 +908,54 @@ async function openWallpaperFromHash(date) {
 }
 
 function handleWallpaperHistoryChange() {
+  const hash = window.location.hash
+
+  // =========================
+  // 月份归档
+  // =========================
+  const monthMatch = hash.match(MONTH_HASH_RE)
+
+  if (monthMatch) {
+    const month = monthMatch[1]
+
+    hashOpenRequestId++
+
+    // 月份页面不应该保留详情弹窗。
+    if (viewerVisible.value) {
+      closeViewer()
+    }
+
+    // 如果已经是当前月份，不重复加载。
+    if (selectedMonth.value === month) {
+      return
+    }
+
+    void restoreMonthFromHash(month)
+    return
+  }
+
+  // =========================
+  // 壁纸详情
+  // =========================
   const date = getWallpaperDateFromHash()
 
   if (!date) {
     hashOpenRequestId++
     closeViewer()
+
+    // URL 返回首页时，清除月份视图状态。
+    if (selectedMonth.value) {
+      void returnToHome()
+    }
+
     return
   }
 
-  // 避免相同日期在 浏览器历史变化 中被重复加载。
-  if (viewerVisible.value && currentItem.value?.date === date) {
+  // 避免相同日期在浏览器历史变化中被重复加载。
+  if (
+    viewerVisible.value &&
+    currentItem.value?.date === date
+  ) {
     return
   }
 
@@ -1844,12 +1946,23 @@ onMounted(async () => {
   document.addEventListener('click', handleSourceMenuOutsideClick)
   document.addEventListener('keydown', handleSourceMenuEscape)
 
-  // 首页只初始化一次；带日期的分享链接在首页数据准备好后恢复弹窗。
+  // 首页只初始化一次；初始化完成后恢复 URL 对应的视图。
   await initializeHome()
 
-  const date = getWallpaperDateFromHash()
-  if (date) {
-    await openWallpaperFromHash(date)
+  const hash = window.location.hash
+
+  // 月份归档链接。
+  const monthMatch = hash.match(MONTH_HASH_RE)
+
+  if (monthMatch) {
+    await restoreMonthFromHash(monthMatch[1])
+  } else {
+    // 壁纸详情链接。
+    const date = getWallpaperDateFromHash()
+
+    if (date) {
+      await openWallpaperFromHash(date)
+    }
   }
 })
 
