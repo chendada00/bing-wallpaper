@@ -200,38 +200,33 @@
         :class="{ 'month-filter-active': selectedMonth }"
       >
 
-        <!-- 当前月份悬浮面板 -->
-        <Transition name="month-float">
-          <section
-            v-if="selectedMonth"
-            class="month-view-heading"
-            aria-label="当前月份筛选状态"
+      <!-- 月份归档导航：融入页面，不遮挡壁纸 -->
+      <Transition name="archive-nav">
+        <nav
+          v-if="selectedMonth"
+          class="archive-nav"
+          aria-label="月份归档导航"
+        >
+          <button
+            type="button"
+            class="archive-nav-back"
+            @click="returnToHome"
           >
-            <div class="month-view-copy">
-              <span class="month-view-eyebrow">
-                WALLPAPER ARCHIVE
-              </span>
+            <span aria-hidden="true">←</span>
+            <span>全部壁纸</span>
+          </button>
 
-              <h2>
-                {{ Number(selectedMonth.slice(0, 4)) }}年
-                {{ Number(selectedMonth.slice(5, 7)) }}月
-              </h2>
+          <span class="archive-nav-divider" aria-hidden="true">/</span>
 
-              <p>
-                {{ monthViewItems.length }} 张壁纸
-              </p>
-            </div>
+          <span class="archive-nav-month">
+            {{ selectedMonth }}
+          </span>
 
-            <button
-              type="button"
-              class="month-home-button"
-              @click="returnToHome"
-            >
-              <span aria-hidden="true">↶</span>
-              返回主页
-            </button>
-          </section>
-        </Transition>
+          <span class="archive-nav-count">
+            {{ monthViewItems.length }} 张
+          </span>
+        </nav>
+      </Transition>
 
 
 
@@ -2393,6 +2388,121 @@ function updateIntroTheme(item) {
 @media (max-width: 640px) {
   .header-right {
     gap: 6px;
+  }
+}
+
+
+/* =========================
+   月份归档极简导航
+   ========================= */
+
+.archive-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 12px 0;
+  margin-bottom: 18px;
+
+  border-bottom: 1px solid rgba(128, 128, 128, 0.16);
+
+  color: var(--text-color, inherit);
+}
+
+/* 返回首页 */
+.archive-nav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  opacity: 0.65;
+  cursor: pointer;
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.archive-nav-back:hover {
+  opacity: 1;
+  transform: translateX(-2px);
+}
+
+/* 分隔符 */
+.archive-nav-divider {
+  color: inherit;
+  opacity: 0.25;
+}
+
+/* 当前月份 */
+.archive-nav-month {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* 图片数量 */
+.archive-nav-count {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.5;
+}
+
+/* 轻量进入动画 */
+.archive-nav-enter-active,
+.archive-nav-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.archive-nav-enter-from,
+.archive-nav-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 手机端 */
+@media (max-width: 640px) {
+  .archive-nav {
+    gap: 8px;
+    padding: 10px 0;
+    margin-bottom: 12px;
+  }
+
+  .archive-nav-back {
+    font-size: 12px;
+  }
+
+  .archive-nav-month {
+    font-size: 13px;
+  }
+
+  .archive-nav-count {
+    font-size: 11px;
+  }
+}
+
+/* 尊重系统减少动画设置 */
+@media (prefers-reduced-motion: reduce) {
+  .archive-nav,
+  .archive-nav-back,
+  .archive-nav-enter-active,
+  .archive-nav-leave-active {
+    transition: none !important;
   }
 }
 
