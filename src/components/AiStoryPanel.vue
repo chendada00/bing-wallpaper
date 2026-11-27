@@ -454,9 +454,8 @@ async function exportCard() {
       await document.fonts.ready
     }
 
-    // 3. 获取当前卡片实际宽度
-    const rect = source.getBoundingClientRect()
-    const width = Math.ceil(rect.width)
+    // 导出采用统一的画布宽度，不再依赖手机或桌面当前弹窗宽度
+    const width = 560
 
     if (!width || width < 100) {
       throw new Error('无法获取有效的卡片宽度')
@@ -485,17 +484,25 @@ async function exportCard() {
 
     // 9. 创建屏幕外容器
     exportRoot = document.createElement('div')
-
+    
     Object.assign(exportRoot.style, {
       position: 'fixed',
       left: '-10000px',
       top: '0',
+    
+      // 外层容器与内部导出卡片保持一致
       width: `${width}px`,
+      minWidth: `${width}px`,
+      maxWidth: `${width}px`,
+    
       height: 'auto',
       overflow: 'visible',
+    
       pointerEvents: 'none',
       zIndex: '-1',
-      background: 'transparent'
+    
+      background: 'transparent',
+      boxSizing: 'border-box'
     })
 
     exportRoot.appendChild(clone)
@@ -1288,14 +1295,16 @@ onBeforeUnmount(() => {
   }
 }
 
-
 /* ================================
    AI 解读独立导出布局
 ================================ */
 
+/* 导出卡片固定为桌面布局宽度 */
 .ai-story-export-root {
   width: 560px !important;
-  max-width: none !important;
+  min-width: 560px !important;
+  max-width: 560px !important;
+
   height: auto !important;
   max-height: none !important;
 
@@ -1317,9 +1326,10 @@ onBeforeUnmount(() => {
   border-radius: 23px !important;
 }
 
-/* 导出时取消内部滚动 */
+/* 导出时展开滚动容器 */
 .ai-story-export-root .ai-story-scroll {
   width: 100% !important;
+  min-width: 0 !important;
 
   height: auto !important;
   max-height: none !important;
@@ -1329,17 +1339,20 @@ onBeforeUnmount(() => {
   flex: none !important;
 
   overscroll-behavior: auto !important;
-
   -webkit-overflow-scrolling: auto !important;
+
+  box-sizing: border-box !important;
 }
 
-/* 统一导出时的图片布局 */
+/* 导出时固定标题和图片的横向布局 */
 .ai-story-export-root .ai-story-intro {
+  display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) !important;
+  align-items: center !important;
   gap: 18px !important;
 }
 
-/* 统一导出时图片尺寸 */
+/* 导出时统一预览图尺寸 */
 .ai-story-export-root .ai-story-preview {
   width: 100% !important;
   max-width: 220px !important;
@@ -1363,15 +1376,61 @@ onBeforeUnmount(() => {
   object-fit: cover !important;
 }
 
-/* 保持标题尺寸统一 */
+/* 导出标题统一字号 */
 .ai-story-export-root .ai-story-title-block h2 {
   font-size: 34px !important;
 }
 
-/* 保持正文排版统一 */
+/* 导出正文统一字号 */
 .ai-story-export-root .ai-story-body {
   font-size: 13px !important;
   line-height: 2 !important;
+}
+
+/* 心境回声：明确横向 Flex 布局 */
+.ai-story-export-root .ai-story-tags-section .ai-story-tags {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  gap: 8px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* 心境回声标签：保持内容宽度，不压缩 */
+.ai-story-export-root .ai-story-tag--mood {
+  display: inline-flex !important;
+  flex-direction: row !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex: 0 0 auto !important;
+
+  width: auto !important;
+  max-width: none !important;
+
+  min-height: 27px !important;
+
+  white-space: nowrap !important;
+
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+
+  box-sizing: border-box !important;
+}
+
+/* 导出标签区域 */
+.ai-story-export-root .ai-story-tags-section {
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 /* 导出时移除动态效果 */
@@ -1388,7 +1447,7 @@ onBeforeUnmount(() => {
   display: none !important;
 }
 
-/* 确保顶部装饰线正常显示 */
+/* 顶部装饰线保持正常显示 */
 .ai-story-export-root .ai-story-dialog-accent-line {
   opacity: 1 !important;
 }
@@ -1398,7 +1457,7 @@ onBeforeUnmount(() => {
   margin-top: 20px;
 }
 
-/* 二级小标题：轻量引导式样 */
+/* 二级小标题 */
 .ai-story-subheading {
   display: flex;
   align-items: center;
@@ -1413,7 +1472,7 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
 }
 
-/* 小标题前的细线标记 */
+/* 小标题前的细线 */
 .ai-story-subheading::before {
   content: '';
   display: block;
