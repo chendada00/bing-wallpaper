@@ -44,11 +44,19 @@
             </header>
 
             <div v-if="status === 'idle' || status === 'error'" class="bulk-config">
-              <div class="bulk-range-card">
+              <div
+                class="bulk-range-card"
+                :class="{ 'is-ai-story': downloadType === 'aiStory' }"
+              >
 
                 <div class="bulk-download-mode">
 
-                  <div class="bulk-mode-switch">
+                  <div
+                    class="bulk-mode-switch"
+                    :class="{ 'is-ai': downloadType === 'aiStory' }"
+                  >
+                    <span class="bulk-mode-slider" aria-hidden="true"></span>
+
                     <label
                       class="bulk-mode-option"
                       :class="{ selected: downloadType === 'wallpaper' }"
@@ -165,124 +173,124 @@
                 </div>
 
 
-<div class="bulk-settings-panel">
-  <Transition name="bulk-tab-content" mode="out-in">
-    <div
-      v-if="downloadType === 'wallpaper'"
-      key="wallpaper"
-      class="bulk-settings-content"
-    >
-      <div class="bulk-settings-heading">
-        <span class="bulk-settings-icon">◈</span>
-        <div>
-          <strong>壁纸下载质量</strong>
-          <small>选择图片分辨率</small>
-        </div>
-      </div>
+                <div class="bulk-settings-panel">
+                  <Transition name="bulk-tab-content" mode="out-in">
+                    <div
+                      v-if="downloadType === 'wallpaper'"
+                      key="wallpaper"
+                      class="bulk-settings-content"
+                    >
+                      <div class="bulk-settings-heading">
+                        <span class="bulk-settings-icon">◈</span>
+                        <div>
+                          <strong>壁纸下载质量</strong>
+                          <small>选择图片分辨率</small>
+                        </div>
+                      </div>
 
-      <div class="bulk-quality">
-        <label
-          class="bulk-quality-option"
-          :class="{ selected: quality === 'preview' }"
-        >
-          <input
-            v-model="quality"
-            type="radio"
-            value="preview"
-          />
-          <span class="bulk-radio-mark"></span>
-          <span class="bulk-quality-copy">
-            <strong>预览图</strong>
-            <small>文件较小，下载速度快，适合日常收藏</small>
-          </span>
-          <span class="bulk-quality-tag">默认</span>
-        </label>
+                      <div class="bulk-quality">
+                        <label
+                          class="bulk-quality-option"
+                          :class="{ selected: quality === 'preview' }"
+                        >
+                          <input
+                            v-model="quality"
+                            type="radio"
+                            value="preview"
+                          />
+                          <span class="bulk-radio-mark"></span>
+                          <span class="bulk-quality-copy">
+                            <strong>预览图</strong>
+                            <small>文件较小，下载速度快，适合日常收藏</small>
+                          </span>
+                          <span class="bulk-quality-tag">默认</span>
+                        </label>
 
-        <label
-          class="bulk-quality-option"
-          :class="{ selected: quality === 'uhd' }"
-        >
-          <input
-            v-model="quality"
-            type="radio"
-            value="uhd"
-          />
-          <span class="bulk-radio-mark"></span>
-          <span class="bulk-quality-copy">
-            <strong>高清原图 UHD</strong>
-            <small>高分辨率壁纸，文件较大，下载耗时更长</small>
-          </span>
-          <span class="bulk-quality-tag">UHD</span>
-        </label>
-      </div>
+                        <label
+                          class="bulk-quality-option"
+                          :class="{ selected: quality === 'uhd' }"
+                        >
+                          <input
+                            v-model="quality"
+                            type="radio"
+                            value="uhd"
+                          />
+                          <span class="bulk-radio-mark"></span>
+                          <span class="bulk-quality-copy">
+                            <strong>高清原图 UHD</strong>
+                            <small>高分辨率壁纸，文件较大，下载耗时更长</small>
+                          </span>
+                          <span class="bulk-quality-tag">UHD</span>
+                        </label>
+                      </div>
 
-      <div class="bulk-settings-note">
-        <span class="bulk-settings-note-icon">i</span>
-        <span>预览图适合快速收藏，UHD 适合桌面大屏和高分辨率显示器。</span>
-      </div>
-    </div>
+                      <div class="bulk-settings-note">
+                        <span class="bulk-settings-note-icon">i</span>
+                        <span>预览图适合快速收藏，UHD 适合桌面大屏和高分辨率显示器。</span>
+                      </div>
+                    </div>
 
-    <div
-      v-else
-      key="aiStory"
-      class="bulk-settings-content bulk-ai-panel"
-    >
-      <div class="bulk-settings-heading">
-        <span class="bulk-settings-icon">✦</span>
-        <div>
-          <strong>AI 视界</strong>
-          <small>AI Story 图片导出</small>
-        </div>
-      </div>
+                    <div
+                      v-else
+                      key="aiStory"
+                      class="bulk-settings-content bulk-ai-panel"
+                    >
+                      <div class="bulk-settings-heading">
+                        <span class="bulk-settings-icon">✦</span>
+                        <div>
+                          <strong>AI 视界</strong>
+                          <small>AI Story 图片导出</small>
+                        </div>
+                      </div>
 
-      <div class="bulk-ai-visual">
-        <div class="bulk-ai-preview">
-          <div class="bulk-ai-preview-top">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="bulk-ai-preview-body">
-            <span class="bulk-ai-symbol">✦</span>
-            <strong>AI STORY</strong>
-            <span>IMAGE EXPORT</span>
-          </div>
-        </div>
-      </div>
+                      <div class="bulk-ai-visual">
+                        <div class="bulk-ai-preview">
+                          <div class="bulk-ai-preview-top">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                          <div class="bulk-ai-preview-body">
+                            <span class="bulk-ai-symbol">✦</span>
+                            <strong>AI STORY</strong>
+                            <span>IMAGE EXPORT</span>
+                          </div>
+                        </div>
+                      </div>
 
-      <div class="bulk-ai-info">
-        <div class="bulk-ai-info-item">
-          <span class="bulk-ai-info-icon">▧</span>
-          <div>
-            <strong>PNG 图片</strong>
-            <small>导出为 PNG 格式，保留图像细节</small>
-          </div>
-        </div>
+                      <div class="bulk-ai-info">
+                        <div class="bulk-ai-info-item">
+                          <span class="bulk-ai-info-icon">▧</span>
+                          <div>
+                            <strong>PNG 图片</strong>
+                            <small>导出为 PNG 格式，保留图像细节</small>
+                          </div>
+                        </div>
 
-        <div class="bulk-ai-info-item">
-          <span class="bulk-ai-info-icon">↕</span>
-          <div>
-            <strong>完整长图</strong>
-            <small>将 AI 视界页面内容整理为图片</small>
-          </div>
-        </div>
+                        <div class="bulk-ai-info-item">
+                          <span class="bulk-ai-info-icon">↕</span>
+                          <div>
+                            <strong>完整长图</strong>
+                            <small>将 AI 视界页面内容整理为图片</small>
+                          </div>
+                        </div>
 
-        <div class="bulk-ai-info-item">
-          <span class="bulk-ai-info-icon">▤</span>
-          <div>
-            <strong>按日期归档</strong>
-            <small>图片以日期和标题命名，方便整理</small>
-          </div>
-        </div>
-      </div>
+                        <div class="bulk-ai-info-item">
+                          <span class="bulk-ai-info-icon">▤</span>
+                          <div>
+                            <strong>按日期归档</strong>
+                            <small>图片以日期和标题命名，方便整理</small>
+                          </div>
+                        </div>
+                      </div>
 
-      <div class="bulk-settings-note bulk-ai-note">
-        <span class="bulk-settings-note-icon">i</span>
-        <span>将所选日期内的 AI 视界内容导出并打包为 ZIP 文件。</span>
-      </div>
-    </div>
-  </Transition>
-</div>
+                      <div class="bulk-settings-note bulk-ai-note">
+                        <span class="bulk-settings-note-icon">i</span>
+                        <span>将所选日期内的 AI 视界内容导出并打包为 ZIP 文件。</span>
+                      </div>
+                    </div>
+                  </Transition>
+                </div>
 
               </div>
 
@@ -1837,487 +1845,193 @@ onBeforeUnmount(() => {
     background: rgba(255, 255, 255, .055);
   }
 }
+/* ==========================================
+   Batch Download - Coordinated Motion
+========================================== */
 
-/* ========================================
-   Batch Download - Layout Redesign
-======================================== */
+/* ---------- 顶部滑动标签 ---------- */
 
-.bulk-dialog {
-  width: min(100%, 680px);
-  max-height: min(88vh, 800px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.bulk-config {
-  padding: 0 22px 20px;
-}
-
-/* 主体布局 */
-.bulk-range-card {
+.bulk-mode-switch {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
-  grid-template-areas:
-    "mode mode"
-    "heading settings"
-    "calendar settings";
-  align-items: start;
-  gap: 14px;
-  padding: 16px;
-}
-
-.bulk-download-mode {
-  grid-area: mode;
-  margin: 0;
-}
-
-.bulk-range-heading {
-  grid-area: heading;
-  margin: 0;
-  align-self: center;
-}
-
-.bulk-calendar {
-  grid-area: calendar;
-  min-width: 0;
-  padding: 12px;
-}
-
-/* 右侧设置区域 */
-.bulk-settings-panel {
-  grid-area: settings;
-  min-width: 0;
-  align-self: stretch;
-  padding: 14px;
-  border: 1px solid rgba(120, 135, 148, .18);
-  border-radius: 15px;
-  background: rgba(120, 135, 148, .045);
-}
-
-.bulk-settings-content {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-}
-
-.bulk-settings-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.bulk-settings-heading > div {
-  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
-  min-width: 0;
-}
-
-.bulk-settings-heading strong {
-  color: #303941;
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.bulk-settings-heading small {
-  color: #92999f;
-  font-size: 10px;
-}
-
-.bulk-settings-icon {
-  display: grid;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 11px;
-  color: #526b7e;
-  background: rgba(82, 107, 126, .1);
-  font-size: 17px;
-}
-
-/* 质量选择 */
-.bulk-settings-panel .bulk-quality {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-}
-
-.bulk-settings-panel .bulk-quality-option {
-  min-height: 78px;
-  padding: 12px;
-  border-radius: 13px;
-}
-
-.bulk-settings-panel .bulk-quality-copy {
-  gap: 5px;
-}
-
-.bulk-settings-panel .bulk-quality-copy strong {
-  font-size: 11px;
-}
-
-.bulk-settings-panel .bulk-quality-copy small {
-  font-size: 10px;
-  line-height: 1.5;
-}
-
-.bulk-settings-panel .bulk-quality-tag {
-  font-size: 8px;
-}
-
-/* 信息提示 */
-.bulk-settings-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 11px;
-  border-radius: 12px;
-  color: #77838d;
-  background: rgba(120, 135, 148, .075);
-  font-size: 10px;
-  line-height: 1.65;
-}
-
-.bulk-settings-note-icon {
-  display: grid;
-  flex: 0 0 15px;
-  width: 15px;
-  height: 15px;
-  place-items: center;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 9px;
-  font-weight: 700;
-}
-
-/* AI 视界展示 */
-.bulk-ai-visual {
-  padding: 5px 0;
-}
-
-.bulk-ai-preview {
+  padding: 4px;
+  isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(120, 135, 148, .2);
-  border-radius: 13px;
-  background: linear-gradient(
-    145deg,
-    rgba(82, 107, 126, .12),
-    rgba(120, 135, 148, .045)
-  );
 }
 
-.bulk-ai-preview-top {
-  display: flex;
-  gap: 5px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(120, 135, 148, .12);
+.bulk-mode-slider {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 11px;
+  background: #526b7e;
+  box-shadow: 0 3px 10px rgba(50, 70, 85, .14);
+
+  transition:
+    transform .42s cubic-bezier(.22, 1, .36, 1),
+    background .3s ease,
+    box-shadow .3s ease;
 }
 
-.bulk-ai-preview-top span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #9baab5;
+.bulk-mode-switch.is-ai .bulk-mode-slider {
+  transform: translateX(100%);
 }
 
-.bulk-ai-preview-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 130px;
-  padding: 16px;
+.bulk-mode-option {
+  z-index: 1;
+  min-height: 58px;
+  border: 1px solid transparent;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+
+  transition:
+    color .3s ease,
+    opacity .3s ease;
 }
 
-.bulk-ai-symbol {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border: 1px solid rgba(82, 107, 126, .2);
-  border-radius: 13px;
-  color: #526b7e;
-  background: rgba(255, 255, 255, .55);
-  font-size: 20px;
+.bulk-mode-option.selected {
+  color: #fff;
 }
 
-.bulk-ai-preview-body strong {
-  color: #526b7e;
-  font-size: 12px;
-  letter-spacing: .12em;
+.bulk-mode-option:not(.selected) {
+  color: #626c75;
 }
 
-.bulk-ai-preview-body > span:last-child {
-  color: #92999f;
-  font-size: 8px;
-  letter-spacing: .16em;
+.bulk-mode-option:hover:not(.selected) {
+  background: rgba(255, 255, 255, .25) !important;
 }
 
-.bulk-ai-info {
-  display: grid;
-  gap: 12px;
+/* ---------- 左右区域同步运动 ---------- */
+
+.bulk-range-heading,
+.bulk-calendar,
+.bulk-settings-panel {
+  will-change: transform, opacity;
 }
 
-.bulk-ai-info-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* 普通模式 -> AI 模式 */
+
+.bulk-range-card.is-ai-story .bulk-range-heading,
+.bulk-range-card.is-ai-story .bulk-calendar {
+  transform: translateX(-5px);
+  opacity: .92;
 }
 
-.bulk-ai-info-icon {
-  display: grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 10px;
-  color: #526b7e;
-  background: rgba(82, 107, 126, .09);
-  font-size: 14px;
+.bulk-range-card.is-ai-story .bulk-settings-panel {
+  transform: translateX(5px);
 }
 
-.bulk-ai-info-item > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
+/* 恢复普通模式 */
+
+.bulk-range-heading,
+.bulk-calendar,
+.bulk-settings-panel {
+  transition:
+    transform .42s cubic-bezier(.22, 1, .36, 1),
+    opacity .35s ease,
+    border-color .35s ease,
+    background .35s ease;
 }
 
-.bulk-ai-info-item strong {
-  color: #3d4750;
-  font-size: 11px;
-}
+/* ---------- 右侧内容切换 ---------- */
 
-.bulk-ai-info-item small {
-  color: #92999f;
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.bulk-ai-note {
-  margin-top: 0;
-}
-
-/* 日历压缩 */
-.bulk-calendar-header {
-  margin-bottom: 10px;
-}
-
-.bulk-calendar-weekdays,
-.bulk-calendar-grid {
-  gap: 3px;
-}
-
-.bulk-calendar-weekdays {
-  margin-bottom: 5px;
-}
-
-.bulk-calendar-weekdays span {
-  padding: 4px 0;
-  font-size: 10px;
-}
-
-.bulk-calendar-day {
-  aspect-ratio: auto;
-  height: 34px;
-  border-radius: 8px;
-  font-size: 11px;
-}
-
-.bulk-calendar-selection {
-  margin-top: 12px;
-  padding: 10px;
-  gap: 6px;
-}
-
-.bulk-calendar-selection strong {
-  font-size: 10px;
-}
-
-.bulk-calendar .bulk-date-presets {
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.bulk-calendar .bulk-date-presets button {
-  padding: 7px 8px;
-  font-size: 9px;
-}
-
-.bulk-calendar .bulk-error {
-  margin: 8px 0 0;
-  font-size: 10px;
-}
-
-/* 配置区域下方 */
-.bulk-limit {
-  margin-top: 12px;
-}
-
-.bulk-config > .bulk-primary {
-  margin-top: 14px;
-}
-
-.bulk-notice {
-  margin-top: 10px;
-}
-
-/* 页签内容切换动画 */
 .bulk-tab-content-enter-active {
   transition:
-    opacity .22s ease,
-    transform .22s ease;
+    opacity .26s ease,
+    transform .34s cubic-bezier(.22, 1, .36, 1),
+    filter .26s ease;
 }
 
 .bulk-tab-content-leave-active {
   transition:
-    opacity .14s ease,
-    transform .14s ease;
+    opacity .16s ease,
+    transform .2s ease,
+    filter .16s ease;
 }
 
 .bulk-tab-content-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(14px) scale(.985);
+  filter: blur(2px);
 }
 
 .bulk-tab-content-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateX(-8px) scale(.99);
+  filter: blur(1px);
 }
 
-/* 模式页签动画 */
-.bulk-mode-option {
+/* ---------- 日历细节动效 ---------- */
+
+.bulk-calendar-day {
   transition:
-    color .22s ease,
-    background .22s ease,
-    border-color .22s ease,
-    box-shadow .22s ease,
-    transform .2s ease;
+    background .2s ease,
+    color .2s ease,
+    transform .2s ease,
+    border-radius .2s ease;
 }
 
-.bulk-mode-option.selected {
-  transform: scale(1.015);
+.bulk-calendar-day:hover:not(:disabled) {
+  transform: scale(1.05);
 }
 
-/* 屏幕高度不足时才允许滚动 */
-@media (max-height: 760px) {
-  .bulk-dialog {
-    max-height: 94vh;
-    overflow-y: auto;
+.bulk-calendar-day.is-selected {
+  transform: scale(.98);
+}
+
+.bulk-calendar-nav {
+  transition:
+    background .2s ease,
+    transform .2s ease,
+    opacity .2s ease;
+}
+
+.bulk-calendar-nav:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+/* ---------- 暗色模式 ---------- */
+
+@media (prefers-color-scheme: dark) {
+  .bulk-mode-slider {
+    background: #d7e0e6;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .18);
   }
 
-  .bulk-calendar-day {
-    height: 29px;
+  .bulk-mode-option.selected {
+    color: #20262b;
   }
 
-  .bulk-ai-preview-body {
-    min-height: 95px;
+  .bulk-mode-option:not(.selected) {
+    color: #c5cdd3;
   }
 
-  .bulk-settings-panel {
-    padding: 12px;
+  .bulk-mode-option:hover:not(.selected) {
+    background: rgba(255, 255, 255, .06) !important;
   }
 }
 
-/* 手机端：回归单列 */
-@media (max-width: 600px) {
-  .bulk-dialog {
-    width: 100%;
-    max-height: 92vh;
-    overflow-y: auto;
-  }
+/* ---------- 减少动画偏好 ---------- */
 
-  .bulk-range-card {
-    display: flex;
-    flex-direction: column;
-    gap: 13px;
-    padding: 12px;
-  }
-
-  .bulk-download-mode,
+@media (prefers-reduced-motion: reduce) {
+  .bulk-mode-slider,
+  .bulk-mode-option,
   .bulk-range-heading,
   .bulk-calendar,
-  .bulk-settings-panel {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .bulk-calendar-day {
-    aspect-ratio: 1;
-    height: auto;
-  }
-
-  .bulk-settings-panel {
-    padding: 14px;
-  }
-
-  .bulk-settings-panel .bulk-quality-option {
-    min-height: 65px;
-  }
-
-  .bulk-ai-preview-body {
-    min-height: 120px;
-  }
-
-  .bulk-config {
-    padding: 0 19px 18px;
+  .bulk-settings-panel,
+  .bulk-calendar-day,
+  .bulk-calendar-nav,
+  .bulk-tab-content-enter-active,
+  .bulk-tab-content-leave-active {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
   }
 }
-
-/* 暗色模式 */
-@media (prefers-color-scheme: dark) {
-  .bulk-settings-panel {
-    background: rgba(255, 255, 255, .025);
-    border-color: #41494f;
-  }
-
-  .bulk-settings-heading strong {
-    color: #edf0f2;
-  }
-
-  .bulk-settings-icon,
-  .bulk-ai-info-icon {
-    color: #c2d2de;
-    background: rgba(180, 205, 220, .09);
-  }
-
-  .bulk-settings-note {
-    color: #a5adb4;
-    background: rgba(255, 255, 255, .045);
-  }
-
-  .bulk-ai-preview {
-    border-color: #41494f;
-    background: linear-gradient(
-      145deg,
-      rgba(100, 125, 145, .16),
-      rgba(255, 255, 255, .025)
-    );
-  }
-
-  .bulk-ai-preview-top {
-    border-color: #41494f;
-  }
-
-  .bulk-ai-symbol {
-    color: #d0e0ea;
-    background: rgba(255, 255, 255, .035);
-    border-color: #41494f;
-  }
-
-  .bulk-ai-preview-body strong {
-    color: #d0e0ea;
-  }
-
-  .bulk-ai-info-item strong {
-    color: #e0e5e8;
-  }
-
-  .bulk-ai-info-item small {
-    color: #a5adb4;
-  }
-}
-
 </style>
