@@ -45,6 +45,39 @@
 
             <div v-if="status === 'idle' || status === 'error'" class="bulk-config">
               <div class="bulk-range-card">
+
+                <div class="bulk-download-mode">
+
+                  <div class="bulk-mode-switch">
+                    <label
+                      class="bulk-mode-option"
+                      :class="{ selected: downloadType === 'wallpaper' }"
+                    >
+                      <input
+                        v-model="downloadType"
+                        type="radio"
+                        value="wallpaper"
+                      />
+
+                      <span class="bulk-mode-title">普通壁纸</span>
+                      <span class="bulk-mode-desc">预览图 / UHD</span>
+                    </label>
+
+                    <label
+                      class="bulk-mode-option"
+                      :class="{ selected: downloadType === 'aiStory' }"
+                    >
+                      <input
+                        v-model="downloadType"
+                        type="radio"
+                        value="aiStory"
+                      />
+
+                      <span class="bulk-mode-title">AI 视界</span>
+                      <span class="bulk-mode-desc">PNG 长图</span>
+                    </label>
+                  </div>
+                </div>
                 <div class="bulk-range-heading">
                   <div>
                     <strong>选择下载日期</strong>
@@ -54,26 +87,6 @@
                   <span class="bulk-range-count">
                     {{ selectedMonthCount }} / {{ maxMonths }} 个月
                   </span>
-                </div>
-
-                <div class="bulk-download-mode">
-                  <span class="bulk-section-label">下载内容</span>
-                  <label class="bulk-quality-option" :class="{ selected: downloadType === 'wallpaper' }">
-                    <input v-model="downloadType" type="radio" value="wallpaper" />
-                    <span class="bulk-radio-mark"></span>
-                    <span class="bulk-quality-copy">
-                      <strong>普通壁纸</strong>
-                      <small>下载预览图或 UHD 高清原图</small>
-                    </span>
-                  </label>
-                  <label class="bulk-quality-option" :class="{ selected: downloadType === 'aiStory' }">
-                    <input v-model="downloadType" type="radio" value="aiStory" />
-                    <span class="bulk-radio-mark"></span>
-                    <span class="bulk-quality-copy">
-                      <strong>AI 视界截图</strong>
-                      <small>将完整 AI 解读卡片生成 PNG 长图</small>
-                    </span>
-                  </label>
                 </div>
 
                 <div class="bulk-calendar">
@@ -143,7 +156,7 @@
                     <button type="button" @click="applyPreset(7)">最近 7 天</button>
                     <button type="button" @click="applyPreset(30)">最近 30 天</button>
                     <button type="button" @click="applyPreset(60)">最近 60 天</button>
-                    <button type="button" @click="applyPreset(90)">最近 90 天</button>
+                    
                   </div>
 
                   <p v-if="rangeError" class="bulk-error">
@@ -154,7 +167,6 @@
 
                 <div v-if="downloadType === 'wallpaper'" class="bulk-quality">
                   <div class="bulk-quality">
-                    <span class="bulk-section-label">图片清晰度</span>
 
                     <label
                       class="bulk-quality-option"
@@ -808,86 +820,211 @@ function aiStoryCacheKey(item) {
 async function runTask(token) {
   for (let index = completedCount.value; index < taskItems.length; index += 1) {
     if (token !== taskToken || cancelRequested) break
+
     await waitWhilePaused()
+
     if (cancelRequested || token !== taskToken) break
 
     const item = taskItems[index]
     const date = item.date
-    const title = safeFilePart(item.aiStory?.title || item.title || item.description || 'Bing Wallpaper')
+
+    const title = safeFilePart(
+      item.aiStory?.title ||
+      item.title ||
+      item.description ||
+      'Bing Wallpaper'
+    )
+
     const extension = downloadType.value === 'aiStory' ? 'png' : 'jpg'
     const fileName = `${date}-${title}.${extension}`
+
     const cacheKey = downloadType.value === 'aiStory'
       ? aiStoryCacheKey(item)
       : `${quality.value}:${date}:${getImageUrls(item).join('|')}`
+
     currentFile.value = fileName
 
     let blob = await cacheGet(cacheKey)
     const fromCache = Boolean(blob)
 
+    // 1. 缓存未命中：生成图片
     if (!blob) {
       if (downloadType.value === 'aiStory') {
         try {
           blob = await exportAiStoryImage(item)
-          if (!blob?.size) throw new Error('截图 Blob 为空')
+
+          if (!blob || blob.size === 0) {
+            throw new Error('截图 Blob 为空')
+          }
+
           await cachePut(cacheKey, blob)
         } catch (error) {
-          if (error?.name === 'AbortError' || cancelRequested) break
-          failedItems.value.push({ date, reason: error?.message || '截图生成失败' })
+          if (error?.name === 'AbortError' || cancelRequested) {
+            break
+          }
+
+          failedItems.value.push({
+            date,
+            reason: error?.message || '截图生成失败'
+          })
+
           completedCount.value += 1
           continue
         }
       } else {
         const urls = getImageUrls(item)
+
         if (!urls.length) {
-          failedItems.value.push({ date, reason: '没有可用图片地址' })
+          failedItems.value.push({
+            date,
+            reason: '没有可用图片地址'
+          })
+
           completedCount.value += 1
           continue
         }
+
         let lastError = null
+
         for (const url of urls) {
+          if (cancelRequested || token !== taskToken) break
+
           try {
             activeController = new AbortController()
-            blob = await fetchBlob(url, activeController.signal, (loaded, total) => {
-              currentFile.value = total > 0
-                ? `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`
-                : `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} MB`
-            })
-            if (!blob.size) throw new Error('图片内容为空')
+
+            blob = await fetchBlob(
+              url,
+              activeController.signal,
+              (loaded, total) => {
+                currentFile.value = total > 0
+                  ? `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`
+                  : `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} MB`
+              }
+            )
+
+            if (!blob || blob.size === 0) {
+              throw new Error('图片内容为空')
+            }
+
             await cachePut(cacheKey, blob)
             lastError = null
             break
           } catch (error) {
             lastError = error
+
+            // 暂停时，当前请求可能被 AbortController 中断
             if (pauseRequested || cancelRequested) break
           } finally {
             activeController = null
           }
         }
-        if (pauseRequested) {
+
+        // 暂停时重新执行当前图片，不计入进度
+        if (pauseRequested && !cancelRequested) {
           index -= 1
           await waitWhilePaused()
-          if (cancelRequested) break
+
+          if (cancelRequested || token !== taskToken) break
+
           continue
         }
-        if (cancelRequested) break
+
+        if (cancelRequested || token !== taskToken) break
+
         if (!blob) {
-          failedItems.value.push({ date, reason: lastError?.message || '下载失败' })
+          failedItems.value.push({
+            date,
+            reason: lastError?.message || '下载失败'
+          })
+
           completedCount.value += 1
           continue
         }
       }
     }
+
+    // 2. 检查 Blob
+    if (!blob || blob.size === 0) {
+      failedItems.value.push({
+        date,
+        reason: '图片 Blob 为空'
+      })
+
+      completedCount.value += 1
+      continue
+    }
+
+    // 3. 当前图片生成期间如果暂停，先等待
+    await waitWhilePaused()
+
+    if (cancelRequested || token !== taskToken) break
+
+    // 4. 写入 ZIP
+    try {
+      await zipWriter.add(
+        fileName,
+        new BlobReader(blob)
+      )
+
+      // 只有真正写入 ZIP 后，才统计缓存命中
+      if (fromCache) {
+        cachedCount.value += 1
+      }
+
+      completedCount.value += 1
+    } catch (error) {
+      failedItems.value.push({
+        date,
+        reason: error?.message || '写入 ZIP 失败'
+      })
+
+      completedCount.value += 1
+    }
   }
 
-  // 所有图片处理完毕，进入 ZIP 最终生成阶段
+  // 5. 取消任务，不生成下载文件
+  if (cancelRequested || token !== taskToken) {
+    status.value = 'cancelled'
+    currentFile.value = '任务已取消'
+    preparing.value = false
+
+    // 尝试关闭 ZIP Writer，但不下载结果
+    try {
+      if (zipWriter) {
+        await zipWriter.close()
+      }
+    } catch {
+      // 取消过程中的 ZIP 清理异常不再影响任务状态
+    }
+
+    zipWriter = null
+    return
+  }
+
+  // 6. 正常完成后再生成 ZIP
   status.value = 'packaging'
   currentFile.value = '正在生成 ZIP 文件目录…'
 
   try {
     const zipBlob = await zipWriter.close()
 
-    const prefix = downloadType.value === 'aiStory' ? 'Bing-AI-Story' : 'Bing-Wallpaper'
-    saveBlob(zipBlob, `${prefix}-${startDate.value}_${endDate.value}.zip`)
+    if (cancelRequested || token !== taskToken) {
+      status.value = 'cancelled'
+      return
+    }
+
+    if (!zipBlob || zipBlob.size === 0) {
+      throw new Error('生成的 ZIP 文件为空，请检查图片写入过程。')
+    }
+
+    const prefix = downloadType.value === 'aiStory'
+      ? 'Bing-AI-Story'
+      : 'Bing-Wallpaper'
+
+    saveBlob(
+      zipBlob,
+      `${prefix}-${startDate.value}_${endDate.value}.zip`
+    )
 
     status.value = 'done'
 
@@ -896,8 +1033,11 @@ async function runTask(token) {
         `${failedItems.value.length} 张图片未能加入压缩包，请检查失败列表。`
     }
   } catch (error) {
-    taskError.value = error.message || 'ZIP 文件生成失败。'
+    taskError.value = error?.message || 'ZIP 文件生成失败。'
     status.value = 'error'
+  } finally {
+    zipWriter = null
+    preparing.value = false
   }
 }
 
@@ -1527,6 +1667,100 @@ onBeforeUnmount(() => {
     color: #c5cdd3;
     background: #30363b;
     border-color: #4a5157;
+  }
+}
+
+/* 下载模式左右切换 */
+.bulk-download-mode {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.bulk-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid rgba(120, 135, 148, .18);
+  border-radius: 14px;
+  background: rgba(120, 135, 148, .06);
+}
+
+.bulk-mode-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #626c75;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    transform .18s ease;
+}
+
+.bulk-mode-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bulk-mode-option:hover:not(.selected) {
+  background: rgba(255, 255, 255, .45);
+}
+
+.bulk-mode-option.selected {
+  color: #fff;
+  border-color: #526b7e;
+  background: #526b7e;
+  box-shadow: 0 3px 10px rgba(50, 70, 85, .14);
+}
+
+.bulk-mode-title {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.bulk-mode-desc {
+  font-size: 9px;
+  line-height: 1.4;
+  opacity: .75;
+  text-align: center;
+}
+
+.bulk-mode-option:focus-within {
+  outline: 2px solid #879eaf;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bulk-mode-switch {
+    background: rgba(255, 255, 255, .035);
+    border-color: #41494f;
+  }
+
+  .bulk-mode-option {
+    color: #c5cdd3;
+  }
+
+  .bulk-mode-option.selected {
+    color: #20262b;
+    border-color: #d7e0e6;
+    background: #d7e0e6;
+  }
+
+  .bulk-mode-option:hover:not(.selected) {
+    background: rgba(255, 255, 255, .055);
   }
 }
 </style>
