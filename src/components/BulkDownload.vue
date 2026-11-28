@@ -56,6 +56,26 @@
                   </span>
                 </div>
 
+                <div class="bulk-download-mode">
+                  <span class="bulk-section-label">下载内容</span>
+                  <label class="bulk-quality-option" :class="{ selected: downloadType === 'wallpaper' }">
+                    <input v-model="downloadType" type="radio" value="wallpaper" />
+                    <span class="bulk-radio-mark"></span>
+                    <span class="bulk-quality-copy">
+                      <strong>普通壁纸</strong>
+                      <small>下载预览图或 UHD 高清原图</small>
+                    </span>
+                  </label>
+                  <label class="bulk-quality-option" :class="{ selected: downloadType === 'aiStory' }">
+                    <input v-model="downloadType" type="radio" value="aiStory" />
+                    <span class="bulk-radio-mark"></span>
+                    <span class="bulk-quality-copy">
+                      <strong>AI 视界截图</strong>
+                      <small>将完整 AI 解读卡片生成 PNG 长图</small>
+                    </span>
+                  </label>
+                </div>
+
                 <div class="bulk-calendar">
                   <div class="bulk-calendar-header">
                     <button
@@ -132,53 +152,54 @@
                 </div>
 
 
+                <div v-if="downloadType === 'wallpaper'" class="bulk-quality">
+                  <div class="bulk-quality">
+                    <span class="bulk-section-label">图片清晰度</span>
 
-                <div class="bulk-quality">
-                  <span class="bulk-section-label">图片清晰度</span>
+                    <label
+                      class="bulk-quality-option"
+                      :class="{ selected: quality === 'preview' }"
+                    >
+                      <input
+                        v-model="quality"
+                        type="radio"
+                        value="preview"
+                      />
 
-                  <label
-                    class="bulk-quality-option"
-                    :class="{ selected: quality === 'preview' }"
-                  >
-                    <input
-                      v-model="quality"
-                      type="radio"
-                      value="preview"
-                    />
+                      <span class="bulk-radio-mark"></span>
 
-                    <span class="bulk-radio-mark"></span>
+                      <span class="bulk-quality-copy">
+                        <strong>预览图</strong>
+                        <small>文件较小，下载速度快，适合日常收藏</small>
+                      </span>
 
-                    <span class="bulk-quality-copy">
-                      <strong>预览图</strong>
-                      <small>文件较小，下载速度快，适合日常收藏</small>
-                    </span>
+                      <span class="bulk-quality-tag">默认</span>
+                    </label>
 
-                    <span class="bulk-quality-tag">默认</span>
-                  </label>
+                    <label
+                      class="bulk-quality-option"
+                      :class="{ selected: quality === 'uhd' }"
+                    >
+                      <input
+                        v-model="quality"
+                        type="radio"
+                        value="uhd"
+                      />
 
-                  <label
-                    class="bulk-quality-option"
-                    :class="{ selected: quality === 'uhd' }"
-                  >
-                    <input
-                      v-model="quality"
-                      type="radio"
-                      value="uhd"
-                    />
+                      <span class="bulk-radio-mark"></span>
 
-                    <span class="bulk-radio-mark"></span>
+                      <span class="bulk-quality-copy">
+                        <strong>高清原图 UHD</strong>
+                        <small>高分辨率壁纸，文件较大，下载耗时更长</small>
+                      </span>
 
-                    <span class="bulk-quality-copy">
-                      <strong>高清原图 UHD</strong>
-                      <small>高分辨率壁纸，文件较大，下载耗时更长</small>
-                    </span>
-
-                    <span class="bulk-quality-tag">UHD</span>
-                  </label>
+                      <span class="bulk-quality-tag">UHD</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
-              <div v-if="quality === 'uhd'" class="bulk-notice">
+              <div v-if="downloadType === 'wallpaper' && quality === 'uhd'" class="bulk-notice">
                 <span class="bulk-notice-icon">i</span>
                 <span>高清图片文件较大，批量下载可能需要较长时间，并占用较多网络流量和本地存储空间。</span>
               </div>
@@ -292,6 +313,8 @@ import {
   ZipWriter
 } from '@zip.js/zip.js'
 
+import { exportAiStoryImage } from '../utils/aiStoryImageExporter'
+
 const props = defineProps({
   dataBaseUrl: {
     type: String,
@@ -324,6 +347,7 @@ const currentFile = ref('')
 const failedItems = ref([])
 const availableMinDate = ref('')
 const availableMaxDate = ref('')
+const downloadType = ref('wallpaper')
 
 let activeController = null
 let pauseResolver = null
@@ -588,6 +612,10 @@ async function loadRangeItems() {
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
+function hasValidAiStory(item) {
+  return typeof item?.aiStory?.story === 'string' && item.aiStory.story.trim().length > 0
+}
+
 function getImageUrls(item) {
   if (quality.value === 'preview') {
     return item.preview ? [item.preview] : []
@@ -726,7 +754,10 @@ async function startDownload() {
 
     currentFile.value = '正在读取所选日期范围内的壁纸数据…'
 
-    taskItems = await loadRangeItems()
+    const loadedItems = await loadRangeItems()
+    taskItems = downloadType.value === 'aiStory'
+      ? loadedItems.filter(hasValidAiStory)
+      : loadedItems
 
     if (token !== taskToken || cancelRequested) {
       status.value = 'cancelled'
@@ -734,7 +765,9 @@ async function startDownload() {
     }
 
     if (!taskItems.length) {
-      throw new Error('所选日期范围内没有可下载的壁纸。')
+      throw new Error(downloadType.value === 'aiStory'
+        ? '所选日期范围内没有有效的 AI 视界内容。'
+        : '所选日期范围内没有可下载的壁纸。')
     }
 
     totalCount.value = taskItems.length
@@ -756,6 +789,22 @@ async function startDownload() {
   }
 }
 
+function aiStoryCacheKey(item) {
+  const payload = JSON.stringify({
+    date: item.date,
+    preview: item.preview || '',
+    story: item.aiStory || {},
+    templateVersion: 1
+  })
+  // 32 位 FNV-1a 字符串指纹，避免 IndexedDB key 过长。
+  let hash = 2166136261
+  for (let i = 0; i < payload.length; i++) {
+    hash ^= payload.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `ai-story:v1:${item.date}:${(hash >>> 0).toString(16)}`
+}
+
 async function runTask(token) {
   for (let index = completedCount.value; index < taskItems.length; index += 1) {
     if (token !== taskToken || cancelRequested) break
@@ -764,69 +813,69 @@ async function runTask(token) {
 
     const item = taskItems[index]
     const date = item.date
-    const title = safeFilePart(item.title || item.description || 'Bing Wallpaper')
-    const fileName = `${date}-${title}.jpg`
-    const urls = getImageUrls(item)
-    const cacheKey = `${quality.value}:${date}:${urls.join('|')}`
+    const title = safeFilePart(item.aiStory?.title || item.title || item.description || 'Bing Wallpaper')
+    const extension = downloadType.value === 'aiStory' ? 'png' : 'jpg'
+    const fileName = `${date}-${title}.${extension}`
+    const cacheKey = downloadType.value === 'aiStory'
+      ? aiStoryCacheKey(item)
+      : `${quality.value}:${date}:${getImageUrls(item).join('|')}`
     currentFile.value = fileName
 
     let blob = await cacheGet(cacheKey)
-    let fromCache = Boolean(blob)
+    const fromCache = Boolean(blob)
 
     if (!blob) {
-    if (!urls.length) {
-      failedItems.value.push({
-        date,
-        reason: '没有可用图片地址'
-      })
-      completedCount.value += 1
-      continue
-    }
-
-    let lastError = null
-      for (const url of urls) {
+      if (downloadType.value === 'aiStory') {
         try {
-          activeController = new AbortController()
-          blob = await fetchBlob(url, activeController.signal, (loaded, total) => {
-            if (total > 0) {
-              currentFile.value = `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`
-            } else {
-              currentFile.value = `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} MB`
-            }
-          })
-          if (!blob.size) throw new Error('图片内容为空')
+          blob = await exportAiStoryImage(item)
+          if (!blob?.size) throw new Error('截图 Blob 为空')
           await cachePut(cacheKey, blob)
-          lastError = null
-          break
         } catch (error) {
-          lastError = error
-          if (pauseRequested || cancelRequested) break
-        } finally {
-          activeController = null
+          if (error?.name === 'AbortError' || cancelRequested) break
+          failedItems.value.push({ date, reason: error?.message || '截图生成失败' })
+          completedCount.value += 1
+          continue
+        }
+      } else {
+        const urls = getImageUrls(item)
+        if (!urls.length) {
+          failedItems.value.push({ date, reason: '没有可用图片地址' })
+          completedCount.value += 1
+          continue
+        }
+        let lastError = null
+        for (const url of urls) {
+          try {
+            activeController = new AbortController()
+            blob = await fetchBlob(url, activeController.signal, (loaded, total) => {
+              currentFile.value = total > 0
+                ? `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`
+                : `${fileName} · ${(loaded / 1024 / 1024).toFixed(1)} MB`
+            })
+            if (!blob.size) throw new Error('图片内容为空')
+            await cachePut(cacheKey, blob)
+            lastError = null
+            break
+          } catch (error) {
+            lastError = error
+            if (pauseRequested || cancelRequested) break
+          } finally {
+            activeController = null
+          }
+        }
+        if (pauseRequested) {
+          index -= 1
+          await waitWhilePaused()
+          if (cancelRequested) break
+          continue
+        }
+        if (cancelRequested) break
+        if (!blob) {
+          failedItems.value.push({ date, reason: lastError?.message || '下载失败' })
+          completedCount.value += 1
+          continue
         }
       }
-
-      if (pauseRequested) {
-        index -= 1
-        await waitWhilePaused()
-        if (cancelRequested) break
-        continue
-      }
-      if (cancelRequested) break
-      if (!blob) {
-        failedItems.value.push({ date, reason: lastError?.message || '下载失败' })
-        completedCount.value += 1
-        continue
-      }
-    }
-
-    if (fromCache) cachedCount.value += 1
-    try {
-      await zipWriter.add(fileName, new BlobReader(blob), { level: 0 })
-      completedCount.value += 1
-    } catch (error) {
-      failedItems.value.push({ date, reason: `写入 ZIP 失败：${error.message}` })
-      completedCount.value += 1
     }
   }
 
@@ -837,10 +886,8 @@ async function runTask(token) {
   try {
     const zipBlob = await zipWriter.close()
 
-    saveBlob(
-      zipBlob,
-      `Bing-Wallpaper-${startDate.value}_${endDate.value}.zip`
-    )
+    const prefix = downloadType.value === 'aiStory' ? 'Bing-AI-Story' : 'Bing-Wallpaper'
+    saveBlob(zipBlob, `${prefix}-${startDate.value}_${endDate.value}.zip`)
 
     status.value = 'done'
 

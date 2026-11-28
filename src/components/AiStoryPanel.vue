@@ -259,7 +259,7 @@ import {
   watch
 } from 'vue'
 
-import { toBlob } from 'html-to-image'
+import { exportAiStoryImage, downloadAiStoryBlob } from '../utils/aiStoryImageExporter'
 
 const props = defineProps({
   item: {
@@ -441,204 +441,23 @@ function createExportFilename() {
 }
 
 
-/**
- * 导出完整 AI 解读卡片。
- *
- * 原始弹窗保持不动。
- * 使用 cloneNode 创建独立导出 DOM。
- * 复用当前预览图片的 src，不主动重新加载图片，
- * 不调用 fetch、decode 或 cacheBust。
- */
 async function exportCard() {
-  const source = dialogRef.value
-
-  if (!source || isExporting.value) {
-    return
-  }
-
+  if (!props.item || isExporting.value) return
   isExporting.value = true
   exportStatus.value = ''
   exportError.value = ''
-
-  let exportRoot = null
-  let objectUrl = null
-
   try {
-    // 1. 等待 Vue DOM 更新
-    await nextTick()
-
-    // 2. 等待字体，避免导出字体布局不一致
-    if (document.fonts?.ready) {
-      await document.fonts.ready
-    }
-
-    // 导出采用统一的画布宽度，不再依赖手机或桌面当前弹窗宽度
-    const width = 560
-
-    if (!width || width < 100) {
-      throw new Error('无法获取有效的卡片宽度')
-    }
-
-    // 4. 克隆原始卡片，不修改正在显示的 DOM
-    const clone = source.cloneNode(true)
-
-    // 5. 移除不需要导出的按钮
-    clone.querySelectorAll('[data-export-hide]')
-      .forEach(node => node.remove())
-
-    // 6. 移除装饰性光晕
-    clone.querySelectorAll('.ai-story-dialog-glow')
-      .forEach(node => node.remove())
-
-    // 7. 标记导出 DOM
-    clone.classList.add('ai-story-export-root')
-
-    // 8. 直接将当前主题颜色应用到克隆节点
-    Object.entries(themeStyle.value).forEach(
-      ([key, value]) => {
-        clone.style.setProperty(key, value)
-      }
-    )
-
-    // 9. 创建屏幕外容器
-    exportRoot = document.createElement('div')
-    
-    Object.assign(exportRoot.style, {
-      position: 'fixed',
-      left: '-10000px',
-      top: '0',
-    
-      // 外层容器与内部导出卡片保持一致
-      width: `${width}px`,
-      minWidth: `${width}px`,
-      maxWidth: `${width}px`,
-    
-      height: 'auto',
-      overflow: 'visible',
-    
-      pointerEvents: 'none',
-      zIndex: '-1',
-    
-      background: 'transparent',
-      boxSizing: 'border-box'
-    })
-
-    exportRoot.appendChild(clone)
-    document.body.appendChild(exportRoot)
-
-    // 10. 等待独立 DOM 布局完成
-    await nextTick()
-
-    await new Promise(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve)
-      })
-    })
-
-    // 11. 计算完整卡片尺寸
-    const cloneRect = clone.getBoundingClientRect()
-
-    const exportWidth = Math.ceil(cloneRect.width)
-
-    const exportHeight = Math.ceil(
-      Math.max(
-        clone.scrollHeight,
-        cloneRect.height
-      )
-    )
-
-    if (
-      !Number.isFinite(exportWidth) ||
-      !Number.isFinite(exportHeight) ||
-      exportWidth <= 0 ||
-      exportHeight <= 0
-    ) {
-      throw new Error(
-        `导出尺寸异常：${exportWidth} × ${exportHeight}`
-      )
-    }
-
-    // 12. 限制 Canvas 尺寸和像素数量
-    const pixelRatio = Math.max(
-      1,
-      Math.min(
-        3,
-        16000 / Math.max(exportWidth, exportHeight),
-        Math.sqrt(
-          24000000 / (exportWidth * exportHeight)
-        )
-      )
-    )
-
-    console.log('AI 解读导出尺寸：', {
-      width: exportWidth,
-      height: exportHeight,
-      pixelRatio
-    })
-
-    // 13. 导出克隆 DOM
-    const blob = await toBlob(clone, {
-      pixelRatio,
-      width: exportWidth,
-      height: exportHeight,
-
-      // 不使用缓存规避参数
-      cacheBust: false,
-
-      // 卡片本身有 CSS 背景
-      backgroundColor: '#17191f',
-
-      // 过滤导出按钮等节点
-      filter: node => {
-        return !(
-          node instanceof HTMLElement &&
-          node.hasAttribute('data-export-hide')
-        )
-      }
-    })
-
-    if (!blob || blob.size === 0) {
-      throw new Error('导出 PNG 失败，未生成有效图片')
-    }
-
-    // 14. 下载文件
-    objectUrl = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-
-    link.href = objectUrl
-    link.download = createExportFilename()
-
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-
+    const blob = await exportAiStoryImage(props.item)
+    downloadAiStoryBlob(blob, createExportFilename())
     exportStatus.value = '已保存'
-
   } catch (error) {
     console.error('AI 解读卡片导出失败：', error)
-
     exportStatus.value = '导出失败'
-
-    exportError.value =
-      error?.message || '请稍后重试'
-
+    exportError.value = error?.message || '请稍后重试'
   } finally {
-    // 15. 清理独立 DOM
-    exportRoot?.remove()
-
-    // 16. 释放文件地址
-    if (objectUrl) {
-      window.setTimeout(() => {
-        URL.revokeObjectURL(objectUrl)
-      }, 3000)
-    }
-
-    // 17. 恢复导出状态
     isExporting.value = false
   }
 }
-
 
 
 /**
