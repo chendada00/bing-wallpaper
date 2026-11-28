@@ -1221,7 +1221,6 @@ onBeforeUnmount(() => {
 }
 .bulk-field input:focus { border-color: #8b9eaf; box-shadow: 0 0 0 3px rgba(110,139,163,.12); }
 .bulk-quality { display: grid; gap: 9px; margin-top: 21px; }
-.bulk-section-label { color: #737b83; font-size: 10px; font-weight: 700; }
 .bulk-quality-option {
   display: flex;
   align-items: center;
@@ -1317,7 +1316,7 @@ onBeforeUnmount(() => {
   .bulk-download-trigger:hover { background: rgba(52,55,59,.95); }
   .bulk-dialog { color: #e9ecef; background: rgba(35,38,41,.97); border-color: rgba(255,255,255,.12); }
   .bulk-dialog-header h2, .bulk-progress-heading h3, .bulk-quality-copy strong, .bulk-progress-summary strong { color: #edf0f2; }
-  .bulk-dialog-header p, .bulk-field, .bulk-section-label, .bulk-hint, .bulk-dialog-footer { color: #a5adb4; }
+  .bulk-dialog-header p, .bulk-field, .bulk-hint, .bulk-dialog-footer { color: #a5adb4; }
   .bulk-field input { color: #eee; background: #292e33; border-color: #444b51; color-scheme: dark; }
   .bulk-quality-option { background: #292e33; border-color: #444b51; }
   .bulk-quality-option.selected { background: #303c45; border-color: #72899a; }
